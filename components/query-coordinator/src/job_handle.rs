@@ -13,8 +13,6 @@ use clp_rust_utils::job_config::QUERY_JOBS_TABLE_NAME;
 use clp_rust_utils::job_config::QueryJobConfig;
 use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::job_config::QueryJobStatus;
-use clp_rust_utils::job_config::QueryOutput;
-use clp_rust_utils::job_config::ResultsCacheOutput;
 use clp_rust_utils::types::ArchiveId;
 use const_format::formatcp;
 use spider_core::task::ExecutionPolicy;
@@ -70,12 +68,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     /// # Returns
     ///
     /// A newly created [`QueryJobHandle`] for the given query job.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * [`Error::UnsupportedJobConfig`] if the job carries an aggregation.
+    #[must_use]
     pub fn new(
         context: Arc<QueryJobHandleContext>,
         query_job_id: QueryJobId,
@@ -83,36 +76,20 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
         resource_group_id: ResourceGroupId,
         query_job_config: QueryJobConfig,
         job_creation_timestamp_millisecs: i64,
-    ) -> Result<Self, Error> {
-        match &query_job_config.output {
-            QueryOutput::ResultsCache(ResultsCacheOutput {
-                aggregation: None, ..
-            })
-            | QueryOutput::Network(_)
-            | QueryOutput::File {} => {}
-            QueryOutput::ResultsCache(ResultsCacheOutput {
-                aggregation: Some(_),
-                ..
-            }) => {
-                return Err(Error::UnsupportedJobConfig(
-                    "aggregation jobs are not supported".to_owned(),
-                ));
-            }
-        }
-
+    ) -> Self {
         let archive_end_ts_lower_bound_millisecs = context
             .archive_selection_options
             .archive_retention_period_millisecs
             .map(|period| job_creation_timestamp_millisecs.saturating_sub_unsigned(period.get()));
 
-        Ok(Self {
+        Self {
             context,
             query_job_id,
             job_submitter,
             resource_group_id,
             query_job_config,
             archive_end_ts_lower_bound_millisecs,
-        })
+        }
     }
 
     /// Submits the query job to Spider and drives it to completion.
@@ -121,7 +98,8 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     /// was assigned, and then waits for the job to reach a terminal state. On failure, it attempts
     /// to persist a terminal status for the query job before the error is returned.
     ///
-    /// If no archives are selected, it marks the query job as succeeded without submitting it.
+    /// If no archives are selected and no timeline is requested, it marks the query job as
+    /// succeeded without submitting it.
     ///
     /// # Errors
     ///
@@ -136,7 +114,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
 
         let result = async {
             let archives_to_search = self.plan().await?;
-            if archives_to_search.is_empty() {
+            if archives_to_search.is_empty() && !self.query_job_config.output.has_timeline() {
                 return self.terminate(QueryJobOutcome::Succeeded).await;
             }
 
@@ -746,124 +724,26 @@ struct ArchiveRowProjection {
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;
-    use std::num::NonZeroU16;
-    use std::num::NonZeroU32;
     use std::num::NonZeroUsize;
-    use std::sync::Arc;
     use std::time::Duration;
 
-    use async_trait::async_trait;
     use clp_rust_utils::clp_config::package::config::Database;
     use clp_rust_utils::dataset::DatasetName;
     use clp_rust_utils::dataset::NonEmptyDatasetNames;
-    use clp_rust_utils::job_config::Aggregation;
-    use clp_rust_utils::job_config::NetworkOutput;
     use clp_rust_utils::job_config::QueryJobConfig;
-    use clp_rust_utils::job_config::QueryJobId;
     use clp_rust_utils::job_config::QueryOutput;
     use clp_rust_utils::job_config::ResultsCacheOutput;
     use clp_rust_utils::job_config::SearchQuery;
     use clp_rust_utils::job_config::TimeRange;
-    use clp_rust_utils::types::PositiveI64;
-    use clp_rust_utils::types::SessionToken;
     use clp_rust_utils::types::non_empty_string::ExpectedNonEmpty;
     use non_empty_string::NonEmptyString;
-    use spider_core::task::ExecutionPolicy;
-    use spider_core::types::id::JobId as SpiderJobId;
-    use spider_core::types::id::ResourceGroupId;
     use sqlx::mysql::MySqlPoolOptions;
 
     use super::ArchiveSelectionOptions;
     use super::ArchiveSelector;
-    use super::QueryJobHandle;
     use super::QueryJobHandleContext;
     use super::SpiderOption;
     use crate::Error;
-    use crate::query_job_submitter::ArchiveMetadata;
-    use crate::query_job_submitter::QueryJobOutcome;
-    use crate::query_job_submitter::QueryJobSubmitter;
-
-    /// A submitter for tests that never reach Spider.
-    #[derive(Clone)]
-    struct UnreachableSubmitter;
-
-    #[async_trait]
-    impl QueryJobSubmitter for UnreachableSubmitter {
-        async fn submit_query_job(
-            &self,
-            _query_job_id: QueryJobId,
-            _resource_group_id: ResourceGroupId,
-            _query: SearchQuery,
-            _output: QueryOutput,
-            _archives_to_search: Vec<(ArchiveMetadata, ExecutionPolicy)>,
-        ) -> Result<SpiderJobId, Error> {
-            unreachable!("the test doesn't submit query jobs")
-        }
-
-        async fn run_query_job_to_completion(
-            &self,
-            _spider_job_id: SpiderJobId,
-            _poll_interval: Duration,
-        ) -> Result<QueryJobOutcome, Error> {
-            unreachable!("the test doesn't run query jobs")
-        }
-
-        async fn cancel_query_job(&self, _spider_job_id: SpiderJobId) -> Result<(), Error> {
-            unreachable!("the test doesn't cancel query jobs")
-        }
-    }
-
-    #[tokio::test]
-    async fn query_job_handle_rejects_only_aggregation_outputs() {
-        let context = Arc::new(context(None));
-        let results_cache_output = ResultsCacheOutput {
-            max_num_results: NonZeroU32::new(7),
-            aggregation: None,
-        };
-        let new_job_handle = |output| {
-            QueryJobHandle::new(
-                context.clone(),
-                1,
-                UnreachableSubmitter,
-                ResourceGroupId::random(),
-                QueryJobConfig {
-                    output,
-                    ..base_query_job_config()
-                },
-                0,
-            )
-        };
-
-        for output in [
-            QueryOutput::ResultsCache(results_cache_output.clone()),
-            QueryOutput::Network(NetworkOutput {
-                host: NonEmptyString::from_static_str("10.0.0.5"),
-                port: NonZeroU16::new(3003).expect("3003 is nonzero"),
-                session_token: SessionToken::from(uuid::Uuid::nil()),
-            }),
-            QueryOutput::File {},
-        ] {
-            if let Err(error) = new_job_handle(output.clone()) {
-                panic!("output should be supported: {output:?}: {error:?}");
-            }
-        }
-
-        let error = new_job_handle(QueryOutput::ResultsCache(ResultsCacheOutput {
-            aggregation: Some(Aggregation::CountByTime {
-                bucket_size_millisecs: PositiveI64::new(60_000).expect("60,000 is positive"),
-            }),
-            ..results_cache_output
-        }))
-        .err()
-        .expect("an aggregation output should be unsupported");
-        assert!(
-            matches!(
-                &error,
-                Error::UnsupportedJobConfig(message) if message.contains("aggregation")
-            ),
-            "unexpected error: {error:?}"
-        );
-    }
 
     #[tokio::test]
     async fn duplicate_requested_datasets_count_once_toward_max_datasets_per_query() {

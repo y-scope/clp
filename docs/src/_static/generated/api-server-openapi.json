@@ -234,6 +234,54 @@
         }
       }
     },
+    "/query_results/{query_job_id}/timeline": {
+      "get": {
+        "tags": [],
+        "description": "Streams committed timeline buckets as Server-Sent Events (SSE).",
+        "operationId": "query_timeline",
+        "parameters": [
+          {
+            "name": "query_job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Each event contains one timeline bucket in JSON format.",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimelineBucket"
+                },
+                "example": "data: {\"timestamp\": 1633036800000, \"count\": 42}\\n"
+              }
+            }
+          },
+          "400": {
+            "description": "The query job ID is invalid or the job has no timeline configuration.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No query job with the given ID was found."
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
     "/usage/compression": {
       "get": {
         "tags": [],
@@ -556,6 +604,27 @@
           }
         },
         "additionalProperties": false
+      },
+      "TimelineBucket": {
+        "type": "object",
+        "description": "A validated timeline bucket with an integral timestamp and nonnegative count.",
+        "required": [
+          "timestamp",
+          "count"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The number of matching events in the bucket.",
+            "minimum": 0
+          },
+          "timestamp": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The bucket's start timestamp in epoch milliseconds."
+          }
+        }
       }
     }
   }

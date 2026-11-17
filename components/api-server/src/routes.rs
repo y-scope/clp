@@ -13,6 +13,7 @@ use axum::response::sse::KeepAlive;
 use axum::routing::get;
 use clp_rust_utils::job_config::QueryJobConfig;
 use clp_rust_utils::logs_input::LogsInputError;
+use clp_rust_utils::timeline::Bucket;
 use futures::Stream;
 use futures::StreamExt;
 use serde::Deserialize;
@@ -72,6 +73,7 @@ pub fn from_app_state(state: AppState) -> Result<axum::Router, serde_json::Error
         .routes(routes!(health))
         .routes(routes!(query))
         .routes(routes!(query_results))
+        .routes(routes!(query_timeline))
         .routes(routes!(cancel_query))
         .routes(routes!(compression_usage))
         .split_for_parts();
@@ -96,6 +98,7 @@ mod api_doc {
     use super::__path_health;
     use super::__path_query;
     use super::__path_query_results;
+    use super::__path_query_timeline;
     use super::CompressionUsage;
     use super::OpenApi;
     use super::OpenApiRouter;
@@ -109,7 +112,14 @@ mod api_doc {
             description = "API Server for CLP",
             contact(name = "YScope")
         ),
-        paths(health, query, query_results, cancel_query, compression_usage),
+        paths(
+            health,
+            query,
+            query_results,
+            query_timeline,
+            cancel_query,
+            compression_usage
+        ),
         components(schemas(CompressionUsage, CompressionJobStatus))
     )]
     pub struct ApiDoc;
@@ -291,6 +301,38 @@ async fn query_results(
 }
 
 #[utoipa::path(
+    get,
+    path = "/query_results/{query_job_id}/timeline",
+    description = "Streams committed timeline buckets as Server-Sent Events (SSE).",
+    responses(
+        (
+            status = OK,
+            body = Bucket,
+            content_type = "text/event-stream",
+            description = "Each event contains one timeline bucket in JSON format.",
+            example = r#"data: {"timestamp": 1633036800000, "count": 42}\n"#
+        ),
+        (status = BAD_REQUEST, body = String, content_type = "text/plain",
+            description = "The query job ID is invalid or the job has no timeline configuration."),
+        (status = NOT_FOUND, description = "No query job with the given ID was found."),
+        (status = INTERNAL_SERVER_ERROR)
+    )
+)]
+async fn query_timeline(
+    State(client): State<Client>,
+    Path(query_job_id): Path<u64>,
+) -> Result<Sse<impl Stream<Item = Result<Event, HandlerError>>>, HandlerError> {
+    let buckets = client
+        .fetch_timeline(query_job_id)
+        .await
+        .inspect_err(|error| {
+            tracing::error!(query_job_id, error = ? error, "Failed to fetch timeline.");
+        })?;
+    let events = buckets.map(|bucket| Ok(Event::default().json_data(bucket?)?));
+    Ok(Sse::new(events).keep_alive(KeepAlive::default()))
+}
+
+#[utoipa::path(
     delete,
     path = "/query/{query_job_id}",
     description = "Cancels a previously submitted query job.",
@@ -409,6 +451,8 @@ impl From<ClientError> for HandlerError {
             | ClientError::QueryNotSucceeded
             | ClientError::Io(_)
             | ClientError::MalformedData
+            | ClientError::TimelineNotCommitted(_)
+            | ClientError::Timeline(_)
             | ClientError::TaskJoin(_)
             | ClientError::Aws { .. }
             | ClientError::ExtractionJobFailed { .. }
@@ -460,6 +504,26 @@ mod tests {
     use tower::ServiceExt;
 
     use super::*;
+
+    #[test]
+    fn timeline_errors_preserve_details_and_map_to_internal_server_error() {
+        let error = ClientError::from(clp_rust_utils::timeline::Error::NegativeCount { count: -1 });
+        assert!(matches!(
+            error,
+            ClientError::Timeline(clp_rust_utils::timeline::Error::NegativeCount { count: -1 })
+        ));
+        assert!(
+            error
+                .to_string()
+                .contains("timeline count must be nonnegative, got -1")
+        );
+        for error in [error, ClientError::TimelineNotCommitted(42)] {
+            assert_eq!(
+                HandlerError::from(error).into_response().status(),
+                StatusCode::INTERNAL_SERVER_ERROR
+            );
+        }
+    }
 
     #[tokio::test]
     async fn query_rejects_a_network_output_with_unprocessable_entity() -> anyhow::Result<()> {

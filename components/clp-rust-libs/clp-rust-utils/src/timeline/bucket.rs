@@ -2,13 +2,20 @@
 
 use mongodb::bson::Bson;
 use mongodb::bson::Document;
+use serde::Serialize;
+use utoipa::ToSchema;
 
 use super::Error;
 
 /// A validated timeline bucket with an integral timestamp and nonnegative count.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Serialize, ToSchema)]
+#[schema(as = TimelineBucket)]
 pub struct Bucket {
+    /// The bucket's start timestamp in epoch milliseconds.
     timestamp: i64,
+
+    /// The number of matching events in the bucket.
+    #[schema(minimum = 0)]
     count: i64,
 }
 
@@ -29,6 +36,31 @@ impl Bucket {
         self.count
     }
 
+    /// Constructs a bucket from a MongoDB document in the committed bucket format.
+    ///
+    /// # Returns
+    ///
+    /// The bucket on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`Error::NegativeCount`] if the count is negative.
+    /// * Forwards [`get_integer_field`]'s return values on failure.
+    pub fn try_from_committed_document(document: &Document) -> Result<Self, Error> {
+        let bucket = Self {
+            timestamp: get_integer_field(document, "_id")?,
+            count: get_integer_field(document, "count")?,
+        };
+        if bucket.count < 0 {
+            return Err(Error::NegativeCount {
+                count: bucket.count,
+            });
+        }
+        Ok(bucket)
+    }
+
     /// Constructs a bucket from a MongoDB aggregation document.
     ///
     /// # Returns
@@ -42,8 +74,8 @@ impl Bucket {
     /// * [`Error::InvalidArchiveBucket`] if the aggregate flags invalid archive buckets.
     /// * [`Error::CountOverflow`] if the sum of valid archive bucket counts overflows a BSON
     ///   integer.
-    /// * [`Error::NegativeCount`] if the count is negative.
     /// * Forwards [`get_integer_field`]'s return values on failure.
+    /// * Forwards [`Self::try_from_committed_document`]'s return values on failure.
     pub(super) fn try_from_aggregation_document(document: &Document) -> Result<Self, Error> {
         if get_integer_field(document, "invalid")? != 0 {
             return Err(Error::InvalidArchiveBucket);
@@ -53,16 +85,7 @@ impl Bucket {
         if matches!(document.get("count"), Some(Bson::Double(_))) {
             return Err(Error::CountOverflow);
         }
-        let bucket = Self {
-            timestamp: get_integer_field(document, "_id")?,
-            count: get_integer_field(document, "count")?,
-        };
-        if bucket.count < 0 {
-            return Err(Error::NegativeCount {
-                count: bucket.count,
-            });
-        }
-        Ok(bucket)
+        Self::try_from_committed_document(document)
     }
 }
 
