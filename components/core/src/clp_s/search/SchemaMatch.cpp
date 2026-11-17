@@ -133,6 +133,22 @@ auto add_operand_flattened(
 [[nodiscard]] auto operand_as_string(ast::FilterExpr const& filter) -> std::optional<std::string>;
 
 /**
+ * Determines whether a non-inverted `=` filter's comparison against a node's string storage class
+ * is necessarily false for every value of that class, so the node can be dropped from the filter's
+ * resolution without changing the records the filter matches.
+ *
+ * Such a node is a compatible occurrence of the leaf and contributes a defined False. Dropping it
+ * is only safe when no ancestor inverts the filter: under inversion, or for `!=`, the node would
+ * instead contribute a defined True, so dropping it would shrink the leaf's definition set.
+ * @param filter The filter whose column is being resolved.
+ * @param node A node the filter's column resolved to.
+ * @return Whether `node` can never satisfy `filter` and may be dropped during resolution.
+ */
+[[nodiscard]] auto
+is_unmatchable_node_for_positive_equality(ast::FilterExpr const& filter, SchemaNode const& node)
+        -> bool;
+
+/**
  * @param filter
  * @return Whether `filter` is an existence filter that is satisfied by a record in which its column
  * is absent, i.e. `NEXISTS` or inverted `EXISTS`.
@@ -257,6 +273,33 @@ auto operand_as_string(ast::FilterExpr const& filter) -> std::optional<std::stri
         return std::nullopt;
     }
     return query;
+}
+
+auto
+is_unmatchable_node_for_positive_equality(ast::FilterExpr const& filter, SchemaNode const& node)
+        -> bool {
+    if (filter.is_inverted() || FilterOperation::EQ != filter.get_operation()) {
+        return false;
+    }
+    for (auto const* ancestor{filter.get_parent()}; nullptr != ancestor;
+         ancestor = ancestor->get_parent())
+    {
+        if (ancestor->is_inverted()) {
+            return false;
+        }
+    }
+    auto const operand{filter.get_operand()};
+    if (nullptr == operand) {
+        return false;
+    }
+    switch (node.get_type()) {
+        case NodeType::ClpString:
+            return operand->can_never_equal_clp_string();
+        case NodeType::VarString:
+            return operand->can_never_equal_var_string();
+        default:
+            return false;
+    }
 }
 
 auto existence_filter_holds_when_absent(ast::FilterExpr const& filter) -> bool {
@@ -385,9 +428,11 @@ auto SchemaMatch::expand_unresolved_column(
         ast::ColumnDescriptor const& column,
         ast::FilterExpr const& filter
 ) -> std::shared_ptr<Expression> {
-    auto expanded{
-            build_multi_node_filter(column, column.resolved_nodes().wildcard_node_ids, filter)
-    };
+    auto wildcard_node_ids{column.resolved_nodes().wildcard_node_ids};
+    std::erase_if(wildcard_node_ids, [&](mpt_node_id_t const node_id) -> bool {
+        return is_unmatchable_node_for_positive_equality(filter, m_tree->get_node(node_id));
+    });
+    auto expanded{build_multi_node_filter(column, wildcard_node_ids, filter)};
     if (nullptr == expanded) {
         return EmptyExpr::create(filter.get_parent());
     }
@@ -523,8 +568,19 @@ auto SchemaMatch::populate_column_mapping(
         }
     }
 
+    std::erase_if(leaf_node_ids, [&](mpt_node_id_t const node_id) -> bool {
+        return is_unmatchable_node_for_positive_equality(
+                dynamic_cast<FilterExpr const&>(*expr),
+                m_tree->get_node(node_id)
+        );
+    });
     if (false == matched_node) {
         return nullptr;
+    }
+    if (leaf_node_ids.empty() && false == column->is_bound()
+        && false == column->is_unresolved_descriptor())
+    {
+        return EmptyExpr::create(expr->get_parent());
     }
     bool const any_decomposable{
             std::ranges::any_of(leaf_node_ids, [&](mpt_node_id_t node_id) -> bool {
