@@ -264,10 +264,10 @@ impl From<QueryOutputConfig> for QueryOutput {
 /// * `EventStreamType` - The stream of the job's events.
 pub struct SubmittedStreamingQuery<EventStreamType> {
     /// The ID of the submitted query job.
-    pub query_job_id: u64,
+    pub(crate) query_job_id: u64,
 
     /// The stream of the job's events.
-    pub events: EventStreamType,
+    pub(crate) events: EventStreamType,
 }
 
 #[derive(Clone)]

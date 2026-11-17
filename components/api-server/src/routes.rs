@@ -317,23 +317,26 @@ async fn stream_query(
     );
     // Spawned so that the submission runs to completion even if the client disconnects meanwhile,
     // which drops this handler: the task's output, including the stream of the submitted job's
-    // events, is then dropped, which requests the job's cancellation.
+    // events, is then dropped, which requests the job's cancellation. The task logs its own outcome
+    // for the same reason.
     let submission = tokio::spawn(async move {
         client
             .submit_streaming_query(&query_result_listener, streaming_query_config.query)
             .await
+            .inspect(|submitted_streaming_query| {
+                tracing::info!(
+                    query_job_id = submitted_streaming_query.query_job_id,
+                    "Submitted a streaming query."
+                );
+            })
+            .inspect_err(|error| {
+                tracing::error!(error = % error, "Failed to submit a streaming query.");
+            })
     });
-    let submitted_streaming_query = submission
-        .await
-        .map_err(ClientError::from)
-        .flatten()
-        .inspect_err(|error| {
-            tracing::error!(error = % error, "Failed to submit a streaming query.");
-        })?;
-    tracing::info!(
-        query_job_id = submitted_streaming_query.query_job_id,
-        "Submitted a streaming query."
-    );
+    let submitted_streaming_query = submission.await.map_err(|error| {
+        tracing::error!(error = % error, "The task submitting a streaming query failed.");
+        HandlerError::InternalServer
+    })??;
     Ok(submitted_streaming_query.into_sse_response())
 }
 
