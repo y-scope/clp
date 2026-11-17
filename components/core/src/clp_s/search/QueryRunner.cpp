@@ -7,6 +7,7 @@
 #include <string>
 #include <string_view>
 #include <type_traits>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -202,6 +203,15 @@ auto rewrite_nexists_array_op(ast::FilterOperation& op) -> bool {
             break;
     }
     throw ReaderUtils::OperationFailed(ErrorCodeUnsupported, __FILENAME__, __LINE__);
+}
+
+/**
+ * @return A shared empty variable-match set for a pure-wildcard filter whose literal can never
+ * equal a `VarString` value. The returned set must not be modified.
+ */
+[[nodiscard]] auto get_empty_var_match_set() -> std::unordered_set<int64_t>* {
+    static std::unordered_set<int64_t> empty_var_match_set{};
+    return &empty_var_match_set;
 }
 }  // namespace
 
@@ -490,26 +500,39 @@ auto QueryRunner::evaluate_wildcard_filter(FilterExpr* expr, int32_t schema) -> 
     };
     auto const& storage{m_wildcard_string_storage[column]};
     if (storage.clp) {
-        auto* const q{m_expr_clp_query.at(expr)};
-        for (auto const& entry : m_clp_string_readers) {
-            if (false == matches_metadata && m_metadata_columns.contains(entry.first)) {
-                continue;
-            }
-            if (collect(defined_value(evaluate_clp_string_filter(op, q, entry.second)))) {
-                return EvaluatedValue::True;
+        if (literal->can_never_equal_clp_string()) {
+            // The literal can never equal a `ClpString` value, but the class's scalar node is a
+            // compatible occurrence in every record, so it supplies the filter's definedness.
+            any_defined = true;
+        } else {
+            auto* const q{m_expr_clp_query.at(expr)};
+            for (auto const& entry : m_clp_string_readers) {
+                if (false == matches_metadata && m_metadata_columns.contains(entry.first)) {
+                    continue;
+                }
+                if (collect(defined_value(evaluate_clp_string_filter(op, q, entry.second)))) {
+                    return EvaluatedValue::True;
+                }
             }
         }
     }
 
     if (storage.var || storage.text) {
-        auto* const matching_vars{m_expr_var_match_map.at(expr)};
-        for (auto const& entry : m_var_string_readers) {
-            if (false == matches_metadata && m_metadata_columns.contains(entry.first)) {
-                continue;
-            }
-            if (collect(defined_value(evaluate_var_string_filter(op, entry.second, matching_vars))))
-            {
-                return EvaluatedValue::True;
+        if (storage.var && false == storage.text && literal->can_never_equal_var_string()) {
+            // As for the `ClpString` class, the scalar node supplies the filter's definedness.
+            any_defined = true;
+        } else {
+            auto* const matching_vars{m_expr_var_match_map.at(expr)};
+            for (auto const& entry : m_var_string_readers) {
+                if (false == matches_metadata && m_metadata_columns.contains(entry.first)) {
+                    continue;
+                }
+                if (collect(defined_value(
+                            evaluate_var_string_filter(op, entry.second, matching_vars)
+                    )))
+                {
+                    return EvaluatedValue::True;
+                }
             }
         }
     }
@@ -1368,6 +1391,12 @@ EvaluatedValue QueryRunner::constant_propagate(std::shared_ptr<Expression> const
             auto const node_type{
                     m_schema_tree->get_node(filter->get_column()->get_bound_node_id()).get_type()
             };
+            auto const& operand{*filter->get_operand()};
+            if ((NodeType::ClpString == node_type && operand.can_never_equal_clp_string())
+                || (NodeType::VarString == node_type && operand.can_never_equal_var_string()))
+            {
+                return fold_unmatchable_string_filter(*filter);
+            }
             bool can_match{};
             if (NodeType::ClpString == node_type) {
                 auto* const query{get_or_build_clp_query(query_string)};
@@ -1409,14 +1438,24 @@ auto QueryRunner::propagate_pure_wildcard_string_filter(
         throw ReaderUtils::OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
     }
     if (has_clp_storage) {
-        auto* const query{get_or_build_clp_query(filter_string)};
-        m_expr_clp_query[expr.get()] = query;
-        matches_clp_string = nullptr != query;
+        if (filter->get_operand()->can_never_equal_clp_string()) {
+            m_expr_clp_query[expr.get()] = nullptr;
+        } else {
+            auto* const query{get_or_build_clp_query(filter_string)};
+            m_expr_clp_query[expr.get()] = query;
+            matches_clp_string = nullptr != query;
+        }
     }
     if (has_var_storage) {
-        auto* const matching_vars{get_or_build_var_matches(filter_string)};
-        m_expr_var_match_map[expr.get()] = matching_vars;
-        matches_var_string = false == matching_vars->empty();
+        if (storage.var && false == storage.text
+            && filter->get_operand()->can_never_equal_var_string())
+        {
+            m_expr_var_match_map[expr.get()] = get_empty_var_match_set();
+        } else {
+            auto* const matching_vars{get_or_build_var_matches(filter_string)};
+            m_expr_var_match_map[expr.get()] = matching_vars;
+            matches_var_string = false == matching_vars->empty();
+        }
     }
 
     bool const any_string_type{has_clp_storage || has_var_storage};

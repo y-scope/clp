@@ -88,6 +88,8 @@ public:
      */
     [[nodiscard]] auto has_wildcard() const -> bool override { return 0 != m_wildcard_types; }
 
+    [[nodiscard]] auto get_string_space_class() const -> std::optional<StringSpaceClass> override;
+
 private:
     // Constructors
     /**

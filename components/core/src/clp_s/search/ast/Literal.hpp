@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <type_traits>
 
@@ -35,6 +36,18 @@ using literal_type_bitmask_t = std::underlying_type_t<LiteralType>;
 
 constexpr literal_type_bitmask_t cIntegralTypes = LiteralType::IntegerT | LiteralType::FloatT;
 constexpr literal_type_bitmask_t cAllTypes = TypesEnd - 1;
+
+/**
+ * Whether the string a literal is compared as against a string occurrence contains a space.
+ */
+enum class StringSpaceClass : uint8_t {
+    // A whole-value match against a string with no space.
+    ContainsNoSpace,
+    // The pattern has a literal space, so every match contains a space.
+    ContainsSpace,
+    // A wildcard without a literal space; `*` and `?` can match a space.
+    MayContainSpace
+};
 
 /**
  * Parent class for all Literals in the AST.
@@ -118,6 +131,32 @@ public:
     }
 
     [[nodiscard]] virtual auto has_wildcard() const -> bool { return false; }
+
+    /**
+     * @return The literal's string space class, or std::nullopt if it has no string
+     * interpretation.
+     */
+    [[nodiscard]] virtual auto get_string_space_class() const -> std::optional<StringSpaceClass> {
+        return std::nullopt;
+    }
+
+    /**
+     * @return Whether the literal's string interpretation can never equal a `ClpString` value,
+     * whose values all contain a space. Returns false if the literal has no string
+     * interpretation, since the comparison is then undefined rather than a defined non-match.
+     */
+    [[nodiscard]] auto can_never_equal_clp_string() const -> bool {
+        return StringSpaceClass::ContainsNoSpace == get_string_space_class();
+    }
+
+    /**
+     * @return Whether the literal's string interpretation can never equal a `VarString` value,
+     * whose values never contain a space. Returns false if the literal has no string
+     * interpretation, since the comparison is then undefined rather than a defined non-match.
+     */
+    [[nodiscard]] auto can_never_equal_var_string() const -> bool {
+        return StringSpaceClass::ContainsSpace == get_string_space_class();
+    }
 };
 }  // namespace clp_s::search::ast
 

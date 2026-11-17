@@ -260,6 +260,16 @@ auto ValueLiteral::can_match_op(LiteralType type, FilterOperation op) const -> b
     return can_match_scalar_op(type, op);
 }
 
+auto ValueLiteral::get_string_space_class() const -> std::optional<StringSpaceClass> {
+    if (0 == (m_types & LiteralType::StringT)) {
+        return std::nullopt;
+    }
+    if (std::string::npos != m_string.find(' ')) {
+        return StringSpaceClass::ContainsSpace;
+    }
+    return has_wildcard() ? StringSpaceClass::MayContainSpace : StringSpaceClass::ContainsNoSpace;
+}
+
 auto ValueLiteral::can_match_scalar_op(LiteralType type, FilterOperation op) const -> bool {
     switch (type) {
         case LiteralType::IntegerT:

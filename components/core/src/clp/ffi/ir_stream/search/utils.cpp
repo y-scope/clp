@@ -232,6 +232,11 @@ auto evaluate_string_filter_op_against_value(
     }
 
     if (value.is<std::string>()) {
+        // The serializer writes a plain string iff it contains no space, so a pattern with a
+        // literal space can never match one.
+        if (operand->can_never_equal_var_string()) {
+            return FilterOperation::NEQ == op;
+        }
         return evaluate_string_filter_op(
                 op,
                 filter_operand,
@@ -243,6 +248,11 @@ auto evaluate_string_filter_op_against_value(
     if (value.is<clp::ffi::EightByteEncodedTextAst>()
         || value.is<clp::ffi::FourByteEncodedTextAst>())
     {
+        // The serializer writes an encoded value iff the string contains a space, so a pattern
+        // without a space can never equal one. Avoid decoding it to match.
+        if (operand->can_never_equal_clp_string()) {
+            return FilterOperation::NEQ == op;
+        }
         auto const value_operand{YSTDLIB_ERROR_HANDLING_TRYX(
                 value.is<clp::ffi::EightByteEncodedTextAst>()
                         ? value.get_immutable_view<clp::ffi::EightByteEncodedTextAst>().to_string()
