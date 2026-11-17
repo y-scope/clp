@@ -56,12 +56,6 @@ using clp_s::search::ast::OrExpr;
 
 namespace clp_s::search {
 namespace {
-// The column types whose values are matched through the variable dictionary: a `VarString`
-// (`VarStringT`) or an `UnstructurizedText` (`StringT`) column.
-constexpr literal_type_bitmask_t cVarDictStringTypes{
-        LiteralType::VarStringT | LiteralType::StringT
-};
-
 /**
  * Evaluates a filter with a wildcard operand against numeric columns by matching the pattern
  * against each value's text. Readers that retain the value's original text (`FormattedFloat`,
@@ -122,9 +116,7 @@ auto evaluate_numeric_wildcard_filter(
         bool ignore_case
 ) -> bool {
     std::string pattern;
-    if (false == operand->as_var_string(pattern, op)
-        && false == operand->as_clp_string(pattern, op))
-    {
+    if (false == operand->as_string(pattern, op)) {
         return false;
     }
     std::string value_string;
@@ -187,11 +179,34 @@ auto rewrite_nexists_array_op(ast::FilterOperation& op) -> bool {
     op = ast::FilterOperation::EXISTS;
     return true;
 }
+
+/**
+ * Folds a string equality filter that no compatible value can match. Before inversion `EQ` is False
+ * and `NEQ` is True.
+ * @param filter
+ * @return The filter's value, with the filter's inversion applied.
+ * @throws ReaderUtils::OperationFailed if the filter's operation is not `EQ` or `NEQ`.
+ */
+[[nodiscard]] auto fold_unmatchable_string_filter(ast::FilterExpr const& filter) -> EvaluatedValue {
+    switch (filter.get_operation()) {
+        case ast::FilterOperation::EQ:
+            return filter.is_inverted() ? EvaluatedValue::True : EvaluatedValue::False;
+        case ast::FilterOperation::NEQ:
+            return filter.is_inverted() ? EvaluatedValue::False : EvaluatedValue::True;
+        case ast::FilterOperation::LT:
+        case ast::FilterOperation::GT:
+        case ast::FilterOperation::LTE:
+        case ast::FilterOperation::GTE:
+        case ast::FilterOperation::EXISTS:
+        case ast::FilterOperation::NEXISTS:
+            break;
+    }
+    throw ReaderUtils::OperationFailed(ErrorCodeUnsupported, __FILENAME__, __LINE__);
+}
 }  // namespace
 
 void QueryRunner::global_init() {
     populate_internal_columns();
-    populate_string_queries(m_expr);
 }
 
 auto QueryRunner::schema_init(int32_t schema_id) -> EvaluatedValue {
@@ -199,6 +214,8 @@ auto QueryRunner::schema_init(int32_t schema_id) -> EvaluatedValue {
     m_expr_clp_query.clear();
     m_expr_var_match_map.clear();
     m_wildcard_to_searched_basic_columns.clear();
+    m_wildcard_string_storage.clear();
+    m_wildcard_columns_absent_is_identity.clear();
     m_wildcard_columns.clear();
     m_expr = m_schema_expressions.at(schema_id);
     m_schema = schema_id;
@@ -460,10 +477,8 @@ auto QueryRunner::evaluate_inverted_filter(FilterExpr* expr, int32_t schema) -> 
 
 auto QueryRunner::evaluate_wildcard_filter(FilterExpr* expr, int32_t schema) -> EvaluatedValue {
     bool any_defined{false};
-    bool any_unknown{false};
-    auto const collect{[&any_defined, &any_unknown](EvaluatedValue const value) -> bool {
+    auto const collect{[&any_defined](EvaluatedValue const value) -> bool {
         any_defined |= EvaluatedValue::Unknown != value;
-        any_unknown |= EvaluatedValue::Unknown == value;
         return EvaluatedValue::True == value;
     }};
     auto literal = expr->get_operand();
@@ -473,8 +488,9 @@ auto QueryRunner::evaluate_wildcard_filter(FilterExpr* expr, int32_t schema) -> 
     auto const matches_metadata{
             subtree_type.has_value() && constants::cMetadataSubtreeType == subtree_type.value()
     };
-    if (column->matches_type(LiteralType::ClpStringT)) {
-        auto* q = m_expr_clp_query.at(expr);
+    auto const& storage{m_wildcard_string_storage[column]};
+    if (storage.clp) {
+        auto* const q{m_expr_clp_query.at(expr)};
         for (auto const& entry : m_clp_string_readers) {
             if (false == matches_metadata && m_metadata_columns.contains(entry.first)) {
                 continue;
@@ -485,8 +501,8 @@ auto QueryRunner::evaluate_wildcard_filter(FilterExpr* expr, int32_t schema) -> 
         }
     }
 
-    if (column->matches_any(cVarDictStringTypes)) {
-        std::unordered_set<int64_t>* matching_vars = m_expr_var_match_map[expr];
+    if (storage.var || storage.text) {
+        auto* const matching_vars{m_expr_var_match_map.at(expr)};
         for (auto const& entry : m_var_string_readers) {
             if (false == matches_metadata && m_metadata_columns.contains(entry.first)) {
                 continue;
@@ -527,7 +543,10 @@ auto QueryRunner::evaluate_wildcard_filter(FilterExpr* expr, int32_t schema) -> 
         }
     }
 
-    return any_defined || false == any_unknown ? EvaluatedValue::False : EvaluatedValue::Unknown;
+    if (any_defined || absent_occurrences_are_identity(column)) {
+        return EvaluatedValue::False;
+    }
+    return EvaluatedValue::Unknown;
 }
 
 auto QueryRunner::evaluate_wildcard_basic_column(
@@ -584,27 +603,23 @@ auto QueryRunner::evaluate_scalar_filter(FilterExpr* expr, int32_t schema) -> bo
                                : m_var_string_readers.try_emplace(node_id).first->second;
             }
     };
-    clp::Query* q = nullptr;
-    std::unordered_set<int64_t>* matching_vars = nullptr;
     switch (column->get_literal_type()) {
         case LiteralType::IntegerT:
             return evaluate_int_filter(expr->get_operation(), get_basic_readers(), literal);
         case LiteralType::FloatT:
             return evaluate_float_filter(expr->get_operation(), get_basic_readers(), literal);
-        case LiteralType::ClpStringT:
-            q = m_expr_clp_query.at(expr);
-            return evaluate_clp_string_filter(
-                    expr->get_operation(),
-                    q,
-                    m_clp_string_readers.try_emplace(node_id).first->second
-            );
-        case LiteralType::VarStringT:
         case LiteralType::StringT:
-            matching_vars = m_expr_var_match_map.at(expr);
+            if (NodeType::ClpString == m_schema_tree->get_node(node_id).get_type()) {
+                return evaluate_clp_string_filter(
+                        expr->get_operation(),
+                        m_expr_clp_query.at(expr),
+                        m_clp_string_readers.try_emplace(node_id).first->second
+                );
+            }
             return evaluate_var_string_filter(
                     expr->get_operation(),
                     get_var_string_readers(),
-                    matching_vars
+                    m_expr_var_match_map.at(expr)
             );
         case LiteralType::BooleanT:
             return evaluate_bool_filter(expr->get_operation(), get_basic_readers(), literal);
@@ -835,9 +850,7 @@ auto QueryRunner::evaluate_array_filter(
 auto QueryRunner::prepare_array_search(FilterOperation op, std::shared_ptr<Literal> const& operand)
         -> void {
     bool const searches_for_value{FilterOperation::EXISTS != op && FilterOperation::NEXISTS != op};
-    m_maybe_string = searches_for_value
-                     && (operand->as_var_string(m_array_search_string, op)
-                         || operand->as_clp_string(m_array_search_string, op));
+    m_maybe_string = searches_for_value && operand->as_string(m_array_search_string, op);
     m_maybe_number = searches_for_value
                      && (operand->can_match_op(LiteralType::IntegerT, op)
                          || operand->can_match_op(LiteralType::FloatT, op));
@@ -1115,76 +1128,58 @@ bool QueryRunner::evaluate_bool_filter(
     return false;
 }
 
-void QueryRunner::populate_string_queries(std::shared_ptr<Expression> const& expr) {
-    if (expr->has_only_expression_operands()) {
-        for (auto const& op : expr->get_op_list()) {
-            populate_string_queries(std::static_pointer_cast<Expression>(op));
-        }
-        return;
+auto QueryRunner::get_or_build_clp_query(std::string const& query_string) -> clp::Query* {
+    auto const existing{m_string_query_map.find(query_string)};
+    if (m_string_query_map.end() != existing) {
+        return existing->second.has_value() ? &existing->second.value() : nullptr;
     }
 
-    auto filter = std::dynamic_pointer_cast<FilterExpr>(expr);
-    if (filter != nullptr
-        && !(filter->get_operation() == FilterOperation::EXISTS
-             || filter->get_operation() == FilterOperation::NEXISTS))
-    {
-        if (ClpFlavour::Clps == m_flavour
-            && filter->get_column()->matches_type(LiteralType::ClpStringT))
-        {
-            std::string query_string;
-            filter->get_operand()->as_clp_string(query_string, filter->get_operation());
-
-            if (m_string_query_map.count(query_string)) {
-                return;
-            }
-
-            // search on log type dictionary
-            clp::epochtime_t placeholder_timestamp{};
-            m_string_query_map.emplace(
+    // search on log type dictionary
+    clp::epochtime_t placeholder_timestamp{};
+    auto const [it, _]{m_string_query_map.emplace(
+            query_string,
+            clp::GrepCore::process_raw_query(
+                    *m_archive_reader->get_log_type_dictionary(),
+                    *m_archive_reader->get_variable_dictionary(),
                     query_string,
-                    clp::GrepCore::process_raw_query(
-                            *m_archive_reader->get_log_type_dictionary(),
-                            *m_archive_reader->get_variable_dictionary(),
-                            query_string,
-                            placeholder_timestamp,
-                            placeholder_timestamp,
-                            m_ignore_case
-                    )
-            );
+                    placeholder_timestamp,
+                    placeholder_timestamp,
+                    m_ignore_case
+            )
+    )};
+    return it->second.has_value() ? &it->second.value() : nullptr;
+}
+
+auto QueryRunner::get_or_build_var_matches(std::string const& query_string)
+        -> std::unordered_set<int64_t>* {
+    auto const existing{m_string_var_match_map.find(query_string)};
+    if (m_string_var_match_map.end() != existing) {
+        return &existing->second;
+    }
+
+    auto& matching_vars{m_string_var_match_map[query_string]};
+    auto const var_dict{m_archive_reader->get_variable_dictionary()};
+    if (false == ast::has_unescaped_wildcards(query_string)) {
+        auto const unescaped_query_string{clp::string_utils::unescape_string(query_string)};
+        auto const entries{
+                var_dict->get_entry_matching_value(unescaped_query_string, m_ignore_case)
+        };
+
+        for (auto const& entry : entries) {
+            matching_vars.insert(entry->get_id());
         }
-
-        if (filter->get_column()->matches_any(cVarDictStringTypes)) {
-            std::string query_string;
-            filter->get_operand()->as_var_string(query_string, filter->get_operation());
-            if (false == m_string_var_match_map.contains(query_string)) {
-                auto const var_dict{m_archive_reader->get_variable_dictionary()};
-                std::unordered_set<int64_t>& matching_vars = m_string_var_match_map[query_string];
-                if (false == ast::has_unescaped_wildcards(query_string)) {
-                    auto const unescaped_query_string{
-                            clp::string_utils::unescape_string(query_string)
-                    };
-                    auto const entries = var_dict->get_entry_matching_value(
-                            unescaped_query_string,
-                            m_ignore_case
-                    );
-
-                    for (auto const& entry : entries) {
-                        matching_vars.insert(entry->get_id());
-                    }
-                } else {
-                    std::unordered_set<VariableDictionaryEntry const*> matching_entries;
-                    var_dict->get_entries_matching_wildcard_string(
-                            query_string,
-                            m_ignore_case,
-                            matching_entries
-                    );
-                    for (auto const& entry : matching_entries) {
-                        matching_vars.emplace(entry->get_id());
-                    }
-                }
-            }
+    } else {
+        std::unordered_set<VariableDictionaryEntry const*> matching_entries;
+        var_dict->get_entries_matching_wildcard_string(
+                query_string,
+                m_ignore_case,
+                matching_entries
+        );
+        for (auto const& entry : matching_entries) {
+            matching_vars.emplace(entry->get_id());
         }
     }
+    return &matching_vars;
 }
 
 void QueryRunner::populate_internal_columns() {
@@ -1211,31 +1206,57 @@ void QueryRunner::populate_searched_wildcard_columns(std::shared_ptr<Expression>
             return;
         }
         m_wildcard_columns.push_back(col);
+        auto& storage{m_wildcard_string_storage[col]};
         literal_type_bitmask_t matching_types{0};
-        (*m_schemas)[m_schema].get_view().for_each_node_id([&](mpt_node_id_t node) -> void {
+        // `for_each_node_id` skips the roots stored as unordered-object metadata, but the
+        // `StructurizedText` and `ParentRule` roots are decomposable. They must be visited to know
+        // whether the record is defined through the decomposed filters.
+        auto const& schema_view{(*m_schemas)[m_schema].get_view()};
+        static_cast<void>(schema_view.any_node_id<true>([&](mpt_node_id_t node) -> bool {
             if (m_metadata_columns.contains(node)) {
-                return;
+                return false;
             }
             auto const& tree_node{m_schema_tree->get_node(node)};
-            // Decomposable nodes have no column reader; schema matching has already expanded the
-            // filter over them.
-            if (tree_node.is_decomposable()) {
-                return;
-            }
             auto const tree_node_type{tree_node.get_type()};
-            if (col->matches_type(SchemaNode::node_to_literal_type(tree_node_type))) {
-                auto literal_type = SchemaNode::node_to_literal_type(tree_node_type);
-                matching_types |= literal_type;
-                if (NodeType::ClpString != tree_node_type && NodeType::VarString != tree_node_type
-                    && NodeType::UnstructurizedText != tree_node_type
-                    && NodeType::DeprecatedDateString != tree_node_type)
-                {
-                    m_wildcard_to_searched_basic_columns[col].insert(node);
+            // Decomposable nodes have no column reader; schema matching has already expanded the
+            // filter over them. A record in this schema is defined through the decomposed filters,
+            // so the non-decomposable part's absent occurrences are the filter's identity.
+            if (tree_node.is_decomposable()) {
+                if (col->excludes_decomposable_nodes()) {
+                    m_wildcard_columns_absent_is_identity.insert(col);
                 }
+                return false;
             }
-        });
+            auto const literal_type{SchemaNode::node_to_literal_type(tree_node_type)};
+            if (false == col->matches_type(literal_type)) {
+                return false;
+            }
+            matching_types |= literal_type;
+            switch (tree_node_type) {
+                case NodeType::ClpString:
+                    storage.clp = true;
+                    break;
+                case NodeType::VarString:
+                    storage.var = true;
+                    break;
+                case NodeType::UnstructurizedText:
+                    storage.text = true;
+                    break;
+                case NodeType::DeprecatedDateString:
+                    break;
+                default:
+                    m_wildcard_to_searched_basic_columns[col].insert(node);
+                    break;
+            }
+            return false;
+        }));
         col->set_matching_types(matching_types);
     }
+}
+
+auto QueryRunner::absent_occurrences_are_identity(ast::ColumnDescriptor const* column) const
+        -> bool {
+    return m_wildcard_columns_absent_is_identity.contains(column);
 }
 
 void QueryRunner::add_wildcard_columns_to_searched_columns() {
@@ -1325,55 +1346,42 @@ EvaluatedValue QueryRunner::constant_propagate(std::shared_ptr<Expression> const
                 return EvaluatedValue::True;
             }
         } else if (filter->get_column()->is_pure_wildcard()
-                   && filter->get_column()->matches_any(
-                           LiteralType::ClpStringT | cVarDictStringTypes
-                   ))
+                   && false == filter->get_column()->matches_any(ast::cAllTypes))
+        {
+            // No node in this schema is compatible with the filter, so the leaf is undefined on
+            // every record of the schema. Its inverted flag cannot make an undefined leaf true.
+            // NOTE: The non-decomposable part of a split pure wildcard instead contributes its
+            // identity, which is False before inversion (as in `evaluate_wildcard_filter`).
+            if (absent_occurrences_are_identity(filter->get_column().get())) {
+                return filter->is_inverted() ? EvaluatedValue::True : EvaluatedValue::False;
+            }
+            return EvaluatedValue::False;
+        } else if (filter->get_column()->is_pure_wildcard()
+                   && filter->get_column()->matches_type(LiteralType::StringT))
         {
             return propagate_pure_wildcard_string_filter(expr, filter);
-        } else if (ClpFlavour::Clps == m_flavour
-                   && filter->get_column()->matches_type(LiteralType::ClpStringT))
-        {
-            std::string filter_string;
-            filter->get_operand()->as_clp_string(filter_string, filter->get_operation());
-
-            // set up string query for this filter
-            auto& query_processing_result = m_string_query_map.at(filter_string);
-            if (query_processing_result.has_value()) {
-                m_expr_clp_query[expr.get()] = &(query_processing_result.value());
-                return EvaluatedValue::Unknown;
-            } else {
-                m_expr_clp_query[expr.get()] = nullptr;
-                // If filter can not match then return it's guaranteed value based on
-                // whether the filter is inverted and whether the operation was == or !=
-                if (filter->get_operation() == FilterOperation::EQ) {
-                    return filter->is_inverted() ? EvaluatedValue::True : EvaluatedValue::False;
-                } else if (filter->get_operation() == FilterOperation::NEQ) {
-                    return filter->is_inverted() ? EvaluatedValue::False : EvaluatedValue::True;
-                }
-                // FIXME: throw
-                return EvaluatedValue::False;
-            }
-        } else if (filter->get_column()->matches_any(cVarDictStringTypes)) {
-            std::string filter_string;
-            filter->get_operand()->as_var_string(filter_string, filter->get_operation());
-
-            // set up string query for this filter
-            m_expr_var_match_map[expr.get()] = &m_string_var_match_map.at(filter_string);
-
-            // use string queries to potentially propagate known result
-            if (m_expr_var_match_map.at(expr.get())->empty()) {
-                // If filter can not match then return it's guaranteed value based on
-                // whether the filter is inverted and whether the operation was == or !=
-                if (filter->get_operation() == FilterOperation::EQ) {
-                    return filter->is_inverted() ? EvaluatedValue::True : EvaluatedValue::False;
-                } else if (filter->get_operation() == FilterOperation::NEQ) {
-                    return filter->is_inverted() ? EvaluatedValue::False : EvaluatedValue::True;
-                }
-                // FIXME: throw
-                return EvaluatedValue::False;
-            } else {
+        } else if (filter->get_column()->matches_type(LiteralType::StringT)) {
+            std::string query_string;
+            if (false == filter->get_operand()->as_string(query_string, filter->get_operation())) {
                 return EvaluatedValue::Unknown;
             }
+            auto const node_type{
+                    m_schema_tree->get_node(filter->get_column()->get_bound_node_id()).get_type()
+            };
+            bool can_match{};
+            if (NodeType::ClpString == node_type) {
+                auto* const query{get_or_build_clp_query(query_string)};
+                m_expr_clp_query[expr.get()] = query;
+                can_match = nullptr != query;
+            } else {
+                auto* const matching_vars{get_or_build_var_matches(query_string)};
+                m_expr_var_match_map[expr.get()] = matching_vars;
+                can_match = false == matching_vars->empty();
+            }
+            if (can_match) {
+                return EvaluatedValue::Unknown;
+            }
+            return fold_unmatchable_string_filter(*filter);
         } else {
             return EvaluatedValue::Unknown;
         }
@@ -1386,62 +1394,43 @@ auto QueryRunner::propagate_pure_wildcard_string_filter(
         std::shared_ptr<Expression> const& expr,
         std::shared_ptr<FilterExpr> const& filter
 ) -> EvaluatedValue {
-    auto* wildcard = filter->get_column().get();
-    bool has_var_string = false;
-    bool matches_var_string = false;
-    bool has_clp_string = false;
-    bool matches_clp_string = false;
+    auto* const wildcard{filter->get_column().get()};
+    auto const& storage{m_wildcard_string_storage[wildcard]};
+    bool const has_clp_storage{storage.clp};
+    bool const has_var_storage{storage.var || storage.text};
+    bool matches_clp_string{false};
+    bool matches_var_string{false};
     constexpr literal_type_bitmask_t cOtherTypes = LiteralType::ArrayT | ast::cIntegralTypes
                                                    | LiteralType::NullT | LiteralType::BooleanT
                                                    | LiteralType::TimestampT;
     bool const has_other = wildcard->matches_any(cOtherTypes);
     std::string filter_string;
-    bool const valid
-            = filter->get_operand()->as_var_string(filter_string, filter->get_operation())
-              || filter->get_operand()->as_clp_string(filter_string, filter->get_operation());
-    if (false == valid) {
+    if (false == filter->get_operand()->as_string(filter_string, filter->get_operation())) {
         throw ReaderUtils::OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
     }
-    if (filter->get_column()->matches_type(LiteralType::ClpStringT)) {
-        if (ClpFlavour::Clpp == m_flavour) {
-            m_expr_clp_query[expr.get()] = nullptr;
-        } else {
-            auto& query_processing_result = m_string_query_map.at(filter_string);
-            if (query_processing_result.has_value()) {
-                m_expr_clp_query[expr.get()] = &(query_processing_result.value());
-                matches_clp_string = true;
-            } else {
-                m_expr_clp_query[expr.get()] = nullptr;
-            }
-        }
-        has_clp_string = wildcard->matches_type(LiteralType::ClpStringT);
+    if (has_clp_storage) {
+        auto* const query{get_or_build_clp_query(filter_string)};
+        m_expr_clp_query[expr.get()] = query;
+        matches_clp_string = nullptr != query;
     }
-    if (filter->get_column()->matches_any(cVarDictStringTypes)) {
-        m_expr_var_match_map[expr.get()] = &m_string_var_match_map.at(filter_string);
-        has_var_string = wildcard->matches_any(cVarDictStringTypes);
-        matches_var_string = !m_expr_var_match_map.at(expr.get())->empty();
+    if (has_var_storage) {
+        auto* const matching_vars{get_or_build_var_matches(filter_string)};
+        m_expr_var_match_map[expr.get()] = matching_vars;
+        matches_var_string = false == matching_vars->empty();
     }
 
-    bool const any_string_type{has_clp_string || has_var_string};
+    bool const any_string_type{has_clp_storage || has_var_storage};
     bool const no_string_matches{false == matches_clp_string && false == matches_var_string};
     if (filter->get_operation() == FilterOperation::EQ) {
-        if (false == has_other) {
-            if (false == matches_clp_string) {
-                wildcard->remove_matching_type(LiteralType::ClpStringT);
-            }
-            if (false == matches_var_string) {
-                wildcard->remove_matching_types(cVarDictStringTypes);
-            }
-            if (any_string_type && no_string_matches) {
-                return filter->is_inverted() ? EvaluatedValue::True : EvaluatedValue::False;
-            }
+        if (false == has_other && any_string_type && no_string_matches) {
+            return filter->is_inverted() ? EvaluatedValue::True : EvaluatedValue::False;
         }
         return EvaluatedValue::Unknown;
     }
     if (filter->get_operation() == FilterOperation::NEQ) {
         bool const some_string_unmatched{
-                (has_clp_string && false == matches_clp_string)
-                || (has_var_string && false == matches_var_string)
+                (has_clp_storage && false == matches_clp_string)
+                || (has_var_storage && false == matches_var_string)
         };
         if (some_string_unmatched) {
             return filter->is_inverted() ? EvaluatedValue::False : EvaluatedValue::True;
