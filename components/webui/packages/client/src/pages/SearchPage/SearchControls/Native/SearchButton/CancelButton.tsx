@@ -13,32 +13,21 @@ import {handleQueryCancel} from "../search-requests";
  * @return
  */
 const CancelButton = () => {
-    const {searchJobId, aggregationJobId} = useSearchStore();
+    const searchJobId = useSearchStore((state) => state.searchJobId);
 
     /**
      * Cancels search query.
      */
     const handleCancelButtonClick = useCallback(() => {
-        // Note it should be impossible to for searchJobId or aggregationJobId to be null,
+        // Note it should be impossible for searchJobId to be null,
         // since the button is only rendered when there is an active query.
         if (null === searchJobId) {
             console.error("Cannot cancel query: searchJobId is not set.");
 
             return;
         }
-        if (null === aggregationJobId) {
-            console.error("Cannot cancel query: aggregationJobId is not set.");
-
-            return;
-        }
-        handleQueryCancel(
-            {
-                searchJobId: Number(searchJobId),
-                aggregationJobId: Number(aggregationJobId),
-            }
-        );
-    }, [searchJobId,
-        aggregationJobId]);
+        handleQueryCancel(Number(searchJobId));
+    }, [searchJobId]);
 
     return (
         <Button
