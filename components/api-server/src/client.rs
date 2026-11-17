@@ -4,6 +4,7 @@ use std::time::Duration;
 
 use async_stream::stream;
 use async_stream::try_stream;
+use axum::body::Bytes;
 use chrono::DateTime;
 use chrono::TimeZone;
 use chrono::Utc;
@@ -34,6 +35,9 @@ use mongodb::options::Hint;
 use mongodb::options::ReadPreference;
 use mongodb::options::SelectionCriteria;
 use pin_project_lite::pin_project;
+use query_result_listener::listener::ResultListener;
+use query_result_listener::session::SessionConfig;
+use query_result_listener::session::SessionEvent;
 use serde::Deserialize;
 use serde::Serialize;
 use sqlx::Row;
@@ -41,6 +45,7 @@ use utoipa::IntoParams;
 use utoipa::ToSchema;
 
 pub use crate::error::ClientError;
+use crate::sse::SseEncoding;
 
 /// Default job statuses to include when the caller does not specify `job_status`.
 /// Covers all terminal states that consumed compute resources (succeeded, failed).
@@ -252,6 +257,19 @@ impl From<QueryOutputConfig> for QueryOutput {
     }
 }
 
+/// A streaming query whose job has been submitted, with the stream of the job's events.
+///
+/// # Type Parameters
+///
+/// * `EventStreamType` - The stream of the job's events.
+pub struct SubmittedStreamingQuery<EventStreamType> {
+    /// The ID of the submitted query job.
+    pub query_job_id: u64,
+
+    /// The stream of the job's events.
+    pub events: EventStreamType,
+}
+
 #[derive(Clone)]
 pub struct Client {
     #[allow(clippy::struct_field_names)]
@@ -297,6 +315,69 @@ impl Client {
         query_job_config: &QueryJobConfig,
     ) -> Result<u64, ClientError> {
         Ok(query_job::submit(&self.sql_pool, query_job_config).await?)
+    }
+
+    /// Submits a query job that runs `query` and streams its results to a new session of
+    /// `query_result_listener`.
+    ///
+    /// # Returns
+    ///
+    /// The submitted streaming query on success. Its events come from
+    /// [`OpenSession::into_events`](query_result_listener::session::OpenSession::into_events),
+    /// which finds the job terminated by reading its status with the backoff of the API
+    /// server's query job polling configuration, and requests the job's cancellation with
+    /// [`Client::cancel_query_job`], logging the request's outcome.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`ResultListener::open_session`]'s return values on failure.
+    /// * Forwards [`Client::submit_query`]'s return values on failure.
+    pub async fn submit_streaming_query(
+        &self,
+        query_result_listener: &ResultListener<SseEncoding>,
+        query: SearchQuery,
+    ) -> Result<
+        SubmittedStreamingQuery<impl Stream<Item = SessionEvent<Bytes>> + Send + use<>>,
+        ClientError,
+    > {
+        let open_session = query_result_listener.open_session(SessionConfig::default())?;
+        let query_job_config = QueryJobConfig {
+            query,
+            output: QueryOutput::Network(open_session.network_output().clone()),
+        };
+        let query_job_id = self.submit_query(&query_job_config).await?;
+
+        let wait_for_termination = {
+            let client = self.clone();
+            async move { client.wait_for_query_job_termination(query_job_id).await }
+        };
+        let request_cancellation = {
+            let client = self.clone();
+            async move {
+                match client.cancel_query_job(query_job_id).await {
+                    Ok(()) => tracing::info!(
+                        query_job_id,
+                        "Requested the cancellation of a streaming query's job."
+                    ),
+                    Err(ClientError::QueryJobAlreadyTerminated(_)) => tracing::info!(
+                        query_job_id,
+                        "Skipped the cancellation of a streaming query's job, which had already \
+                         terminated."
+                    ),
+                    Err(error) => tracing::warn!(
+                        query_job_id,
+                        error = % error,
+                        "Failed to request the cancellation of a streaming query's job."
+                    ),
+                }
+            }
+        };
+        Ok(SubmittedStreamingQuery {
+            query_job_id,
+            events: open_session.into_events(wait_for_termination, request_cancellation),
+        })
     }
 
     /// Asynchronously fetches the results of a completed query job.
@@ -492,7 +573,7 @@ impl Client {
     /// Returns an error if:
     ///
     /// * Forwards [`Client::get_status`]'s return values on failure.
-    pub(crate) async fn wait_for_query_job_termination(
+    async fn wait_for_query_job_termination(
         &self,
         query_job_id: u64,
     ) -> Result<QueryJobStatus, ClientError> {
@@ -914,8 +995,8 @@ where
 /// The backoff between the reads of a query job's status: the first delay is the configured initial
 /// backoff, and each next delay doubles the previous one, up to the configured maximum backoff.
 struct QueryJobPollingBackoff {
-    delay_ms: u64,
-    max_delay_ms: u64,
+    delay: Duration,
+    max_delay: Duration,
 }
 
 impl QueryJobPollingBackoff {
@@ -926,8 +1007,8 @@ impl QueryJobPollingBackoff {
     /// A newly created backoff that `config` configures, starting at its first delay.
     const fn new(config: &QueryJobPollingConfig) -> Self {
         Self {
-            delay_ms: config.initial_backoff_ms,
-            max_delay_ms: config.max_backoff_ms,
+            delay: Duration::from_millis(config.initial_backoff_ms),
+            max_delay: Duration::from_millis(config.max_backoff_ms),
         }
     }
 
@@ -936,8 +1017,8 @@ impl QueryJobPollingBackoff {
     /// The delay before the next read of the status. The delay after it is doubled, up to the
     /// maximum.
     fn next_delay(&mut self) -> Duration {
-        let delay = Duration::from_millis(self.delay_ms);
-        self.delay_ms = std::cmp::min(self.delay_ms.saturating_mul(2), self.max_delay_ms);
+        let delay = self.delay;
+        self.delay = std::cmp::min(self.delay.saturating_mul(2), self.max_delay);
         delay
     }
 }

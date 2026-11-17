@@ -16,14 +16,11 @@ use axum::response::sse::KeepAlive;
 use axum::routing::get;
 use clp_rust_utils::job_config::QueryJobConfig;
 use clp_rust_utils::job_config::QueryJobStatus;
-use clp_rust_utils::job_config::QueryOutput;
-use clp_rust_utils::job_config::SearchQuery;
 use clp_rust_utils::logs_input::LogsInputError;
 use clp_rust_utils::timeline::Bucket;
 use futures::Stream;
 use futures::StreamExt;
 use query_result_listener::listener::ResultListener;
-use query_result_listener::session::SessionConfig;
 use query_result_listener::session::SessionEvent;
 use query_result_listener::session::SessionStats;
 use serde::Deserialize;
@@ -43,6 +40,7 @@ use crate::client::CompressionUsage;
 use crate::client::CompressionUsageParams;
 use crate::client::QueryConfig;
 use crate::client::StreamingQueryConfig;
+use crate::client::SubmittedStreamingQuery;
 use crate::client::ValidatedCompressionUsageParams;
 pub use crate::sse::SseEncoding;
 use crate::sse::SseResponse;
@@ -320,98 +318,23 @@ async fn stream_query(
     // Spawned so that the submission runs to completion even if the client disconnects meanwhile,
     // which drops this handler: the task's output, including the stream of the submitted job's
     // events, is then dropped, which requests the job's cancellation.
-    let submission = tokio::spawn(submit_streaming_query(
-        client,
-        query_result_listener,
-        streaming_query_config.query,
-    ));
-    let submitted_streaming_query = submission.await.map_err(|error| {
-        tracing::error!(error = % error, "The task submitting a streaming query failed.");
-        HandlerError::InternalServer
-    })??;
-    Ok(submitted_streaming_query.into_sse_response())
-}
-
-/// Opens a session on `query_result_listener`, submits a query job that runs `query` and streams
-/// its results to the session, and streams the job's events.
-///
-/// A failure to open the session or to submit the job is logged.
-///
-/// # Returns
-///
-/// The submitted streaming query on success. Its events come from
-/// [`OpenSession::into_events`](query_result_listener::session::OpenSession::into_events), which
-/// finds the job terminated with [`Client::wait_for_query_job_termination`], and requests the job's
-/// cancellation with [`Client::cancel_query_job`], logging the request's outcome.
-///
-/// # Errors
-///
-/// Returns an error if:
-///
-/// * [`HandlerError::InternalServer`] if the session can't be opened.
-/// * Forwards [`Client::submit_query`]'s return values on failure.
-async fn submit_streaming_query(
-    client: Client,
-    query_result_listener: Arc<ResultListener<SseEncoding>>,
-    query: SearchQuery,
-) -> Result<SubmittedStreamingQuery<impl Stream<Item = SessionEvent<Bytes>> + Send>, HandlerError> {
-    let open_session = query_result_listener
-        .open_session(SessionConfig::default())
-        .map_err(|error| {
-            tracing::error!(
-                error = % error,
-                "Failed to open the session of a streaming query."
-            );
-            HandlerError::InternalServer
-        })?;
-    let query_job_config = QueryJobConfig {
-        query,
-        output: QueryOutput::Network(open_session.network_output().clone()),
-    };
-    let query_job_id = client
-        .submit_query(&query_job_config)
+    let submission = tokio::spawn(async move {
+        client
+            .submit_streaming_query(&query_result_listener, streaming_query_config.query)
+            .await
+    });
+    let submitted_streaming_query = submission
         .await
+        .map_err(ClientError::from)
+        .flatten()
         .inspect_err(|error| {
             tracing::error!(error = % error, "Failed to submit a streaming query.");
         })?;
-    tracing::info!(query_job_id, "Submitted a streaming query.");
-
-    let wait_for_termination = {
-        let client = client.clone();
-        async move { client.wait_for_query_job_termination(query_job_id).await }
-    };
-    let request_cancellation = async move {
-        match client.cancel_query_job(query_job_id).await {
-            Ok(()) => tracing::info!(
-                query_job_id,
-                "Requested the cancellation of a streaming query's job."
-            ),
-            Err(ClientError::QueryJobAlreadyTerminated(_)) => tracing::info!(
-                query_job_id,
-                "Skipped the cancellation of a streaming query's job, which had already \
-                 terminated."
-            ),
-            Err(error) => tracing::warn!(
-                query_job_id,
-                error = % error,
-                "Failed to request the cancellation of a streaming query's job."
-            ),
-        }
-    };
-    Ok(SubmittedStreamingQuery {
-        query_job_id,
-        events: open_session.into_events(wait_for_termination, request_cancellation),
-    })
-}
-
-/// A streaming query whose job has been submitted, with the stream of the job's events.
-///
-/// # Type Parameters
-///
-/// * `EventStreamType` - The stream of the job's events.
-struct SubmittedStreamingQuery<EventStreamType> {
-    query_job_id: u64,
-    events: EventStreamType,
+    tracing::info!(
+        query_job_id = submitted_streaming_query.query_job_id,
+        "Submitted a streaming query."
+    );
+    Ok(submitted_streaming_query.into_sse_response())
 }
 
 impl<EventStreamType: Stream<Item = SessionEvent<Bytes>> + Send + 'static>
@@ -733,6 +656,7 @@ impl From<ClientError> for HandlerError {
             | ClientError::MalformedData
             | ClientError::TimelineNotCommitted(_)
             | ClientError::Timeline(_)
+            | ClientError::QueryResultSession(_)
             | ClientError::TaskJoin(_)
             | ClientError::Aws { .. }
             | ClientError::ExtractionJobFailed { .. }
@@ -1070,6 +994,9 @@ mod tests {
 
     #[test]
     fn client_errors_map_to_their_statuses() -> anyhow::Result<()> {
+        use clp_rust_utils::types::SessionToken;
+        use query_result_listener::SessionError;
+
         for (error, expected_status) in [
             (ClientError::QueryJobNotFound(1), StatusCode::NOT_FOUND),
             (
@@ -1077,6 +1004,12 @@ mod tests {
                 StatusCode::CONFLICT,
             ),
             (ClientError::QueryResultsNotStored(1), StatusCode::CONFLICT),
+            (
+                ClientError::QueryResultSession(SessionError::TokenCollision(
+                    SessionToken::generate(),
+                )),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ),
             (
                 ClientError::DatasetNotFound("logs".parse()?),
                 StatusCode::NOT_FOUND,
