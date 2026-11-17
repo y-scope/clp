@@ -13,24 +13,21 @@ namespace clp_s::search::ast {
 /**
  * An enum representing all of the Literal types that can show up in the AST.
  *
- * `ClpStringT` and `VarStringT` are the string types of the clp-s flavour: a `NodeType::ClpString`
- * value contains a space and a `NodeType::VarString` value doesn't. `StringT` is the string type of
- * the clpp flavour (`NodeType::UnstructurizedText`, `NodeType::StructurizedText` and
- * `NodeType::ParentRule`); it carries no invariant about a value's content, so a string literal can
- * always match it and the node type decides how the match is evaluated.
+ * `StringT` is the single string type for all string flavours. A string literal is compatible with
+ * every string occurrence: the occurrence's MPT `NodeType` (e.g. `NodeType::ClpString`,
+ * `NodeType::VarString` or `NodeType::UnstructurizedText`) determines how the match is evaluated,
+ * never the literal's type.
  */
 enum LiteralType : uint32_t {
     TypesBegin = 1,
     IntegerT = 1,
     FloatT = 1 << 1,
-    ClpStringT = 1 << 2,
-    VarStringT = 1 << 3,
-    BooleanT = 1 << 4,
-    ArrayT = 1 << 5,
-    NullT = 1 << 6,
-    TimestampT = 1 << 7,
-    StringT = 1 << 8,
-    TypesEnd = 1 << 9,
+    StringT = 1 << 2,
+    BooleanT = 1 << 3,
+    ArrayT = 1 << 4,
+    NullT = 1 << 5,
+    TimestampT = 1 << 6,
+    TypesEnd = 1 << 7,
     UnknownT = static_cast<uint32_t>(1) << 31
 };
 
@@ -71,10 +68,6 @@ public:
                 return "int";
             case LiteralType::FloatT:
                 return "float";
-            case LiteralType::ClpStringT:
-                return "clpstring";
-            case LiteralType::VarStringT:
-                return "varstring";
             case LiteralType::BooleanT:
                 return "bool";
             case LiteralType::ArrayT:
@@ -91,23 +84,13 @@ public:
     }
 
     /**
-     * Functions to check type conversion and cast when possible under a given filter operation.
-     * By default all casts fail until overriden by the derived literal types.
-     * @param ret the casted value
-     * @param op the FilterOperation operating on the Literal
-     * @return true if cast is successful
+     * Casts the literal to the string it is compared as against a string occurrence.
+     *
+     * @param ret Returns the casted value.
+     * @param op The `FilterOperation` operating on the literal.
+     * @return Whether the cast is successful.
      */
-    virtual auto as_clp_string(std::string& /*ret*/, FilterOperation /*op*/) -> bool {
-        return false;
-    }
-
-    /**
-     * Casts the literal to a string matched whole against a variable dictionary value, i.e.
-     * against a `VarStringT` or `StringT` column.
-     */
-    virtual auto as_var_string(std::string& /*ret*/, FilterOperation /*op*/) -> bool {
-        return false;
-    }
+    virtual auto as_string(std::string& /*ret*/, FilterOperation /*op*/) -> bool { return false; }
 
     virtual auto as_float(double& /*ret*/, FilterOperation /*op*/) -> bool { return false; }
 
@@ -116,10 +99,6 @@ public:
     virtual auto as_bool(bool& /*ret*/, FilterOperation /*op*/) -> bool { return false; }
 
     virtual auto as_null(FilterOperation /*op*/) -> bool { return false; }
-
-    auto as_array(std::string& ret, FilterOperation op) -> bool {
-        return as_var_string(ret, op) || as_clp_string(ret, op);
-    }
 
     virtual auto as_timestamp() -> bool { return false; }
 

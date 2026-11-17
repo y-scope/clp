@@ -253,9 +253,7 @@ auto operand_as_string(ast::FilterExpr const& filter) -> std::optional<std::stri
         return std::nullopt;
     }
     std::string query;
-    if (false == operand->as_var_string(query, filter.get_operation())
-        && false == operand->as_clp_string(query, filter.get_operation()))
-    {
+    if (false == operand->as_string(query, filter.get_operation())) {
         return std::nullopt;
     }
     return query;

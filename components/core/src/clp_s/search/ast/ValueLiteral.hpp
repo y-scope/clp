@@ -55,9 +55,7 @@ public:
     }
 
     // Methods overriding Literal
-    auto as_clp_string(std::string& ret, FilterOperation op) -> bool override;
-
-    auto as_var_string(std::string& ret, FilterOperation op) -> bool override;
+    auto as_string(std::string& ret, FilterOperation op) -> bool override;
 
     auto as_float(double& ret, FilterOperation op) -> bool override;
 
