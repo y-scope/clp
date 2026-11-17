@@ -1,8 +1,12 @@
-import {STORAGE_TYPE} from "@webui/common/config";
+import {
+    CLP_STORAGE_ENGINES,
+    STORAGE_TYPE,
+} from "@webui/common/config";
 
 import {
     SETTINGS_LOG_INGESTOR_ENABLED,
     SETTINGS_LOGS_INPUT_TYPE,
+    SETTINGS_STORAGE_ENGINE,
 } from "../../config";
 import Compress from "./Compress";
 import Details from "./Details";
@@ -22,7 +26,8 @@ const IngestPage = () => {
         <div className={styles["ingestPageGrid"]}>
             <SpaceSavings/>
             <Details/>
-            {STORAGE_TYPE.FS === SETTINGS_LOGS_INPUT_TYPE && (
+            {CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE &&
+                STORAGE_TYPE.FS === SETTINGS_LOGS_INPUT_TYPE && (
                 <div className={styles["fullRow"] || ""}>
                     <Compress/>
                 </div>

@@ -20,9 +20,9 @@ vars:
   G_CARGO_HOME: "{{.G_RUST_TOOLCHAIN_DIR}}/.cargo"
   G_RUSTUP_HOME: "{{.G_RUST_TOOLCHAIN_DIR}}/.rustup"
 
-  # The nightly Rust toolchain used for formatting and linting. It's pinned so that a nightly
-  # regression can't break linting (see y-scope/clp#2653).
-  G_RUST_NIGHTLY_TOOLCHAIN: "nightly-2026-10-31"
+  # The nightly Rust toolchain used for formatting and linting. Set it to a dated nightly (e.g.,
+  # `nightly-2026-10-31`) to pin it if a nightly regression breaks linting.
+  G_RUST_NIGHTLY_TOOLCHAIN: "nightly"
 
   # Rust toolchain checksum file
   G_RUST_TOOLCHAIN_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/toolchains-rust.md5"
@@ -131,6 +131,11 @@ tasks:
             https://github.com/oras-project/oras/releases/download/v{{.ORAS_VERSION}}/oras_{{.ORAS_VERSION}}_{{OS}}_{{ARCH}}.tar.gz
 
   rust:
+    # A task's qualified name is derived from its include path from the root taskfile and a task
+    # that is included through multiple paths will be defined multiple times with different
+    # qualified names. These tasks can then run concurrently as their qualified names differ. To
+    # avoid race conditions invocations should use `toolchains:rust` from the root taskfile and
+    # `:toolchains:rust` from an included taskfile.
     # We use a label to uniquely identify this task and its checksum under `.task/checksums/`.
     label: "toolchains-rust"
     run: "once"
@@ -182,7 +187,8 @@ tasks:
       # Disable Rustup's auto self update at the end to avoid unexpected checksum mismatches.
       - |-
         . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
-        rustup toolchain install "{{.G_RUST_NIGHTLY_TOOLCHAIN}}" --component clippy,rustfmt
+        rustup toolchain install "{{.G_RUST_NIGHTLY_TOOLCHAIN}}" --allow-downgrade \
+          --component clippy,rustfmt
         rustup toolchain install stable
         rustup default stable
         cargo install --locked cargo-nextest

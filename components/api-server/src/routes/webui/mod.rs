@@ -44,6 +44,8 @@ fn log_unexpected_error(operation: &str, error: &ClientError) {
         | ClientError::QueryNotSucceeded
         | ClientError::Io(_)
         | ClientError::MalformedData
+        | ClientError::TimelineNotCommitted(_)
+        | ClientError::Timeline(_)
         | ClientError::TaskJoin(_)
         | ClientError::Aws { .. }
         | ClientError::StreamExtractionTimeout(_)

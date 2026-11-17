@@ -5,6 +5,8 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include <chrono>
+#include <cstddef>
 #include <cstdint>
 #include <iostream>
 #include <map>
@@ -98,6 +100,8 @@ class NetworkOutputHandler : public ::clp_s::search::OutputHandler {
 public:
     // Constants
     static constexpr uint8_t cProtocolVersion{1};
+    static constexpr size_t cBufferSizeSendThreshold{64ULL * 1024ULL};
+    static constexpr std::chrono::milliseconds cBufferedResultAgeSendThreshold{10};
 
     // Constructors
     NetworkOutputHandler(std::string host, int port, std::string session_token, uint64_t task_idx);
@@ -117,7 +121,9 @@ public:
 
     // Methods inherited from OutputHandler
     /**
-     * Connects to the network destination and sends the handshake before the first result.
+     * Buffers the handshake before the first result. Sends the buffered frames before the result
+     * would grow them past `cBufferSizeSendThreshold` bytes, when they reach it, or once the oldest
+     * of them has been buffered for `cBufferedResultAgeSendThreshold`.
      *
      * @return ErrorCodeFailureNetwork if connecting or sending to the network destination fails, or
      * if an earlier call failed to.
@@ -137,31 +143,33 @@ public:
     [[nodiscard]] auto write(std::string_view message) -> ErrorCode override;
 
     /**
-     * Sends the trailer, shuts down the write side of the connection, and waits for the listener's
-     * acknowledgement. Returns immediately if no result was written.
+     * Sends the buffered results along with the trailer, shuts down the write side of the
+     * connection, and waits for the listener's acknowledgement. Returns immediately if no result
+     * was written.
      *
-     * @return ErrorCodeFailureNetwork if an earlier call failed to connect or send, if sending the
-     * trailer, shutting down the write side, or receiving the acknowledgement fails, or if the
-     * acknowledgement is malformed or doesn't match the number of results sent.
+     * @return ErrorCodeFailureNetwork if an earlier call failed to connect or send, if connecting,
+     * sending the buffered results and the trailer, shutting down the write side, or receiving the
+     * acknowledgement fails, or if the acknowledgement is malformed or doesn't match the number of
+     * results sent.
      */
     [[nodiscard]] auto finish() -> ErrorCode override;
 
 private:
     // Methods
     /**
-     * Connects to the network destination.
+     * Connects to the network destination and sets `TCP_NODELAY` on the connection.
      *
      * @return ErrorCodeSuccess on success.
-     * @return ErrorCodeFailureNetwork if the connection fails.
+     * @return ErrorCodeFailureNetwork if the connection or setting `TCP_NODELAY` on it fails.
      */
     [[nodiscard]] auto connect() -> ErrorCode;
 
     /**
-     * Sends the serialized messages in the buffer to the network destination, and then clears the
-     * buffer.
+     * Connects to the network destination if not yet connected, sends the serialized messages in
+     * the buffer to it, and then clears the buffer.
      *
      * @return ErrorCodeSuccess on success.
-     * @return ErrorCodeFailureNetwork if sending fails.
+     * @return ErrorCodeFailureNetwork if connecting or sending fails.
      */
     [[nodiscard]] auto send_buffer() -> ErrorCode;
 
@@ -184,6 +192,7 @@ private:
     int m_socket_fd{-1};
     bool m_has_failed{false};
     msgpack::sbuffer m_buffer;
+    std::chrono::steady_clock::time_point m_oldest_buffered_result_time{};
 };
 
 /**

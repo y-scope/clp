@@ -8,12 +8,12 @@ import {
     AssertError,
     Value,
 } from "@sinclair/typebox/value";
+import {CLP_STORAGE_ENGINES} from "@webui/common/config";
 import {Nullable} from "@webui/common/utility-types";
-import {isAxiosError} from "axios";
 
 import {submitExtractStreamJob} from "../../api/stream-files";
+import {SETTINGS_STORAGE_ENGINE} from "../../config";
 import {
-    EXTRACT_JOB_TYPE,
     ExtractJobSearchParams,
     QUERY_LOADING_STATE,
 } from "../../typings/query";
@@ -48,6 +48,12 @@ const QueryStatus = () => {
         }
         isFirstRun = false;
 
+        if (CLP_STORAGE_ENGINES.CLP_S !== SETTINGS_STORAGE_ENGINE) {
+            setErrorMsg("Viewing logs is only supported for the CLP-S storage engine.");
+
+            return;
+        }
+
         // Validates and parse search parameters.
         const searchParams = new URLSearchParams(window.location.search);
         const paramsObj = Object.fromEntries(searchParams);
@@ -66,27 +72,20 @@ const QueryStatus = () => {
         }
 
         const {
+            archiveId,
             dataset,
-            type,
             logEventIdx,
-            streamId,
         } = parseResult;
 
+        setQueryState(QUERY_LOADING_STATE.WAITING);
         submitExtractStreamJob({
+            archiveId: archiveId,
             dataset: "undefined" === typeof dataset ?
                 null :
                 dataset,
-
-            // `parseResult.type` must be valid key since parsed using with typebox type
-            // `ExtractJobSearchParams`.
-            extractJobType: EXTRACT_JOB_TYPE[type as keyof typeof EXTRACT_JOB_TYPE],
             logEventIdx: logEventIdx,
-            onUploadProgress: () => {
-                setQueryState(QUERY_LOADING_STATE.WAITING);
-            },
-            streamId: streamId,
         })
-            .then(({data}) => {
+            .then((data) => {
                 setQueryState(QUERY_LOADING_STATE.LOADING);
 
                 const innerLogEventNum = parseResult.logEventIdx - data.begin_msg_ix + 1;
@@ -96,13 +95,11 @@ const QueryStatus = () => {
                     `#logEventNum=${innerLogEventNum}`;
             })
             .catch((e: unknown) => {
-                let msg = "Unknown error.";
-                if (isAxiosError<{message: string}>(e)) {
-                    msg = e.message;
-                    if ("undefined" !== typeof e.response) {
-                        msg = e.response.data.message;
-                    }
-                }
+                const msg = e instanceof Error ?
+                    e.message :
+                    `Unable to extract stream with archiveId=${archiveId} at ` +
+                    `logEventIdx=${logEventIdx}.`;
+
                 console.error(msg, e);
                 setErrorMsg(msg);
             });

@@ -1,0 +1,5 @@
+{"idx":0,"empty_array":[],"empty_object":{}}
+{"idx":1,"nested":{"inner_empty_array":[],"inner_empty_object":{}}}
+{"idx":2,"arr":[[],{},1]}
+{"idx":3,"only_empty_array":[]}
+{"idx":4,"only_empty_object":{}}

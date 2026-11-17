@@ -3,6 +3,7 @@
 #include <cstring>
 #include <iostream>
 #include <memory>
+#include <optional>
 
 #include <archive_entry.h>
 #include <boost/filesystem/operations.hpp>

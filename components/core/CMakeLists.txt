@@ -170,7 +170,7 @@ if(CLP_NEED_BOOST)
     endif()
     find_package(
         Boost
-        1.81...1.88
+        1.86...1.88
         REQUIRED
             filesystem
             iostreams
@@ -194,6 +194,13 @@ if(CLP_NEED_DATE)
     endif()
 endif()
 
+if(CLP_NEED_FAST_FLOAT)
+    find_package(FastFloat REQUIRED)
+    if (FastFloat_FOUND)
+        message(STATUS "Found FastFloat (fast_float) ${FastFloat_VERSION}")
+    endif()
+endif()
+
 if(CLP_NEED_FMT)
     find_package(fmt REQUIRED)
     if(fmt_FOUND)
@@ -202,9 +209,9 @@ if(CLP_NEED_FMT)
 endif()
 
 if(CLP_NEED_LOG_SURGEON)
-    find_package(log_surgeon REQUIRED)
-    if(log_surgeon_FOUND)
-        message(STATUS "Found log_surgeon ${log_surgeon_VERSION}")
+    find_package(log-surgeon REQUIRED)
+    if(log-surgeon_FOUND)
+        message(STATUS "Found log-surgeon ${log-surgeon_VERSION}")
     endif()
 endif()
 
@@ -363,6 +370,7 @@ add_subdirectory(src/clp/clo)
 add_subdirectory(src/clp/clp)
 add_subdirectory(src/glt/glt)
 add_subdirectory(src/clp/make_dictionaries_readable)
+add_subdirectory(src/clpp)
 add_subdirectory(src/clp_s)
 add_subdirectory(src/reducer)
 
@@ -647,6 +655,7 @@ set(SOURCE_FILES_unitTest
         src/clp/version.hpp
         src/clp/WriterInterface.cpp
         src/clp/WriterInterface.hpp
+        src/clpp/test/test_TextShape.cpp
         src/utils/profiling/test/test_Profiler.cpp
         src/utils/profiling/test/test_Reporter.cpp
         src/utils/profiling/test/test_ScopedProfiler.cpp
@@ -695,12 +704,14 @@ if(CLP_ENABLE_TESTS)
             clp_s::ffi::sfa
             clp_s::filter
             clp_s::json_constructor
+            clp_s::log_converter
             clp_s::search
             clp_s::search::ast
             clp_s::search::kql
             clp_s::search::sql
             clp_s::timestamp_parser
             clp_s::timestamp_pattern
+            clpp::core
             utils::profiling
             )
 
@@ -723,6 +734,7 @@ if(CLP_ENABLE_TESTS)
             Boost::url
             Catch2::Catch2WithMain
             clp::unit_test_runtime
+            clp_s::log_converter::unit_test_sources
             clp_s::unit_test_sources
             ${CURL_LIBRARIES}
             date::date

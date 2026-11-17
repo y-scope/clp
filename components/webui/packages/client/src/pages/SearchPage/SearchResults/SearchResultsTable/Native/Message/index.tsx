@@ -12,29 +12,29 @@ import {highlighterCustomStyles} from "./utils";
 const {Text} = Typography;
 
 interface MessageProps {
+    archiveId: string;
     dataset: string;
     fileText: string;
     message: string;
     logEventIdx: number;
-    streamId: string;
 }
 
 /**
  * Renders a message with syntax highlighting and a link to original file.
  *
  * @param props
+ * @param props.archiveId
  * @param props.dataset
  * @param props.fileText
  * @param props.logEventIdx
  * @param props.message
- * @param props.streamId
  * @return
  */
 const Message = ({
+    archiveId,
     dataset,
     message,
     fileText,
-    streamId,
     logEventIdx,
 }: MessageProps) => {
     return (
@@ -54,11 +54,15 @@ const Message = ({
                     {message}
                 </SyntaxHighlighter>
             </Text>
-            <LogViewerLink
-                dataset={dataset}
-                fileText={fileText}
-                logEventIdx={logEventIdx}
-                streamId={streamId}/>
+            {CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE ?
+                <LogViewerLink
+                    archiveId={archiveId}
+                    dataset={dataset}
+                    fileText={fileText}
+                    logEventIdx={logEventIdx}/> :
+                <Text type={"secondary"}>
+                    {fileText}
+                </Text>}
         </>
     );
 };

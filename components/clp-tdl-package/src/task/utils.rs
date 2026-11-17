@@ -1,4 +1,4 @@
-//! Helpers shared by the tasks that invoke CLP's core binaries.
+//! Shared helpers for CLP tasks.
 
 use std::path::Path;
 use std::path::PathBuf;
@@ -6,7 +6,13 @@ use std::path::PathBuf;
 use anyhow::Context;
 use aws_config::BehaviorVersion;
 use aws_sdk_s3::config::ProvideCredentials;
+use clp_rust_utils::aws::AWS_DEFAULT_REGION;
 use clp_rust_utils::clp_config::AwsAuthentication;
+use clp_rust_utils::clp_config::S3Config;
+use clp_rust_utils::clp_config::package::credentials;
+use clp_rust_utils::s3::create_new_client;
+use non_empty_string::NonEmptyString;
+use secrecy::SecretString;
 
 /// Resolves the path of a CLP binary under `clp_home`, joining `bin/{binary}`.
 ///
@@ -76,6 +82,82 @@ pub(super) fn s3_credential_env(
         env.push((AWS_SESSION_TOKEN_ENV_VAR, session_token.to_owned()));
     }
     Ok(env)
+}
+
+/// Builds an S3 client for the bucket in `s3_config`, resolving the region to
+/// [`AWS_DEFAULT_REGION`] when the config omits it.
+///
+/// # Returns
+///
+/// The S3 client for the configured bucket.
+pub(super) fn build_s3_client(
+    runtime: &tokio::runtime::Handle,
+    s3_config: &S3Config,
+) -> aws_sdk_s3::Client {
+    let region = s3_config
+        .region_code
+        .as_ref()
+        .map_or(AWS_DEFAULT_REGION, NonEmptyString::as_str);
+    runtime.block_on(create_new_client(
+        region,
+        s3_config.endpoint_url.as_ref(),
+        &s3_config.aws_authentication,
+    ))
+}
+
+/// Uploads a local file to S3 through `PutObject`.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * Forwards [`aws_sdk_s3::primitives::ByteStream::from_path`]'s return values on failure.
+/// * Forwards [`aws_sdk_s3::operation::put_object::builders::PutObjectFluentBuilder::send`]'s
+///   return values on failure.
+pub(super) async fn upload_file_to_s3(
+    client: &aws_sdk_s3::Client,
+    bucket: &str,
+    key: &str,
+    src: &Path,
+) -> anyhow::Result<()> {
+    let body = aws_sdk_s3::primitives::ByteStream::from_path(src)
+        .await
+        .with_context(|| format!("failed to read {} for upload", src.display()))?;
+    client
+        .put_object()
+        .bucket(bucket)
+        .key(key)
+        .body(body)
+        .send()
+        .await
+        .with_context(|| format!("failed to upload to s3://{bucket}/{key}"))?;
+    Ok(())
+}
+
+/// Reads the CLP DB credentials from `CLP_DB_USER` and `CLP_DB_PASS` environment variables.
+///
+/// # Returns
+///
+/// The CLP DB credentials on success.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * Forwards [`std::env::var`]'s return values if either variable is unset or not valid Unicode.
+pub(super) fn db_credentials_from_env() -> anyhow::Result<credentials::Database> {
+    const CLP_DB_USER_ENV_VAR: &str = "CLP_DB_USER";
+    const CLP_DB_PASS_ENV_VAR: &str = "CLP_DB_PASS";
+    let user = std::env::var(CLP_DB_USER_ENV_VAR).with_context(|| {
+        format!("failed to read the `{CLP_DB_USER_ENV_VAR}` environment variable")
+    })?;
+    let password = std::env::var(CLP_DB_PASS_ENV_VAR).with_context(|| {
+        format!("failed to read the `{CLP_DB_PASS_ENV_VAR}` environment variable")
+    })?;
+    Ok(credentials::Database {
+        user,
+        password: SecretString::from(password),
+    })
 }
 
 #[cfg(test)]

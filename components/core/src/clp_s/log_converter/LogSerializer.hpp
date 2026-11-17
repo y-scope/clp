@@ -23,6 +23,10 @@ namespace clp_s::log_converter {
  */
 class LogSerializer {
 public:
+    // Static constants
+    static constexpr std::string_view cTimestampKey{"timestamp"};
+    static constexpr std::string_view cMessageKey{"message"};
+
     // Factory function
     /**
      * Creates an instance of `LogSerializer`.
@@ -97,10 +101,8 @@ public:
     }
 
 private:
-    // Constants
+    // Static constants
     static constexpr std::string_view cOriginalFileMetadataKey{"original_file"};
-    static constexpr std::string_view cTimestampKey{"timestamp"};
-    static constexpr std::string_view cMessageKey{"message"};
     static constexpr size_t cMaxIrBufSize{64ULL * 1024ULL};  // 64 KiB
 
     // Constructors

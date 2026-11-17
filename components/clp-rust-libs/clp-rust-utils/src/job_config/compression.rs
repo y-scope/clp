@@ -35,6 +35,4 @@ pub enum CompressionJobStatus {
     Succeeded = 2,
     /// Job failed.
     Failed = 3,
-    /// Job was killed by a user.
-    Killed = 4,
 }

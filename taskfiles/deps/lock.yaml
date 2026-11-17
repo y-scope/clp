@@ -46,7 +46,7 @@ tasks:
     requires:
       vars: ["CARGO_FETCH_FLAGS"]
     dir: "{{.ROOT_DIR}}"
-    deps: ["toolchains:rust"]
+    deps: [":toolchains:rust"]
     cmd: |-
       . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
       cargo fetch {{.CARGO_FETCH_FLAGS}}
@@ -59,7 +59,7 @@ tasks:
     requires:
       vars: ["CARGO_UPDATE_FLAGS"]
     dir: "{{.ROOT_DIR}}"
-    deps: ["toolchains:rust"]
+    deps: [":toolchains:rust"]
     cmd: |-
       . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
       cargo update {{.CARGO_UPDATE_FLAGS}}

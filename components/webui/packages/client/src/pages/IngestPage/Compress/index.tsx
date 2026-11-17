@@ -2,19 +2,17 @@ import {
     useMutation,
     useQueryClient,
 } from "@tanstack/react-query";
-import {
-    CLP_DEFAULT_DATASET_NAME,
-    CLP_STORAGE_ENGINES,
-} from "@webui/common/config";
-import {CompressionJobCreation} from "@webui/common/schemas/compression";
+import {CLP_DEFAULT_DATASET_NAME} from "@webui/common/config";
 import {
     Form,
     Typography,
 } from "antd";
 
-import {submitCompressionJob} from "../../../api/compress";
+import {
+    CompressionJobCreation,
+    submitCompressionJob,
+} from "../../../api/compress";
 import {DashboardCard} from "../../../components/DashboardCard";
-import {SETTINGS_STORAGE_ENGINE} from "../../../config";
 import ClpSFormItems from "./ClpSFormItems";
 import PathsSelectFormItem from "./PathsSelectFormItem";
 import SubmitFormItem from "./SubmitFormItem";
@@ -58,17 +56,15 @@ const Compress = () => {
     const handleSubmit = (values: FormValues) => {
         const payload: CompressionJobCreation = {paths: values.paths};
 
-        if (CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE) {
-            if ("undefined" === typeof values.dataset || 0 === values.dataset.length) {
-                payload.dataset = CLP_DEFAULT_DATASET_NAME;
-            } else {
-                payload.dataset = values.dataset;
-            }
-            if (true === values.unstructured) {
-                payload.unstructured = true;
-            } else if ("undefined" !== typeof values.timestampKey) {
-                payload.timestampKey = values.timestampKey;
-            }
+        if ("undefined" === typeof values.dataset || 0 === values.dataset.length) {
+            payload.dataset = CLP_DEFAULT_DATASET_NAME;
+        } else {
+            payload.dataset = values.dataset;
+        }
+        if (true === values.unstructured) {
+            payload.unstructured = true;
+        } else if ("undefined" !== typeof values.timestampKey && 0 < values.timestampKey.length) {
+            payload.timestamp_key = values.timestampKey;
         }
 
         mutate(payload);
@@ -82,14 +78,14 @@ const Compress = () => {
                 onFinish={handleSubmit}
             >
                 <PathsSelectFormItem/>
-                {CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE && <ClpSFormItems/>}
+                <ClpSFormItems/>
                 <SubmitFormItem isSubmitting={isSubmitting}/>
 
                 {isSuccess && (
                     <Typography.Text type={"success"}>
                         Compression job submitted successfully with ID:
                         {" "}
-                        {data.jobId}
+                        {data.job_id}
                     </Typography.Text>
                 )}
                 {isError && (

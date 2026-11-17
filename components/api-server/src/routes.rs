@@ -11,7 +11,9 @@ use axum::response::Sse;
 use axum::response::sse::Event;
 use axum::response::sse::KeepAlive;
 use axum::routing::get;
+use clp_rust_utils::job_config::QueryJobConfig;
 use clp_rust_utils::logs_input::LogsInputError;
+use clp_rust_utils::timeline::Bucket;
 use futures::Stream;
 use futures::StreamExt;
 use serde::Deserialize;
@@ -71,6 +73,7 @@ pub fn from_app_state(state: AppState) -> Result<axum::Router, serde_json::Error
         .routes(routes!(health))
         .routes(routes!(query))
         .routes(routes!(query_results))
+        .routes(routes!(query_timeline))
         .routes(routes!(cancel_query))
         .routes(routes!(compression_usage))
         .split_for_parts();
@@ -95,6 +98,7 @@ mod api_doc {
     use super::__path_health;
     use super::__path_query;
     use super::__path_query_results;
+    use super::__path_query_timeline;
     use super::CompressionUsage;
     use super::OpenApi;
     use super::OpenApiRouter;
@@ -108,7 +112,14 @@ mod api_doc {
             description = "API Server for CLP",
             contact(name = "YScope")
         ),
-        paths(health, query, query_results, cancel_query, compression_usage),
+        paths(
+            health,
+            query,
+            query_results,
+            query_timeline,
+            cancel_query,
+            compression_usage
+        ),
         components(schemas(CompressionUsage, CompressionJobStatus))
     )]
     pub struct ApiDoc;
@@ -143,13 +154,16 @@ async fn health() -> String {
     request_body(
         content= QueryConfig,
         example = json!({
-            "query_string": "*",
-            "datasets": ["default"],
-            "time_range_begin_millisecs": 0,
-            "time_range_end_millisecs": 17_356_896,
-            "ignore_case": true,
-            "buffer_results_in_mongodb": true,
-            "count_by_time_bucket_size_millisecs": null
+            "query": {
+                "datasets": ["default"],
+                "query_string": "*",
+                "time_range": {
+                    "begin_timestamp_millisecs": 0,
+                    "end_timestamp_millisecs": 17_356_896
+                },
+                "ignore_case": true
+            },
+            "output": {"type": "results_cache", "max_num_results": 100}
         })),
     responses(
         (
@@ -158,9 +172,17 @@ async fn health() -> String {
             description = "The URI to fetch the results of the submitted query.",
             example = json!({"query_results_uri":"query_results/1"})
         ),
-        (status = BAD_REQUEST, description = "Invalid query config (e.g., empty query_string, \
-            time_range_begin_millisecs > time_range_end_millisecs, \
-            count_by_time_bucket_size_millisecs <= 0)"),
+        (status = BAD_REQUEST, body = String, content_type = "text/plain",
+            description = "The request body is not valid JSON or could not be read."),
+        (status = PAYLOAD_TOO_LARGE, body = String, content_type = "text/plain",
+            description = "The request body exceeds the configured size limit."),
+        (status = UNSUPPORTED_MEDIA_TYPE, body = String, content_type = "text/plain",
+            description = "The Content-Type header is missing or is not a JSON media type."),
+        (status = UNPROCESSABLE_ENTITY, body = String, content_type = "text/plain",
+            description = "The JSON body has missing or unknown fields, or fields with invalid \
+                types or values (e.g., an empty `query.datasets` or `query.query_string`, a \
+                `query.time_range` whose begin timestamp exceeds its end timestamp, or a \
+                non-positive `output.max_num_results`)."),
         (status = INTERNAL_SERVER_ERROR)
     )
 )]
@@ -169,7 +191,8 @@ async fn query(
     Json(query_config): Json<QueryConfig>,
 ) -> Result<Json<QueryResultsUri>, HandlerError> {
     tracing::info!("Submitting query: {:?}", query_config);
-    let query_job_id = match client.submit_query(query_config).await {
+    let query_job_config = QueryJobConfig::from(query_config);
+    let query_job_id = match client.submit_query(&query_job_config).await {
         Ok(id) => {
             tracing::info!("Submitted query job ID: {}", id);
             id
@@ -225,6 +248,8 @@ struct QueryResultsParams {
                 single line of the query result in JSON format.",
             example = r#"data: {"timestamp": 1633036800, "message": "Example log message"}\n"#
         ),
+        (status = BAD_REQUEST, body = String, content_type = "text/plain",
+            description = "The query job ID or query parameters are invalid."),
         (
             status = NOT_FOUND,
             description = "No query job with the given ID was found."
@@ -276,6 +301,38 @@ async fn query_results(
 }
 
 #[utoipa::path(
+    get,
+    path = "/query_results/{query_job_id}/timeline",
+    description = "Streams committed timeline buckets as Server-Sent Events (SSE).",
+    responses(
+        (
+            status = OK,
+            body = Bucket,
+            content_type = "text/event-stream",
+            description = "Each event contains one timeline bucket in JSON format.",
+            example = r#"data: {"timestamp": 1633036800000, "count": 42}\n"#
+        ),
+        (status = BAD_REQUEST, body = String, content_type = "text/plain",
+            description = "The query job ID is invalid or the job has no timeline configuration."),
+        (status = NOT_FOUND, description = "No query job with the given ID was found."),
+        (status = INTERNAL_SERVER_ERROR)
+    )
+)]
+async fn query_timeline(
+    State(client): State<Client>,
+    Path(query_job_id): Path<u64>,
+) -> Result<Sse<impl Stream<Item = Result<Event, HandlerError>>>, HandlerError> {
+    let buckets = client
+        .fetch_timeline(query_job_id)
+        .await
+        .inspect_err(|error| {
+            tracing::error!(query_job_id, error = ? error, "Failed to fetch timeline.");
+        })?;
+    let events = buckets.map(|bucket| Ok(Event::default().json_data(bucket?)?));
+    Ok(Sse::new(events).keep_alive(KeepAlive::default()))
+}
+
+#[utoipa::path(
     delete,
     path = "/query/{query_job_id}",
     description = "Cancels a previously submitted query job.",
@@ -292,6 +349,8 @@ async fn query_results(
             status = CONFLICT,
             description = "The query job with the given ID has terminated without being cancelled."
         ),
+        (status = BAD_REQUEST, body = String, content_type = "text/plain",
+            description = "The query job ID is invalid."),
         (status = INTERNAL_SERVER_ERROR)
     )
 )]
@@ -323,7 +382,8 @@ async fn cancel_query(
     params(CompressionUsageParams),
     responses(
         (status = OK, body = Vec<CompressionUsage>),
-        (status = BAD_REQUEST, description = "Invalid query parameters \
+        (status = BAD_REQUEST, body = String, content_type = "text/plain",
+            description = "Invalid query parameters \
             (e.g., time_range_begin_millisecs > time_range_end_millisecs, \
             missing required fields)"),
         (status = INTERNAL_SERVER_ERROR)
@@ -391,6 +451,8 @@ impl From<ClientError> for HandlerError {
             | ClientError::QueryNotSucceeded
             | ClientError::Io(_)
             | ClientError::MalformedData
+            | ClientError::TimelineNotCommitted(_)
+            | ClientError::Timeline(_)
             | ClientError::TaskJoin(_)
             | ClientError::Aws { .. }
             | ClientError::ExtractionJobFailed { .. }
@@ -442,6 +504,60 @@ mod tests {
     use tower::ServiceExt;
 
     use super::*;
+
+    #[test]
+    fn timeline_errors_preserve_details_and_map_to_internal_server_error() {
+        let error = ClientError::from(clp_rust_utils::timeline::Error::NegativeCount { count: -1 });
+        assert!(matches!(
+            error,
+            ClientError::Timeline(clp_rust_utils::timeline::Error::NegativeCount { count: -1 })
+        ));
+        assert!(
+            error
+                .to_string()
+                .contains("timeline count must be nonnegative, got -1")
+        );
+        for error in [error, ClientError::TimelineNotCommitted(42)] {
+            assert_eq!(
+                HandlerError::from(error).into_response().status(),
+                StatusCode::INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn query_rejects_a_network_output_with_unprocessable_entity() -> anyhow::Result<()> {
+        let app = clp_s_app_with_lazy_clients().await;
+        let body = serde_json::json!({
+            "query": {"datasets": ["default"], "query_string": "*"},
+            "output": {
+                "type": "network",
+                "host": "localhost",
+                "port": 8080,
+                "session_token": "3f1c1a5e-5b6e-4a43-9d6b-0f2b2f5a8c11",
+            },
+        });
+
+        let response = app
+            .oneshot(
+                Request::post("/query")
+                    .header("content-type", "application/json")
+                    .body(Body::from(body.to_string()))?,
+            )
+            .await?;
+
+        assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
+        assert_eq!(
+            response.headers()["content-type"],
+            "text/plain; charset=utf-8"
+        );
+        let response_body = get_body(response).await;
+        assert!(
+            response_body.contains("output.type: unknown variant `network`"),
+            "{response_body}"
+        );
+        Ok(())
+    }
 
     /// Builds a minimal Axum app that validates compression usage params via
     /// [`TryFrom<CompressionUsageParams>`] and returns the resolved
@@ -726,7 +842,7 @@ mod tests {
             .await?;
         assert_eq!(response.status(), StatusCode::OK);
         let body = get_body(response).await;
-        assert_eq!(body, "[2,3,4]"); // SUCCEEDED, FAILED, KILLED
+        assert_eq!(body, "[2,3]"); // SUCCEEDED, FAILED
         Ok(())
     }
 
@@ -795,14 +911,14 @@ mod tests {
                 Request::builder()
                     .uri(
                         "/usage/compression?time_range_begin_millisecs=0&\
-                         time_range_end_millisecs=100&job_status=KILLED",
+                         time_range_end_millisecs=100&job_status=FAILED",
                     )
                     .body(Body::empty())?,
             )
             .await?;
         assert_eq!(response.status(), StatusCode::OK);
         let body = get_body(response).await;
-        assert_eq!(body, "[4]");
+        assert_eq!(body, "[3]");
         Ok(())
     }
 

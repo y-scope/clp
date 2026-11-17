@@ -1,19 +1,23 @@
 import {useQuery} from "@tanstack/react-query";
-import {CLP_STORAGE_ENGINES} from "@webui/common/config";
 import {theme} from "antd";
 
+import {apiClient} from "../../../api/search";
+import {createApiError} from "../../../api/utils";
 import {DashboardCard} from "../../../components/DashboardCard";
 import Stat from "../../../components/Stat";
-import {SETTINGS_STORAGE_ENGINE} from "../../../config";
-import {fetchDatasetNames} from "../../SearchPage/SearchControls/Dataset/sql";
+import QueryErrorAlert from "../QueryErrorAlert";
 import CompressedSize from "./CompressedSize";
 import styles from "./index.module.css";
-import {
-    fetchClpSpaceSavings,
-    fetchClpsSpaceSavings,
-    SPACE_SAVINGS_DEFAULT,
-} from "./sql";
 import UncompressedSize from "./UncompressedSize";
+
+
+/**
+ * Default values for space savings when no data is available.
+ */
+const SPACE_SAVINGS_DEFAULT = {
+    total_compressed_size: 0,
+    total_uncompressed_size: 0,
+};
 
 
 /**
@@ -24,26 +28,32 @@ import UncompressedSize from "./UncompressedSize";
 const SpaceSavings = () => {
     const {token} = theme.useToken();
 
-    const {data: datasetNames = [], isSuccess: isSuccessDatasetNames} = useQuery({
-        queryKey: ["datasets"],
-        queryFn: fetchDatasetNames,
-        enabled: CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE,
-    });
-
-    const {data: spaceSavings = SPACE_SAVINGS_DEFAULT, isPending} = useQuery({
-        queryKey: [
-            "space-savings",
-            datasetNames,
-        ],
+    const {data, error, isError, isPending, refetch} = useQuery({
+        queryKey: ["space-savings"],
         queryFn: async () => {
-            if (CLP_STORAGE_ENGINES.CLP === SETTINGS_STORAGE_ENGINE) {
-                return fetchClpSpaceSavings();
+            // eslint-disable-next-line new-cap
+            const result = await apiClient.GET("/metadata/space_savings", {});
+            if ("undefined" === typeof result.data) {
+                throw createApiError("Failed to fetch savings", result.response, result.error);
             }
 
-            return fetchClpsSpaceSavings(datasetNames);
+            return result.data;
         },
-        enabled: CLP_STORAGE_ENGINES.CLP === SETTINGS_STORAGE_ENGINE || isSuccessDatasetNames,
     });
+    const spaceSavings = data ?? SPACE_SAVINGS_DEFAULT;
+
+    if (isError && "undefined" === typeof data) {
+        return (
+            <div className={styles["spaceSavingsGrid"]}>
+                <QueryErrorAlert
+                    error={error}
+                    hasPreviousData={false}
+                    onRetry={() => {
+                        refetch().catch(console.error);
+                    }}/>
+            </div>
+        );
+    }
 
     const compressedSize = spaceSavings.total_compressed_size;
     const uncompressedSize = spaceSavings.total_uncompressed_size;
@@ -56,6 +66,14 @@ const SpaceSavings = () => {
 
     return (
         <div className={styles["spaceSavingsGrid"]}>
+            {isError && (
+                <QueryErrorAlert
+                    error={error}
+                    hasPreviousData={true}
+                    onRetry={() => {
+                        refetch().catch(console.error);
+                    }}/>
+            )}
             <div className={styles["spaceSavingsCard"]}>
                 <DashboardCard
                     backgroundColor={token.colorPrimary}

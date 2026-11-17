@@ -1,8 +1,11 @@
 import {
+    type components,
     createApiClient,
     type paths,
 } from "@webui/api-client";
 
+
+type Aggregation = components["schemas"]["Aggregation"];
 
 type QueryConfig = paths["/query"]["post"]["requestBody"]["content"]["application/json"];
 
@@ -53,7 +56,10 @@ const cancelQuery = async (queryJobId: number): Promise<void> => {
     }
 };
 
-export type {QueryConfig};
+export type {
+    Aggregation,
+    QueryConfig,
+};
 export {
     apiClient,
     cancelQuery,

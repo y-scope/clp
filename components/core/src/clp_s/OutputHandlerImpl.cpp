@@ -1,9 +1,12 @@
 #include "OutputHandlerImpl.hpp"
 
+#include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
 #include <cerrno>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <exception>
@@ -78,11 +81,21 @@ auto NetworkOutputHandler::write(
         return ErrorCode::ErrorCodeFailureNetwork;
     }
 
-    msgpack::packer<msgpack::sbuffer> packer{m_buffer};
-    if (-1 == m_socket_fd) {
-        if (auto const ecode{connect()}; ErrorCode::ErrorCodeSuccess != ecode) {
+    // The longest msgpack encoding of a result frame's array header, result index, timestamp, and
+    // message header.
+    constexpr size_t cMaxResultFrameOverheadSize{1 + 9 + 9 + 5};
+    auto const max_frame_size{cMaxResultFrameOverheadSize + message.size()};
+    if (0 != m_buffer.size() && m_buffer.size() + max_frame_size > cBufferSizeSendThreshold) {
+        if (auto const ecode{send_buffer()}; ErrorCode::ErrorCodeSuccess != ecode) {
             return ecode;
         }
+    }
+    auto const now{std::chrono::steady_clock::now()};
+    if (0 == m_buffer.size()) {
+        m_oldest_buffered_result_time = now;
+    }
+    msgpack::packer<msgpack::sbuffer> packer{m_buffer};
+    if (0 == m_next_result_idx) {
         packer.pack_array(cNumHandshakeFields);
         packer.pack_uint8(cProtocolVersion);
         packer.pack(m_session_token);
@@ -93,11 +106,13 @@ auto NetworkOutputHandler::write(
     packer.pack_uint64(m_next_result_idx);
     packer.pack_int64(timestamp);
     packer.pack(message);
-    if (auto const ecode{send_buffer()}; ErrorCode::ErrorCodeSuccess != ecode) {
-        return ecode;
-    }
     ++m_next_result_idx;
-    return ErrorCode::ErrorCodeSuccess;
+    if (m_buffer.size() < cBufferSizeSendThreshold
+        && now - m_oldest_buffered_result_time < cBufferedResultAgeSendThreshold)
+    {
+        return ErrorCode::ErrorCodeSuccess;
+    }
+    return send_buffer();
 }
 
 auto NetworkOutputHandler::write([[maybe_unused]] string_view message) -> ErrorCode {
@@ -109,7 +124,7 @@ auto NetworkOutputHandler::finish() -> ErrorCode {
     if (m_has_failed) {
         return ErrorCode::ErrorCodeFailureNetwork;
     }
-    if (-1 == m_socket_fd) {
+    if (0 == m_next_result_idx) {
         return ErrorCode::ErrorCodeSuccess;
     }
 
@@ -157,10 +172,29 @@ auto NetworkOutputHandler::connect() -> ErrorCode {
         m_has_failed = true;
         return ErrorCode::ErrorCodeFailureNetwork;
     }
+
+    constexpr int cTcpNoDelay{1};
+    if (0 != setsockopt(m_socket_fd, IPPROTO_TCP, TCP_NODELAY, &cTcpNoDelay, sizeof(cTcpNoDelay))) {
+        auto const error{std::error_code{errno, std::generic_category()}};
+        SPDLOG_ERROR(
+                "Failed to set TCP_NODELAY on the connection to {}:{} - ({}) {}",
+                m_host,
+                m_port,
+                error.value(),
+                error.message()
+        );
+        m_has_failed = true;
+        return ErrorCode::ErrorCodeFailureNetwork;
+    }
     return ErrorCode::ErrorCodeSuccess;
 }
 
 auto NetworkOutputHandler::send_buffer() -> ErrorCode {
+    if (-1 == m_socket_fd) {
+        if (auto const ecode{connect()}; ErrorCode::ErrorCodeSuccess != ecode) {
+            return ecode;
+        }
+    }
     if (clp::ErrorCode_Success
         != clp::networking::try_send(m_socket_fd, m_buffer.data(), m_buffer.size()))
     {

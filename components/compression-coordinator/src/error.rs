@@ -1,6 +1,9 @@
 //! The crate-level error type for the compression coordinator.
 
+use std::path::PathBuf;
+
 use clp_rust_utils::job_config::ingestion::JobId as IngestionJobId;
+use clp_rust_utils::logs_input::LogsInputError;
 use clp_rust_utils::s3::S3ObjectMetadataId;
 use spider_core::types::resource_group::ExternalResourceGroupCredentialsError;
 
@@ -21,11 +24,20 @@ pub enum Error {
         field: &'static str,
     },
 
+    #[error("failed to join filesystem input discovery: {0}")]
+    FsDiscoveryJoin(#[from] tokio::task::JoinError),
+
+    #[error("failed to traverse filesystem input: {0}")]
+    FsTraversal(#[from] walkdir::Error),
+
     #[error("invalid configuration: {0}")]
     InvalidConfiguration(String),
 
     #[error("invalid endpoint: {0}")]
     InvalidEndpoint(String),
+
+    #[error("logs-input error: {0}")]
+    LogsInput(#[from] LogsInputError),
 
     #[error("failed to create metadata table `{table}`: {source}")]
     MetadataTableCreation {
@@ -40,10 +52,13 @@ pub enum Error {
         id: S3ObjectMetadataId,
     },
 
+    #[error("no filesystem input paths were requested")]
+    NoFsInputPaths,
+
     #[error("no S3 object metadata was requested for ingestion job {0}")]
     NoS3ObjectMetadata(IngestionJobId),
 
-    #[error("no S3 objects were partitioned into compression task inputs")]
+    #[error("no files or S3 objects were partitioned into compression task inputs")]
     NoTaskInputs,
 
     #[error("failed to load the resource group credentials: {0}")]
@@ -74,6 +89,9 @@ pub enum Error {
 
     #[error("number of compression tasks {0} exceeds `i32::MAX`")]
     TooManyCompressionTasks(usize),
+
+    #[error("filesystem input is not a regular file or directory: {}", .0.display())]
+    UnsupportedFsInput(PathBuf),
 
     #[error("unsupported input config")]
     UnsupportedInputConfig,

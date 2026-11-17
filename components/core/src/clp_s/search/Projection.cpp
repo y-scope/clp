@@ -1,43 +1,123 @@
 #include "Projection.hpp"
 
-#include <algorithm>
+#include <cstdint>
+#include <memory>
+#include <stdexcept>
+#include <utility>
+#include <vector>
 
-#include "../SchemaTree.hpp"
-#include "../TraceableException.hpp"
-#include "ast/ColumnDescriptor.hpp"
+#include <fmt/format.h>
+
+#include <clp_s/Defs.hpp>
+#include <clp_s/ErrorCode.hpp>
+#include <clp_s/SchemaTree.hpp>
+#include <clp_s/search/ast/ColumnDescriptor.hpp>
+#include <clp_s/TraceableException.hpp>
 
 namespace clp_s::search {
-void Projection::add_column(std::shared_ptr<ast::ColumnDescriptor> column) {
+auto Projection::add_column(std::shared_ptr<ast::ColumnDescriptor> column) -> void {
     if (column->is_unresolved_descriptor()) {
         throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
     }
-    if (ProjectionMode::ReturnAllColumns == m_projection_mode) {
+    if (Mode::Default == m_projection_mode) {
         throw OperationFailed(ErrorCodeUnsupported, __FILENAME__, __LINE__);
     }
-    if (false == m_allow_duplicate_columns
-        && m_selected_columns.end()
-                   != std::find_if(
-                           m_selected_columns.begin(),
-                           m_selected_columns.end(),
-                           [&column](auto const& rhs) -> bool { return *column == *rhs; }
-                   ))
-    {
-        // no duplicate columns in projection
-        throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+    if (false == m_allow_duplicate_columns) {
+        for (auto const& existing : m_columns) {
+            if (*existing.m_column == *column) {
+                throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+            }
+        }
     }
-    m_selected_columns.push_back(column);
+
+    auto const mode{[&]() -> NodeModes::Mode {
+        switch (column->get_function()) {
+            case ast::ColumnDescriptor::Function::Shape:
+                return NodeModes::Mode::Shape;
+            case ast::ColumnDescriptor::Function::Decompose:
+                return NodeModes::Mode::Decompose;
+            case ast::ColumnDescriptor::Function::None:
+            default:
+                return NodeModes::Mode::Value;
+        }
+    }()};
+    m_columns.emplace_back(std::move(column), mode);
 }
 
-void Projection::resolve_columns(std::shared_ptr<SchemaTree> tree) {
-    for (auto& column : m_selected_columns) {
-        resolve_column(tree, column);
+auto Projection::is_projected_as(mpt_node_id_t node_id, NodeModes::Mode mode) const -> bool {
+    auto it{m_node_projections.find(node_id)};
+    if (m_node_projections.end() == it) {
+        return false;
+    }
+    return it->second.contains(mode);
+}
+
+auto Projection::get_node_modes(mpt_node_id_t node_id) const -> NodeModes {
+    auto it{m_node_projections.find(node_id)};
+    if (m_node_projections.end() == it) {
+        return {};
+    }
+    return it->second;
+}
+
+auto Projection::should_emit_value(SchemaNode const& node) const -> bool {
+    if (Mode::Default == m_projection_mode) {
+        return NodeType::StructurizedText == node.get_type();
+    }
+    auto const node_id{node.get_id()};
+    auto const modes{get_node_modes(node_id)};
+    return m_matching_nodes.contains(node_id)
+           && (modes.contains(NodeModes::Mode::Value) || modes.contains(NodeModes::Mode::Default));
+}
+
+auto Projection::add_projection(mpt_node_id_t node_id, NodeModes::Mode mode) -> void {
+    auto [it, _]{m_node_projections.try_emplace(node_id)};
+    it->second.add(mode);
+}
+
+auto Projection::collect_decomposable_projections(
+        SchemaTree const& tree,
+        std::vector<mpt_node_id_t> const& matched_nodes,
+        NodeModes::Mode mode
+) -> bool {
+    bool found_decomposable_node{false};
+    for (auto node_id : matched_nodes) {
+        if (tree.get_node(node_id).is_decomposable()) {
+            found_decomposable_node = true;
+            add_projection(node_id, mode);
+        }
+    }
+    return found_decomposable_node;
+}
+
+auto Projection::resolve_columns(SchemaTree const& tree) -> void {
+    for (auto& entry : m_columns) {
+        entry.m_matched_nodes = resolve_column(tree, *entry.m_column);
+        if (NodeModes::Mode::Decompose == entry.m_mode || NodeModes::Mode::Shape == entry.m_mode) {
+            if (false
+                == collect_decomposable_projections(tree, entry.m_matched_nodes, entry.m_mode))
+            {
+                throw std::runtime_error(
+                        fmt::format(
+                                "{}(<col>) can only be applied to StructurizedText or ParentRule "
+                                "columns; no StructurizedText or ParentRule nodes match \"{}\".",
+                                ast::ColumnDescriptor::function_to_str(
+                                        entry.m_column->get_function()
+                                ),
+                                entry.m_column->to_string()
+                        )
+                );
+            }
+        } else {
+            static_cast<void>(
+                    collect_decomposable_projections(tree, entry.m_matched_nodes, entry.m_mode)
+            );
+        }
     }
 }
 
-void Projection::resolve_column(
-        std::shared_ptr<SchemaTree> tree,
-        std::shared_ptr<ast::ColumnDescriptor> column
-) {
+auto Projection::resolve_column(SchemaTree const& tree, ast::ColumnDescriptor& column)
+        -> std::vector<mpt_node_id_t> {
     /**
      * Ideally we would reuse the code from SchemaMatch for resolving columns, but unfortunately we
      * can not.
@@ -49,29 +129,28 @@ void Projection::resolve_column(
      * It would be possible to create code that can handle our use-case and SchemaMatch's use-case
      * in an elegant way, but it's a significant refactor. In particular, if we extend our column
      * type system to be one-per-token instead of one-per-column we can make it so that intermediate
-     * tokens will not match certain kinds of MPT nodes (like the node for structured arrays).
+     * tokens will not match certain kinds of MPT nodes (like the node for structurized arrays).
      *
      * In light of that we implement a simple version of column resolution here that does exactly
      * what we need.
      */
 
-    auto cur_node_id = tree->get_object_subtree_node_id_for_namespace(column->get_namespace());
+    auto cur_node_id{tree.get_object_subtree_node_id_for_namespace(column.get_namespace())};
     if (-1 == cur_node_id) {
-        m_ordered_matching_nodes.emplace_back(std::vector<int32_t>{});
-        return;
+        return {};
     }
     std::vector<int32_t> matching_nodes_for_column;
-    auto it = column->descriptor_begin();
-    while (it != column->descriptor_end()) {
-        bool matched_any{false};
-        auto cur_it = it++;
-        bool last_token = it == column->descriptor_end();
-        auto const& cur_node = tree->get_node(cur_node_id);
-        for (int32_t child_node_id : cur_node.get_children_ids()) {
-            auto const& child_node = tree->get_node(child_node_id);
+    auto it{column.descriptor_begin()};
+    while (it != column.descriptor_end()) {
+        auto matched_any{false};
+        auto cur_it{it};
+        ++it;
+        auto const last_token{it == column.descriptor_end()};
+        auto const& cur_node{tree.get_node(cur_node_id)};
+        for (auto const child_node_id : cur_node.get_children_ids()) {
+            auto const& child_node = tree.get_node(child_node_id);
 
-            // Intermediate nodes must be objects
-            if (false == last_token && child_node.get_type() != NodeType::Object) {
+            if (false == last_token && false == child_node.is_structural_container()) {
                 continue;
             }
 
@@ -80,7 +159,9 @@ void Projection::resolve_column(
             }
 
             matched_any = true;
-            if (last_token && column->matches_type(node_to_literal_type(child_node.get_type()))) {
+            if (last_token
+                && column.matches_type(SchemaNode::node_to_literal_type(child_node.get_type())))
+            {
                 m_matching_nodes.insert(child_node_id);
                 matching_nodes_for_column.emplace_back(child_node_id);
             } else if (false == last_token) {
@@ -90,9 +171,9 @@ void Projection::resolve_column(
         }
 
         if (false == matched_any) {
-            break;
+            return {};
         }
     }
-    m_ordered_matching_nodes.emplace_back(std::move(matching_nodes_for_column));
+    return matching_nodes_for_column;
 }
 }  // namespace clp_s::search

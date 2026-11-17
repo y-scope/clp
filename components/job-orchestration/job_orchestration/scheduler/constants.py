@@ -31,7 +31,6 @@ class CompressionJobStatus(StatusIntEnum):
     RUNNING = auto()
     SUCCEEDED = auto()
     FAILED = auto()
-    KILLED = auto()
 
 
 class CompressionJobCompletionStatus(StatusIntEnum):

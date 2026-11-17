@@ -1,7 +1,8 @@
 #include "AddTimestampConditions.hpp"
 
+#include <memory>
+
 #include "../Defs.hpp"
-#include "../Utils.hpp"
 #include "ast/AndExpr.hpp"
 #include "ast/ColumnDescriptor.hpp"
 #include "ast/EmptyExpr.hpp"
@@ -23,7 +24,7 @@ namespace {
 constexpr epochtime_t cNanosecondsInMillisecond{1000LL * 1000LL};
 }  // namespace
 
-std::shared_ptr<Expression> AddTimestampConditions::run(std::shared_ptr<Expression>& expr) {
+auto AddTimestampConditions::run(std::shared_ptr<Expression>& expr) -> std::shared_ptr<Expression> {
     if (false == m_begin_ts.has_value() && false == m_end_ts.has_value()) {
         return expr;
     }

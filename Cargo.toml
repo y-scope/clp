@@ -1,4 +1,7 @@
 [workspace]
+exclude = [
+    "build"
+]
 members = [
     "components/api-server",
     "components/clp-rust-libs/clp-rust-utils",
@@ -27,6 +30,7 @@ chrono = { version = "0.4.45", features = ["serde"] }
 clap = { version = "4.6.6", features = ["derive"] }
 clp-rust-utils = { path = "components/clp-rust-libs/clp-rust-utils" }
 const_format = "0.2.36"
+dashmap = "6.2.1"
 futures = "0.3.33"
 http-body-util = "0.1.4"
 mongodb = "3.8.0"
@@ -36,6 +40,7 @@ opentelemetry = "0.32.0"
 opentelemetry-otlp = { version = "0.32.0", default-features = false, features = ["metrics", "http-proto"] }
 opentelemetry_sdk = { version = "0.32.1", features = ["metrics", "rt-tokio"] }
 pin-project-lite = "0.2.17"
+query-result-listener = { path = "components/clp-rust-libs/query-result-listener" }
 regex = "1.13.1"
 rmp = "0.8.15"
 rmp-serde = "1.3.1"
@@ -65,5 +70,6 @@ url = "2.5.8"
 utoipa = "5.5.0"
 utoipa-axum = "0.2.0"
 uuid = { version = "1.26.1", features = ["v4", "serde"] }
+walkdir = "2.5.0"
 yaml_serde = "0.10.4"
 zstd = "0.13.3"

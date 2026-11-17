@@ -3,6 +3,7 @@
 pub mod compression_job_submitter;
 pub mod coordination;
 mod error;
+mod input;
 pub mod job_handle;
 pub mod partition;
 

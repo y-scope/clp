@@ -3,6 +3,7 @@ import {useQuery} from "@tanstack/react-query";
 import {fetchCompressionJobs} from "../../../api/compress-metadata";
 import {DashboardCard} from "../../../components/DashboardCard";
 import VirtualTable from "../../../components/VirtualTable";
+import QueryErrorAlert from "../QueryErrorAlert";
 import styles from "./index.module.css";
 import {
     jobColumns,
@@ -17,27 +18,38 @@ import {mapCompressionJobResponseToTableData} from "./utils";
  * @return
  */
 const Jobs = () => {
-    const {data: jobs = [], isPending} = useQuery({
+    const {data, error, isError, isPending, refetch} = useQuery({
         queryKey: ["jobs"],
         queryFn: async () => {
-            const data = await fetchCompressionJobs();
-            return data.map((item): JobData => mapCompressionJobResponseToTableData(item));
+            const responseData = await fetchCompressionJobs();
+            return responseData.map((item): JobData => mapCompressionJobResponseToTableData(item));
         },
     });
+    const jobs = data ?? [];
 
     return (
         <DashboardCard
             isLoading={isPending}
             title={"Compression Jobs"}
         >
-            <VirtualTable<JobData>
-                className={styles["jobs"] || ""}
-                columns={jobColumns}
-                dataSource={jobs}
-                pagination={false}
-                rowKey={(record) => record.key}
-                scroll={{y: 400, x: 1}}
-                tableLayout={"fixed"}/>
+            {isError && (
+                <QueryErrorAlert
+                    error={error}
+                    hasPreviousData={"undefined" !== typeof data}
+                    onRetry={() => {
+                        refetch().catch(console.error);
+                    }}/>
+            )}
+            {(!isError || "undefined" !== typeof data) && (
+                <VirtualTable<JobData>
+                    className={styles["jobs"] || ""}
+                    columns={jobColumns}
+                    dataSource={jobs}
+                    pagination={false}
+                    rowKey={(record) => record.key}
+                    scroll={{y: 400, x: 1}}
+                    tableLayout={"fixed"}/>
+            )}
         </DashboardCard>
     );
 };

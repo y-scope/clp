@@ -10,4 +10,5 @@ DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
   curl \
   libcurl4 \
   libmariadb3 \
-  python3
+  python3 \
+  tzdata

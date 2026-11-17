@@ -9,15 +9,16 @@
 #include "ErrorCode.hpp"
 
 // Define a version of __FILE__ that's relative to the source directory
+// NOLINTBEGIN(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp,readability-identifier-naming)
 #ifdef SOURCE_PATH_SIZE
     // Temporary until we switch to using C++20's std::source_location
-    // NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp,readability-identifier-naming)
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     #define __FILENAME__ ((__FILE__) + SOURCE_PATH_SIZE)
 #else
     // We don't know the source path size, so just default to __FILE__
-    // NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp,readability-identifier-naming)
     #define __FILENAME__ __FILE__
 #endif
+// NOLINTEND(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp,readability-identifier-naming)
 
 namespace clp_s {
 class TraceableException : public std::exception {

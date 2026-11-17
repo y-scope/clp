@@ -26,17 +26,8 @@ async fn main() -> anyhow::Result<()> {
         tracing::error!(error = % e, "Failed to load the configuration file.");
     })?;
 
-    if !matches!(config.logs_input, package::config::LogsInput::S3 { .. }) {
-        const ERROR_MESSAGE: &str = "The compression coordinator only supports S3 logs inputs.";
-        tracing::error!(ERROR_MESSAGE);
-        anyhow::bail!(ERROR_MESSAGE);
-    }
-
-    if !matches!(
-        config.archive_output.storage,
-        package::config::ArchiveOutputStorage::S3 { .. }
-    ) {
-        const ERROR_MESSAGE: &str = "The compression coordinator only supports S3 archive outputs.";
+    if config.package.storage_engine != package::config::StorageEngine::ClpS {
+        const ERROR_MESSAGE: &str = "The compression coordinator only supports the CLP-S engine.";
         tracing::error!(ERROR_MESSAGE);
         anyhow::bail!(ERROR_MESSAGE);
     }

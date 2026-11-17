@@ -5,10 +5,14 @@ use std::fmt::Formatter;
 use std::io;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::OnceLock;
 
 use non_empty_string::NonEmptyString;
 use serde::Deserialize;
 use serde::Serialize;
+
+use crate::clp_config::package::config::LOGS_INPUT_MOUNT_POINT;
+use crate::types::non_empty_string::ExpectedNonEmpty;
 
 /// A path in the logs input, relative to the logs-input mount point
 /// ([`LOGS_INPUT_MOUNT_POINT`](crate::clp_config::package::config::LOGS_INPUT_MOUNT_POINT)).
@@ -219,6 +223,53 @@ impl LogsInputMountPoint {
             .ok_or(LogsInputError::UnsupportedName(checked_path))
     }
 
+    /// Converts a container path to its canonical path relative to the logs-input mount point.
+    ///
+    /// # Returns
+    ///
+    /// The canonical logs-input path on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`LogsInputError::RelativeContainerPath`] if `container_path` is relative.
+    /// * [`LogsInputError::UnsupportedName`] if the input or canonical mount-relative path isn't
+    ///   UTF-8 or contains a line break.
+    /// * Forwards [`Self::canonicalize`]'s return values on failure.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the internal containment invariant established by [`Self::canonicalize`] is
+    /// violated.
+    pub fn canonical_input_path(
+        &self,
+        container_path: &Path,
+    ) -> Result<LogsInputPath, LogsInputError> {
+        if container_path.is_relative() {
+            return Err(LogsInputError::RelativeContainerPath(
+                container_path.to_path_buf(),
+            ));
+        }
+        if container_path
+            .to_str()
+            .is_none_or(|path| path.contains(['\n', '\r']))
+        {
+            return Err(LogsInputError::UnsupportedName(
+                container_path.to_path_buf(),
+            ));
+        }
+        let canonical_path = self.canonicalize(container_path, container_path)?;
+        let relative_path = canonical_path
+            .strip_prefix(&self.canonical_path)
+            .expect("canonicalize should have verified containment within the mount point");
+        let relative_path = relative_path
+            .to_str()
+            .ok_or_else(|| LogsInputError::UnsupportedName(canonical_path.clone()))?;
+        LogsInputPath::try_from(format!("/{relative_path}"))
+            .map_err(|_| LogsInputError::UnsupportedName(canonical_path))
+    }
+
     /// Lists the entries of the directory at a logs-input path under the mount point.
     ///
     /// # Returns
@@ -335,6 +386,30 @@ pub enum LogsInputError {
         #[source]
         source: io::Error,
     },
+}
+
+/// Resolves the default logs-input mount point on first use and caches successful resolution.
+///
+/// Failed resolutions are retried on subsequent calls.
+///
+/// # Returns
+///
+/// The shared resolved mount point on success.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * Forwards [`LogsInputMountPoint::resolve`]'s return values on failure.
+pub fn default_mount_point() -> Result<&'static LogsInputMountPoint, LogsInputError> {
+    static MOUNT_POINT: OnceLock<LogsInputMountPoint> = OnceLock::new();
+
+    if let Some(mount_point) = MOUNT_POINT.get() {
+        return Ok(mount_point);
+    }
+    let mount_point =
+        LogsInputMountPoint::resolve(NonEmptyString::from_static_str(LOGS_INPUT_MOUNT_POINT))?;
+    Ok(MOUNT_POINT.get_or_init(|| mount_point))
 }
 
 #[cfg(test)]
@@ -472,6 +547,132 @@ mod tests {
     /// Panics if `value` isn't a valid logs-input path.
     fn path(value: &str) -> LogsInputPath {
         LogsInputPath::try_from(value.to_owned()).expect("the test path should be valid")
+    }
+
+    #[test]
+    fn canonical_input_path_resolves_mounts_and_aliases() -> anyhow::Result<()> {
+        let fixture = Fixture::new();
+        for mount in [&fixture.mount_point, &fixture.linked_mount_point] {
+            let mount_point = LogsInputMountPoint::resolve(mount.clone())?;
+            for container_root in [&fixture.mount_point, &fixture.linked_mount_point] {
+                for (suffix, expected) in [
+                    ("", "/"),
+                    ("/app.log", "/app.log"),
+                    ("/dir/../app.log", "/app.log"),
+                    ("/inside-file-link", "/app.log"),
+                    ("/dir", "/dir"),
+                    ("/inside-link", "/dir"),
+                    ("/dir/inner.log", "/dir/inner.log"),
+                    ("/inside-link/inner.log", "/dir/inner.log"),
+                ] {
+                    let container_path = format!("{container_root}{suffix}");
+                    assert_eq!(
+                        mount_point.canonical_input_path(Path::new(&container_path))?,
+                        path(expected),
+                        "mount: {mount}, input: {container_path}"
+                    );
+                }
+            }
+            assert_eq!(
+                mount_point
+                    .canonical_input_path(&fixture.base.path().join("outside-to-inside-link"))?,
+                path("/app.log")
+            );
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn canonical_input_path_preserves_validation_errors() -> anyhow::Result<()> {
+        let fixture = Fixture::new();
+        let mount_point = LogsInputMountPoint::resolve(fixture.mount_point.clone())?;
+        let relative = Path::new("app.log");
+        let result = mount_point.canonical_input_path(relative);
+        assert!(
+            matches!(&result, Err(LogsInputError::RelativeContainerPath(rejected))
+                if rejected == relative),
+            "unexpected result: {result:?}"
+        );
+        for suffix in ["/missing.log", "/dangling-link"] {
+            let container_path = fixture.under_mount_point(suffix);
+            let container_path = Path::new(container_path.as_str());
+            let result = mount_point.canonical_input_path(container_path);
+            assert!(
+                matches!(&result, Err(LogsInputError::NotFound(rejected))
+                    if rejected == container_path),
+                "unexpected result for {container_path:?}: {result:?}"
+            );
+        }
+        for container_path in [
+            fixture.base.path().join("private.log"),
+            fixture.base.path().join("logs-evil/x.log"),
+            fixture.base.path().join("logs/outside-link"),
+            fixture.base.path().join("logs/sibling-link/x.log"),
+        ] {
+            let result = mount_point.canonical_input_path(&container_path);
+            assert!(
+                matches!(&result, Err(LogsInputError::OutsideMountPoint(rejected))
+                    if rejected == &container_path),
+                "unexpected result for {container_path:?}: {result:?}"
+            );
+        }
+        let loop_path = fixture.base.path().join("logs/loop-link");
+        let result = mount_point.canonical_input_path(&loop_path);
+        assert!(
+            matches!(&result, Err(LogsInputError::Unresolvable { path, .. })
+                if path == &loop_path),
+            "unexpected result: {result:?}"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn canonical_input_path_rejects_invalid_alias_names() -> anyhow::Result<()> {
+        let fixture = Fixture::new();
+        let mount_point = fixture.resolve();
+        for name in [b"line\nlink".as_slice(), b"line\rlink", b"invalid-\xff"] {
+            let alias = fixture
+                .base
+                .path()
+                .join("logs")
+                .join(OsStr::from_bytes(name));
+            symlink("app.log", &alias)?;
+            let result = mount_point.canonical_input_path(&alias);
+            assert!(
+                matches!(&result, Err(LogsInputError::UnsupportedName(rejected))
+                    if rejected == &alias),
+                "unexpected result for {alias:?}: {result:?}"
+            );
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn canonical_input_path_rejects_invalid_target_names() -> anyhow::Result<()> {
+        let fixture = Fixture::new();
+        let mount_point = fixture.resolve();
+        for (index, name) in [b"line\nfile".as_slice(), b"line\rfile", b"invalid-\xff"]
+            .into_iter()
+            .enumerate()
+        {
+            let name = OsStr::from_bytes(name);
+            let target = fixture.base.path().join("logs").join(name);
+            std::fs::write(&target, b"")?;
+            let alias = fixture
+                .base
+                .path()
+                .join("logs")
+                .join(format!("alias-{index}"));
+            symlink(name, &alias)?;
+            let canonical_target = std::fs::canonicalize(&target)?;
+            let result = mount_point.canonical_input_path(&alias);
+            assert!(
+                matches!(&result, Err(LogsInputError::UnsupportedName(rejected))
+                    if rejected == &canonical_target),
+                "unexpected result for {alias:?}: {result:?}"
+            );
+        }
+        Ok(())
     }
 
     #[test]

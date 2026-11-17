@@ -17,3 +17,5 @@ documented below.
 ### Query
 
 * `query::clp_s_search`: Search a single archive using the `clp-s` engine.
+* `query::commit_timeline`: Merge per-archive timeline buckets in the results cache and publish
+  the completed histogram after all archive tasks succeed.

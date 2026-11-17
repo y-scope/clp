@@ -89,6 +89,22 @@ pub struct SessionToken {
     value: uuid::Uuid,
 }
 
+impl SessionToken {
+    /// Factory function.
+    ///
+    /// Generates a random session token.
+    ///
+    /// # Returns
+    ///
+    /// The newly generated token.
+    #[must_use]
+    pub fn generate() -> Self {
+        Self {
+            value: uuid::Uuid::new_v4(),
+        }
+    }
+}
+
 impl From<uuid::Uuid> for SessionToken {
     fn from(value: uuid::Uuid) -> Self {
         Self { value }
