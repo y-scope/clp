@@ -19,7 +19,7 @@ jobs:
     runs-on: >-
       ${{
         github.repository_owner == 'y-scope'
-        && fromJSON('["self-hosted", "arm64", "ubuntu-noble"]')
+        && fromJSON('["self-hosted", "ubuntu-noble"]')
         || 'ubuntu-24.04-arm'
       }}
     steps:
