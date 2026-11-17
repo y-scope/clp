@@ -200,6 +200,9 @@ pub struct NetworkOutput {
     sqlx::Type,
 )]
 #[repr(i32)]
+// Replaces the docstring, which is addressed to developers, as the type's description in the
+// OpenAPI documents.
+#[schema(description = "The status of a query job.")]
 #[strum(ascii_case_insensitive)]
 pub enum QueryJobStatus {
     Pending = 0,
