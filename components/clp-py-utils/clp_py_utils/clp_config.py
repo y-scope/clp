@@ -740,8 +740,8 @@ class GarbageCollector(BaseModel):
 
 
 class QueryJobPollingConfig(BaseModel):
-    initial_backoff_ms: int = Field(default=100, alias="initial_backoff")
-    max_backoff_ms: int = Field(default=5000, alias="max_backoff")
+    initial_backoff_ms: int = Field(default=16, alias="initial_backoff")
+    max_backoff_ms: int = Field(default=256, alias="max_backoff")
 
 
 class ApiServer(BaseModel):

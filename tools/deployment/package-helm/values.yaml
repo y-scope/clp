@@ -136,8 +136,8 @@ clpConfig:
     serviceType: "ClusterIP"  # "NodePort", "ClusterIP", or "LoadBalancer"
     port: 30301  # Specifies the service's nodePort. Ignored unless serviceType is "NodePort".
     query_job_polling:
-      initial_backoff_ms: 100
-      max_backoff_ms: 5000
+      initial_backoff_ms: 16
+      max_backoff_ms: 256
     stream_file_extraction_timeout_secs: 270
 
   database:
