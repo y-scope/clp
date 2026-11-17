@@ -1,8 +1,15 @@
+use std::net::Ipv4Addr;
+use std::net::SocketAddr;
+use std::sync::Arc;
+
 use anyhow::Context;
+use api_server::routes::SseEncoding;
 use clap::Parser;
 use clp_rust_utils::clp_config::package;
 use clp_rust_utils::database::mysql::create_clp_db_mysql_pool;
 use clp_rust_utils::serde::yaml;
+use query_result_listener::listener::ListenerConfig;
+use query_result_listener::listener::ResultListener;
 
 #[derive(Parser)]
 #[command(version, about = "API Server for CLP.")]
@@ -35,6 +42,37 @@ fn read_config_and_credentials(
         },
     };
     Ok((config, credentials))
+}
+
+/// Binds the query result listener that `config` configures, on every interface.
+///
+/// # Returns
+///
+/// The newly bound listener on success.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * Forwards [`ResultListener::bind`]'s return values on failure.
+fn bind_query_result_listener(
+    config: &package::config::QueryResultListener,
+) -> anyhow::Result<ResultListener<SseEncoding>> {
+    let listener = ResultListener::bind(ListenerConfig {
+        bind_addr: SocketAddr::from((Ipv4Addr::UNSPECIFIED, config.port.get())),
+        advertised_host: config.advertised_host.clone(),
+        handshake_timeout_sec: config.handshake_timeout_secs,
+    })
+    .context(format!(
+        "cannot bind the query result listener to port {}",
+        config.port
+    ))?;
+    tracing::info!(
+        port = config.port.get(),
+        advertised_host = % config.advertised_host,
+        "Listening for the results of streaming queries."
+    );
+    Ok(listener)
 }
 
 async fn shutdown_signal() {
@@ -83,6 +121,8 @@ async fn main() -> anyhow::Result<()> {
     let mongodb_client = mongodb::Client::with_uri_str(mongo_uri)
         .await
         .context("cannot connect to MongoDB")?;
+    let query_result_listener =
+        bind_query_result_listener(&api_server_config.query_result_listener)?;
 
     let client =
         api_server::client::Client::new(config.clone(), mongodb_client.clone(), sql_pool.clone());
@@ -92,6 +132,7 @@ async fn main() -> anyhow::Result<()> {
     let router = api_server::routes::from_app_state(api_server::routes::AppState {
         client,
         webui_client,
+        query_result_listener: Arc::new(query_result_listener),
     })?;
     startup_counter.add(1, &[opentelemetry::KeyValue::new("type", "start")]);
 

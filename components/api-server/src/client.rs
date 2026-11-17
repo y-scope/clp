@@ -1,5 +1,6 @@
 use std::num::NonZeroU32;
 use std::pin::Pin;
+use std::time::Duration;
 
 use async_stream::stream;
 use async_stream::try_stream;
@@ -8,6 +9,7 @@ use chrono::TimeZone;
 use chrono::Utc;
 use clp_rust_utils::aws::AWS_DEFAULT_REGION;
 use clp_rust_utils::clp_config::package::config::Config;
+use clp_rust_utils::clp_config::package::config::QueryJobPollingConfig;
 use clp_rust_utils::clp_config::package::config::StreamOutputStorage;
 use clp_rust_utils::database::mysql::query_job;
 use clp_rust_utils::job_config::Aggregation;
@@ -478,6 +480,33 @@ impl Client {
             .ok_or(ClientError::QueryJobNotFound(query_job_id))
     }
 
+    /// Waits until a query job terminates, reading its status with the backoff of the API server's
+    /// query job polling configuration.
+    ///
+    /// # Returns
+    ///
+    /// The terminal status of the job on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`Client::get_status`]'s return values on failure.
+    pub(crate) async fn wait_for_query_job_termination(
+        &self,
+        query_job_id: u64,
+    ) -> Result<QueryJobStatus, ClientError> {
+        let mut backoff =
+            QueryJobPollingBackoff::new(&self.get_api_server_config().query_job_polling);
+        loop {
+            let status = self.get_status(query_job_id).await?;
+            if status.is_terminal() {
+                return Ok(status);
+            }
+            tokio::time::sleep(backoff.next_delay()).await;
+        }
+    }
+
     /// Waits until a query succeeds, fails, or begins cancellation.
     ///
     /// # Errors
@@ -487,9 +516,8 @@ impl Client {
     /// * [`ClientError::QueryNotSucceeded`] if the query fails or cancellation has begun.
     /// * Forwards [`Self::get_status`]'s return values on failure.
     async fn wait_for_query_success(&self, query_job_id: u64) -> Result<(), ClientError> {
-        let api_server_config = self.get_api_server_config();
-        let mut delay_ms = api_server_config.query_job_polling.initial_backoff_ms;
-        let max_delay_ms = api_server_config.query_job_polling.max_backoff_ms;
+        let mut backoff =
+            QueryJobPollingBackoff::new(&self.get_api_server_config().query_job_polling);
         loop {
             match self.get_status(query_job_id).await? {
                 QueryJobStatus::Succeeded => {
@@ -503,8 +531,7 @@ impl Client {
                     return Err(ClientError::QueryNotSucceeded);
                 }
                 QueryJobStatus::Running | QueryJobStatus::Pending => {
-                    tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
-                    delay_ms = std::cmp::min(delay_ms.saturating_mul(2), max_delay_ms);
+                    tokio::time::sleep(backoff.next_delay()).await;
                 }
             }
         }
@@ -884,6 +911,37 @@ where
     }
 }
 
+/// The backoff between the reads of a query job's status: the first delay is the configured initial
+/// backoff, and each next delay doubles the previous one, up to the configured maximum backoff.
+struct QueryJobPollingBackoff {
+    delay_ms: u64,
+    max_delay_ms: u64,
+}
+
+impl QueryJobPollingBackoff {
+    /// Factory function.
+    ///
+    /// # Returns
+    ///
+    /// A newly created backoff that `config` configures, starting at its first delay.
+    const fn new(config: &QueryJobPollingConfig) -> Self {
+        Self {
+            delay_ms: config.initial_backoff_ms,
+            max_delay_ms: config.max_backoff_ms,
+        }
+    }
+
+    /// # Returns
+    ///
+    /// The delay before the next read of the status. The delay after it is doubled, up to the
+    /// maximum.
+    fn next_delay(&mut self) -> Duration {
+        let delay = Duration::from_millis(self.delay_ms);
+        self.delay_ms = std::cmp::min(self.delay_ms.saturating_mul(2), self.max_delay_ms);
+        delay
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
@@ -936,6 +994,21 @@ mod tests {
                 QueryOutput::from(output.clone()),
                 expected,
                 "output: {output:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn query_job_polling_backoff_doubles_its_delay_up_to_the_maximum() {
+        let mut backoff = QueryJobPollingBackoff::new(&QueryJobPollingConfig {
+            initial_backoff_ms: 100,
+            max_backoff_ms: 500,
+        });
+
+        for expected_delay_ms in [100, 200, 400, 500, 500] {
+            assert_eq!(
+                backoff.next_delay(),
+                Duration::from_millis(expected_delay_ms)
             );
         }
     }

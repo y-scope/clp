@@ -1,6 +1,9 @@
 mod webui;
 
+use std::sync::Arc;
+
 use axum::Json;
+use axum::body::Bytes;
 use axum::extract::FromRef;
 use axum::extract::Path;
 use axum::extract::Query;
@@ -12,10 +15,17 @@ use axum::response::sse::Event;
 use axum::response::sse::KeepAlive;
 use axum::routing::get;
 use clp_rust_utils::job_config::QueryJobConfig;
+use clp_rust_utils::job_config::QueryJobStatus;
+use clp_rust_utils::job_config::QueryOutput;
+use clp_rust_utils::job_config::SearchQuery;
 use clp_rust_utils::logs_input::LogsInputError;
 use clp_rust_utils::timeline::Bucket;
 use futures::Stream;
 use futures::StreamExt;
+use query_result_listener::listener::ResultListener;
+use query_result_listener::session::SessionConfig;
+use query_result_listener::session::SessionEvent;
+use query_result_listener::session::SessionStats;
 use serde::Deserialize;
 use serde::Serialize;
 use thiserror::Error;
@@ -32,7 +42,11 @@ use crate::client::ClientError;
 use crate::client::CompressionUsage;
 use crate::client::CompressionUsageParams;
 use crate::client::QueryConfig;
+use crate::client::StreamingQueryConfig;
 use crate::client::ValidatedCompressionUsageParams;
+pub use crate::sse::SseEncoding;
+use crate::sse::SseResponse;
+use crate::sse::encode_event;
 use crate::webui_client::WebuiClient;
 
 /// Shared application state passed to all route handlers.
@@ -42,6 +56,9 @@ pub struct AppState {
     pub client: Client,
     /// Client for the `WebUI`'s routes.
     pub webui_client: WebuiClient,
+
+    /// The listener that the tasks of streaming queries' jobs stream their results to.
+    pub query_result_listener: Arc<ResultListener<SseEncoding>>,
 }
 
 impl FromRef<AppState> for Client {
@@ -53,6 +70,12 @@ impl FromRef<AppState> for Client {
 impl FromRef<AppState> for WebuiClient {
     fn from_ref(state: &AppState) -> Self {
         state.webui_client.clone()
+    }
+}
+
+impl FromRef<AppState> for Arc<ResultListener<SseEncoding>> {
+    fn from_ref(state: &AppState) -> Self {
+        Self::clone(&state.query_result_listener)
     }
 }
 
@@ -72,6 +95,7 @@ pub fn from_app_state(state: AppState) -> Result<axum::Router, serde_json::Error
         .route("/", get(health))
         .routes(routes!(health))
         .routes(routes!(query))
+        .routes(routes!(stream_query))
         .routes(routes!(query_results))
         .routes(routes!(query_timeline))
         .routes(routes!(cancel_query))
@@ -99,9 +123,13 @@ mod api_doc {
     use super::__path_query;
     use super::__path_query_results;
     use super::__path_query_timeline;
+    use super::__path_stream_query;
     use super::CompressionUsage;
     use super::OpenApi;
     use super::OpenApiRouter;
+    use super::StreamingQueryEndEvent;
+    use super::StreamingQueryErrorEvent;
+    use super::StreamingQueryJobEvent;
     use super::webui;
     use crate::client::CompressionJobStatus;
 
@@ -115,12 +143,19 @@ mod api_doc {
         paths(
             health,
             query,
+            stream_query,
             query_results,
             query_timeline,
             cancel_query,
             compression_usage
         ),
-        components(schemas(CompressionUsage, CompressionJobStatus))
+        components(schemas(
+            CompressionUsage,
+            CompressionJobStatus,
+            StreamingQueryJobEvent,
+            StreamingQueryEndEvent,
+            StreamingQueryErrorEvent
+        ))
     )]
     pub struct ApiDoc;
 
@@ -213,6 +248,251 @@ async fn query(
 struct QueryResultsUri {
     /// The uri to get the query results.
     query_results_uri: String,
+}
+
+#[utoipa::path(
+    post,
+    path = "/query/stream",
+    description = "Submits a new query job and streams its results back as Server-Sent Events \
+        (SSE) in the same response while the job runs. If the client disconnects before the job \
+        terminates, the job's cancellation is requested.",
+    request_body(
+        content = StreamingQueryConfig,
+        example = json!({
+            "query": {
+                "datasets": ["default"],
+                "query_string": "*",
+                "time_range": {
+                    "begin_timestamp_millisecs": 0,
+                    "end_timestamp_millisecs": 17_356_896
+                },
+                "ignore_case": true
+            }
+        })),
+    responses(
+        (
+            status = OK,
+            body = String,
+            content_type = "text/event-stream",
+            description = "Server-Sent Events stream of the query. First comes a `job` event \
+                whose data is a `StreamingQueryJobEvent`. Then comes one unnamed event per \
+                result, whose data is a JSON object with the result's `archive_id`, \
+                `timestamp_millisecs` and `message` (without its trailing newline); results from \
+                different archives arrive in no particular order. Once the job has terminated, \
+                the stream ends with an `end` event whose data is a `StreamingQueryEndEvent`. If \
+                the query fails after its job was submitted (e.g., a result can't be encoded, or \
+                the job's status can't be read), the stream ends instead with an `error` event \
+                whose data is a `StreamingQueryErrorEvent`, and the job's cancellation is \
+                requested. While nothing else is sent, the stream periodically sends an SSE \
+                comment, so that the idle connection stays open.",
+            example = "event: job\ndata: {\"query_job_id\":1}\n\ndata: \
+                {\"archive_id\":\"018e90e5-8b2a-4a61-a2fc-cac799936caf\",\
+                \"timestamp_millisecs\":1633036800000,\"message\":\"Example log message\"}\n\n\
+                event: end\ndata: {\"status\":\"Succeeded\",\"num_results_emitted\":1,\
+                \"num_duplicates_dropped\":0}\n\n"
+        ),
+        (status = BAD_REQUEST, body = String, content_type = "text/plain",
+            description = "The request body is not valid JSON or could not be read."),
+        (status = PAYLOAD_TOO_LARGE, body = String, content_type = "text/plain",
+            description = "The request body exceeds the configured size limit."),
+        (status = UNSUPPORTED_MEDIA_TYPE, body = String, content_type = "text/plain",
+            description = "The Content-Type header is missing or is not a JSON media type."),
+        (status = UNPROCESSABLE_ENTITY, body = String, content_type = "text/plain",
+            description = "The JSON body has missing or unknown fields (including `output`, which \
+                only `POST /query` takes), or fields with invalid types or values (e.g., an empty \
+                `query.datasets` or `query.query_string`, or a `query.time_range` whose begin \
+                timestamp exceeds its end timestamp)."),
+        (status = INTERNAL_SERVER_ERROR,
+            description = "The query's session couldn't be opened, or its job couldn't be \
+                submitted.")
+    )
+)]
+async fn stream_query(
+    State(client): State<Client>,
+    State(query_result_listener): State<Arc<ResultListener<SseEncoding>>>,
+    Json(streaming_query_config): Json<StreamingQueryConfig>,
+) -> Result<SseResponse<impl Stream<Item = Result<Bytes, serde_json::Error>> + use<>>, HandlerError>
+{
+    tracing::info!(
+        query = ? streaming_query_config.query,
+        "Submitting a streaming query."
+    );
+    // Spawned so that the submission runs to completion even if the client disconnects meanwhile,
+    // which drops this handler: the task's output, including the stream of the submitted job's
+    // events, is then dropped, which requests the job's cancellation.
+    let submission = tokio::spawn(submit_streaming_query(
+        client,
+        query_result_listener,
+        streaming_query_config.query,
+    ));
+    let submitted_streaming_query = submission.await.map_err(|error| {
+        tracing::error!(error = % error, "The task submitting a streaming query failed.");
+        HandlerError::InternalServer
+    })??;
+    Ok(submitted_streaming_query.into_sse_response())
+}
+
+/// Opens a session on `query_result_listener`, submits a query job that runs `query` and streams
+/// its results to the session, and streams the job's events.
+///
+/// A failure to open the session or to submit the job is logged.
+///
+/// # Returns
+///
+/// The submitted streaming query on success. Its events come from
+/// [`OpenSession::into_events`](query_result_listener::session::OpenSession::into_events), which
+/// finds the job terminated with [`Client::wait_for_query_job_termination`], and requests the job's
+/// cancellation with [`Client::cancel_query_job`], logging the request's outcome.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * [`HandlerError::InternalServer`] if the session can't be opened.
+/// * Forwards [`Client::submit_query`]'s return values on failure.
+async fn submit_streaming_query(
+    client: Client,
+    query_result_listener: Arc<ResultListener<SseEncoding>>,
+    query: SearchQuery,
+) -> Result<SubmittedStreamingQuery<impl Stream<Item = SessionEvent<Bytes>> + Send>, HandlerError> {
+    let open_session = query_result_listener
+        .open_session(SessionConfig::default())
+        .map_err(|error| {
+            tracing::error!(
+                error = % error,
+                "Failed to open the session of a streaming query."
+            );
+            HandlerError::InternalServer
+        })?;
+    let query_job_config = QueryJobConfig {
+        query,
+        output: QueryOutput::Network(open_session.network_output().clone()),
+    };
+    let query_job_id = client
+        .submit_query(&query_job_config)
+        .await
+        .inspect_err(|error| {
+            tracing::error!(error = % error, "Failed to submit a streaming query.");
+        })?;
+    tracing::info!(query_job_id, "Submitted a streaming query.");
+
+    let wait_for_termination = {
+        let client = client.clone();
+        async move { client.wait_for_query_job_termination(query_job_id).await }
+    };
+    let request_cancellation = async move {
+        match client.cancel_query_job(query_job_id).await {
+            Ok(()) => tracing::info!(
+                query_job_id,
+                "Requested the cancellation of a streaming query's job."
+            ),
+            Err(ClientError::QueryJobAlreadyTerminated(_)) => tracing::info!(
+                query_job_id,
+                "Skipped the cancellation of a streaming query's job, which had already \
+                 terminated."
+            ),
+            Err(error) => tracing::warn!(
+                query_job_id,
+                error = % error,
+                "Failed to request the cancellation of a streaming query's job."
+            ),
+        }
+    };
+    Ok(SubmittedStreamingQuery {
+        query_job_id,
+        events: open_session.into_events(wait_for_termination, request_cancellation),
+    })
+}
+
+/// A streaming query whose job has been submitted, with the stream of the job's events.
+///
+/// # Type Parameters
+///
+/// * `EventStreamType` - The stream of the job's events.
+struct SubmittedStreamingQuery<EventStreamType> {
+    query_job_id: u64,
+    events: EventStreamType,
+}
+
+impl<EventStreamType: Stream<Item = SessionEvent<Bytes>> + Send + 'static>
+    SubmittedStreamingQuery<EventStreamType>
+{
+    /// Builds the Server-Sent Events response of the streaming query.
+    ///
+    /// The response sends a `job` event whose data is a [`StreamingQueryJobEvent`], then each batch
+    /// of the job's results as it is, and finally an `end` event whose data is a
+    /// [`StreamingQueryEndEvent`], or an `error` event whose data is a
+    /// [`StreamingQueryErrorEvent`]. The error that ends the job's events is logged with the job's
+    /// ID, and isn't sent to the client.
+    ///
+    /// # Returns
+    ///
+    /// The newly created response.
+    fn into_sse_response(
+        self,
+    ) -> SseResponse<impl Stream<Item = Result<Bytes, serde_json::Error>> + Send + 'static> {
+        let Self {
+            query_job_id,
+            events,
+        } = self;
+        let job_event = encode_event("job", &StreamingQueryJobEvent { query_job_id });
+        let events = events.map(move |event| match event {
+            SessionEvent::Results(batch) => Ok(batch),
+            SessionEvent::Ended {
+                status,
+                stats:
+                    SessionStats {
+                        num_results_emitted,
+                        num_duplicates_dropped,
+                    },
+            } => encode_event(
+                "end",
+                &StreamingQueryEndEvent {
+                    status,
+                    num_results_emitted,
+                    num_duplicates_dropped,
+                },
+            ),
+            SessionEvent::Failed(error) => {
+                tracing::error!(query_job_id, error = % error, "A streaming query failed.");
+                encode_event(
+                    "error",
+                    &StreamingQueryErrorEvent {
+                        message: HandlerError::InternalServer.to_string(),
+                    },
+                )
+            }
+        });
+        SseResponse::new(futures::stream::iter([job_event]).chain(events))
+    }
+}
+
+/// The data of a streaming query's `job` event.
+#[derive(Serialize, ToSchema)]
+struct StreamingQueryJobEvent {
+    /// The ID of the query's job, which `DELETE /query/{query_job_id}` cancels.
+    query_job_id: u64,
+}
+
+/// The data of a streaming query's `end` event.
+#[derive(Serialize, ToSchema)]
+struct StreamingQueryEndEvent {
+    /// The terminal status of the query's job: `Succeeded`, `Failed`, `Cancelled` or `Killed`.
+    status: QueryJobStatus,
+
+    /// The number of results streamed.
+    num_results_emitted: u64,
+
+    /// The number of results dropped because another attempt of their query task had already
+    /// streamed them.
+    num_duplicates_dropped: u64,
+}
+
+/// The data of a streaming query's `error` event.
+#[derive(Serialize, ToSchema)]
+struct StreamingQueryErrorEvent {
+    /// A generic description of the error.
+    message: String,
 }
 
 /// Query parameters for the query results endpoint.
@@ -505,6 +785,9 @@ mod tests {
 
     use super::*;
 
+    /// The ID of the query job whose streaming query response a test builds.
+    const QUERY_JOB_ID: u64 = 7;
+
     #[test]
     fn timeline_errors_preserve_details_and_map_to_internal_server_error() {
         let error = ClientError::from(clp_rust_utils::timeline::Error::NegativeCount { count: -1 });
@@ -559,6 +842,112 @@ mod tests {
         Ok(())
     }
 
+    #[tokio::test]
+    async fn streaming_query_response_sends_the_job_event_the_batches_as_they_are_and_the_end() {
+        use futures::stream;
+
+        const FIRST_BATCH: &str = "data: a\n\n";
+        const SECOND_BATCH: &str = "data: b\n\ndata: c\n\n";
+
+        let events = stream::iter([
+            SessionEvent::Results(Bytes::from_static(FIRST_BATCH.as_bytes())),
+            SessionEvent::Results(Bytes::from_static(SECOND_BATCH.as_bytes())),
+            SessionEvent::Ended {
+                status: QueryJobStatus::Cancelled,
+                stats: SessionStats {
+                    num_results_emitted: 3,
+                    num_duplicates_dropped: 1,
+                },
+            },
+        ]);
+
+        let submitted_streaming_query = SubmittedStreamingQuery {
+            query_job_id: QUERY_JOB_ID,
+            events,
+        };
+
+        let body = get_body(
+            submitted_streaming_query
+                .into_sse_response()
+                .into_response(),
+        )
+        .await;
+
+        assert_eq!(
+            body,
+            [
+                &format!("event: job\ndata: {{\"query_job_id\":{QUERY_JOB_ID}}}\n\n"),
+                FIRST_BATCH,
+                SECOND_BATCH,
+                "event: end\ndata: ",
+                r#"{"status":"Cancelled","num_results_emitted":3,"num_duplicates_dropped":1}"#,
+                "\n\n",
+            ]
+            .concat()
+        );
+    }
+
+    #[tokio::test]
+    async fn streaming_query_response_ends_with_an_error_event_without_the_errors_details() {
+        use futures::stream;
+        use query_result_listener::session::SessionEventError;
+
+        const BATCH: &str = "data: a\n\n";
+
+        let events = stream::iter([
+            SessionEvent::Results(Bytes::from_static(BATCH.as_bytes())),
+            SessionEvent::Failed(SessionEventError::Encoding("an internal detail".to_owned())),
+        ]);
+
+        let submitted_streaming_query = SubmittedStreamingQuery {
+            query_job_id: QUERY_JOB_ID,
+            events,
+        };
+
+        let body = get_body(
+            submitted_streaming_query
+                .into_sse_response()
+                .into_response(),
+        )
+        .await;
+
+        assert_eq!(
+            body,
+            [
+                &format!("event: job\ndata: {{\"query_job_id\":{QUERY_JOB_ID}}}\n\n"),
+                BATCH,
+                "event: error\ndata: ",
+                r#"{"message":"Internal server error"}"#,
+                "\n\n",
+            ]
+            .concat()
+        );
+    }
+
+    #[tokio::test]
+    async fn dropping_the_streaming_query_response_drops_its_events() -> anyhow::Result<()> {
+        use futures::channel::mpsc;
+
+        let (event_sender, events) = mpsc::unbounded::<SessionEvent<Bytes>>();
+        let submitted_streaming_query = SubmittedStreamingQuery {
+            query_job_id: QUERY_JOB_ID,
+            events,
+        };
+        let mut body = submitted_streaming_query
+            .into_sse_response()
+            .into_response()
+            .into_body();
+        body.frame()
+            .await
+            .expect("the body should start with the job event")?;
+        assert!(!event_sender.is_closed());
+
+        drop(body);
+
+        assert!(event_sender.is_closed());
+        Ok(())
+    }
+
     /// Builds a minimal Axum app that validates compression usage params via
     /// [`TryFrom<CompressionUsageParams>`] and returns the resolved
     /// status integer codes on success. No real database is needed.
@@ -574,8 +963,17 @@ mod tests {
     }
 
     /// Builds the application router for the CLP-S storage engine, with clients whose `MySQL` and
-    /// `MongoDB` connections are only established on first use.
+    /// `MongoDB` connections are only established on first use, and a query result listener bound
+    /// to a loopback port.
     async fn clp_s_app_with_lazy_clients() -> axum::Router {
+        use std::net::Ipv4Addr;
+        use std::net::SocketAddr;
+        use std::num::NonZeroU64;
+
+        use clp_rust_utils::types::non_empty_string::ExpectedNonEmpty;
+        use non_empty_string::NonEmptyString;
+        use query_result_listener::listener::ListenerConfig;
+
         let config = Config {
             package: Package {
                 storage_engine: StorageEngine::ClpS,
@@ -588,9 +986,16 @@ mod tests {
         let sql_pool = sqlx::mysql::MySqlPoolOptions::new()
             .connect_lazy("mysql://localhost/clp-db")
             .expect("the MySQL URI should be valid");
+        let query_result_listener = ResultListener::bind(ListenerConfig {
+            bind_addr: SocketAddr::from((Ipv4Addr::LOCALHOST, 0)),
+            advertised_host: NonEmptyString::from_static_str("127.0.0.1"),
+            handshake_timeout_sec: NonZeroU64::MIN,
+        })
+        .expect("binding a loopback listener should succeed");
         from_app_state(AppState {
             client: Client::new(config.clone(), mongodb_client.clone(), sql_pool.clone()),
             webui_client: WebuiClient::new(config, sql_pool, mongodb_client).await,
+            query_result_listener: Arc::new(query_result_listener),
         })
         .expect("the OpenAPI document should serialize")
     }
