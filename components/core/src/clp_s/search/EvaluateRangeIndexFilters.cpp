@@ -11,10 +11,8 @@
 
 #include <clp_s/search/ast/ValueLiteral.hpp>
 
-#include "../../clp/ffi/EncodedTextAst.hpp"
 #include "../../clp/ffi/ir_stream/search/utils.hpp"
 #include "../../clp/ffi/Value.hpp"
-#include "../../clp/ir/types.hpp"
 #include "../archive_constants.hpp"
 #include "../ArchiveReaderAdaptor.hpp"
 #include "ast/AndExpr.hpp"
@@ -203,29 +201,11 @@ auto EvaluateRangeIndexFilters::evaluate_filter(
                     }
                     break;
                 case nlohmann::json::value_t::string: {
-                    if (false
-                        == col->matches_any(
-                                ast::LiteralType::VarStringT | ast::LiteralType::ClpStringT
-                                | ast::LiteralType::StringT
-                        ))
-                    {
-                        break;
-                    }
-                    auto tmp_string{cur_field.template get<std::string>()};
-                    bool contains_space{std::string::npos != tmp_string.find(' ')};
-                    if (false == contains_space) {
+                    if (col->matches_type(ast::LiteralType::StringT)) {
                         std::optional<clp::ffi::Value> str_value{
-                                clp::ffi::Value{std::move(tmp_string)}
+                                clp::ffi::Value{cur_field.template get<std::string>()}
                         };
-                        if (evaluate_expr(ast::LiteralType::VarStringT, str_value)) {
-                            return true;
-                        }
-                    } else {
-                        std::optional<clp::ffi::Value> const str_value{clp::ffi::Value{
-                                clp::ffi::EncodedTextAst<clp::ir::four_byte_encoded_variable_t>::
-                                        parse_and_encode_from(tmp_string)
-                        }};
-                        if (evaluate_expr(ast::LiteralType::ClpStringT, str_value)) {
+                        if (evaluate_expr(ast::LiteralType::StringT, str_value)) {
                             return true;
                         }
                     }

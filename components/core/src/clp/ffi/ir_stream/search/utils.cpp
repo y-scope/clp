@@ -99,31 +99,18 @@ requires std::same_as<OperandType, value_int_t> || std::same_as<OperandType, val
 ) -> bool;
 
 /**
- * Evaluates a `VarString` filter operation by applying the specified `FilterOperation` to the given
+ * Evaluates a string filter operation by applying the specified `FilterOperation` to the given
  * operand and value.
  * @param op
  * @param operand
  * @param value
- * @return Whether the filter condition is satisfied.
- */
-[[nodiscard]] auto evaluate_var_string_filter_op(
-        FilterOperation op,
-        std::shared_ptr<Literal> const& operand,
-        Value const& value,
-        bool case_sensitive_match
-) -> bool;
-
-/**
- * Evaluates a `ClpString` filter operation by applying the specified `FilterOperation` to the given
- * operand and value.
- * @param op
- * @param operand
- * @param value
+ * @param case_sensitive_match Whether the string comparison should be case-sensitive.
  * @return A result containing a boolean indicating whether the filter condition is satisfied on
  * success, or an error code indicating the failure:
+ * - ErrorCodeEnum::LiteralTypeUnexpected if `value` isn't a string value.
  * - Forwards `EncodedTextAst::to_string`'s return values.
  */
-[[nodiscard]] auto evaluate_clp_string_filter_op(
+[[nodiscard]] auto evaluate_string_filter_op_against_value(
         FilterOperation op,
         std::shared_ptr<Literal> const& operand,
         Value const& value,
@@ -233,39 +220,38 @@ auto evaluate_bool_filter_op(
     }
 }
 
-auto evaluate_var_string_filter_op(
-        FilterOperation op,
-        std::shared_ptr<Literal> const& operand,
-        Value const& value,
-        bool case_sensitive_match
-) -> bool {
-    std::string filter_operand;
-    if (false == operand->as_var_string(filter_operand, op)) {
-        return false;
-    }
-    auto const value_operand{value.get_immutable_view<std::string>()};
-
-    return evaluate_string_filter_op(op, filter_operand, value_operand, case_sensitive_match);
-}
-
-auto evaluate_clp_string_filter_op(
+auto evaluate_string_filter_op_against_value(
         FilterOperation op,
         std::shared_ptr<Literal> const& operand,
         Value const& value,
         bool case_sensitive_match
 ) -> ystdlib::error_handling::Result<bool> {
     std::string filter_operand;
-    if (false == operand->as_clp_string(filter_operand, op)) {
+    if (false == operand->as_string(filter_operand, op)) {
         return false;
     }
 
-    auto const value_operand{YSTDLIB_ERROR_HANDLING_TRYX(
-            value.is<clp::ffi::EightByteEncodedTextAst>()
-                    ? value.get_immutable_view<clp::ffi::EightByteEncodedTextAst>().to_string()
-                    : value.get_immutable_view<clp::ffi::FourByteEncodedTextAst>().to_string()
-    )};
+    if (value.is<std::string>()) {
+        return evaluate_string_filter_op(
+                op,
+                filter_operand,
+                value.get_immutable_view<std::string>(),
+                case_sensitive_match
+        );
+    }
 
-    return evaluate_string_filter_op(op, filter_operand, value_operand, case_sensitive_match);
+    if (value.is<clp::ffi::EightByteEncodedTextAst>()
+        || value.is<clp::ffi::FourByteEncodedTextAst>())
+    {
+        auto const value_operand{YSTDLIB_ERROR_HANDLING_TRYX(
+                value.is<clp::ffi::EightByteEncodedTextAst>()
+                        ? value.get_immutable_view<clp::ffi::EightByteEncodedTextAst>().to_string()
+                        : value.get_immutable_view<clp::ffi::FourByteEncodedTextAst>().to_string()
+        )};
+        return evaluate_string_filter_op(op, filter_operand, value_operand, case_sensitive_match);
+    }
+
+    return ErrorCode{ErrorCodeEnum::LiteralTypeUnexpected};
 }
 }  // namespace
 
@@ -279,7 +265,7 @@ auto schema_tree_node_type_to_literal_types(SchemaTree::Node::Type node_type)
         case SchemaTree::Node::Type::Bool:
             return LiteralType::BooleanT;
         case SchemaTree::Node::Type::Str:
-            return LiteralType::ClpStringT | LiteralType::VarStringT;
+            return LiteralType::StringT;
         case SchemaTree::Node::Type::UnstructuredArray:
             return LiteralType::ArrayT;
         case SchemaTree::Node::Type::Obj:
@@ -309,10 +295,7 @@ auto schema_tree_node_type_value_pair_to_literal_type(
         case SchemaTree::Node::Type::UnstructuredArray:
             return LiteralType::ArrayT;
         case SchemaTree::Node::Type::Str:
-            if (value.value().is<std::string>()) {
-                return LiteralType::VarStringT;
-            }
-            return LiteralType::ClpStringT;
+            return LiteralType::StringT;
         case SchemaTree::Node::Type::Obj:
             if (value.value().is_null()) {
                 return LiteralType::NullT;
@@ -345,19 +328,11 @@ auto evaluate_filter_against_literal_type_value_pair(
             return value.has_value() && evaluate_float_filter_op(op, filter->get_operand(), *value);
         case LiteralType::BooleanT:
             return value.has_value() && evaluate_bool_filter_op(op, filter->get_operand(), *value);
-        case LiteralType::VarStringT:
-            return value.has_value()
-                   && evaluate_var_string_filter_op(
-                           op,
-                           filter->get_operand(),
-                           *value,
-                           case_sensitive_match
-                   );
-        case LiteralType::ClpStringT:
+        case LiteralType::StringT:
             if (false == value.has_value()) {
                 return false;
             }
-            return evaluate_clp_string_filter_op(
+            return evaluate_string_filter_op_against_value(
                     op,
                     filter->get_operand(),
                     *value,

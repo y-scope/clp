@@ -159,7 +159,7 @@ auto add_predicate_type(FilterExpr const& filter, QueryShapeMetrics& metrics) ->
     std::string string_value;
     int64_t int_value{};
     double float_value{};
-    if (operand->as_clp_string(string_value, op) || operand->as_var_string(string_value, op)) {
+    if (operand->as_string(string_value, op)) {
         if (false == clp_s::search::ast::has_unescaped_wildcards(string_value)) {
             ++metrics.predicate_type_metrics.num_string;
         } else {
