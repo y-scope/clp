@@ -494,34 +494,6 @@ TEST_CASE("clp-s-search-literal-operation-compatibility", "[clp-s][search]") {
                     true
             },
             std::tuple{
-                    "string word as VarStringT",
-                    ValueLiteral::create_from_string("word"),
-                    LiteralType::VarStringT,
-                    true,
-                    false
-            },
-            std::tuple{
-                    "string two words as ClpStringT",
-                    ValueLiteral::create_from_string("two words"),
-                    LiteralType::ClpStringT,
-                    true,
-                    false
-            },
-            std::tuple{
-                    "string word as ClpStringT",
-                    ValueLiteral::create_from_string("word"),
-                    LiteralType::ClpStringT,
-                    false,
-                    false
-            },
-            std::tuple{
-                    "string two words as VarStringT",
-                    ValueLiteral::create_from_string("two words"),
-                    LiteralType::VarStringT,
-                    false,
-                    false
-            },
-            std::tuple{
                     "string word as ArrayT",
                     ValueLiteral::create_from_string("word"),
                     LiteralType::ArrayT,
@@ -624,8 +596,6 @@ TEST_CASE("clp-s-search-non-value-literal-operation-compatibility", "[clp-s][sea
          {LiteralType::IntegerT,
           LiteralType::FloatT,
           LiteralType::TimestampT,
-          LiteralType::ClpStringT,
-          LiteralType::VarStringT,
           LiteralType::BooleanT,
           LiteralType::ArrayT,
           LiteralType::NullT,
@@ -739,6 +709,8 @@ TEST_CASE("clp-s-search-narrow-numeric-wildcards-neq", "[clp-s][search]") {
 TEST_CASE("clp-s-search", "[clp-s][search]") {
     std::vector<std::pair<std::string, std::vector<int64_t>>> queries_and_results{
             {R"aa(NOT a: b)aa", {0}},
+            {R"aa(NOT a: 42)aa", {0}},
+            {R"aa(NOT var_string: "a b")aa", {9}},
             {R"aa(msg: "Msg 1: \"Abc123\"")aa", {1}},
             {R"aa(msg: "Msg 2: 'Abc123'")aa", {2}},
             {R"aa(msg: "Msg 3: \nAbc123")aa", {3}},
@@ -779,21 +751,15 @@ TEST_CASE("clp-s-search", "[clp-s][search]") {
             {R"aa(o: "0\*")aa", {}},
             {R"aa(NOT o: "?")aa", {}},
             {R"aa(NOT o: "1?")aa", {14}},
-            {R"aa(NOT o: "*xyz*")aa", {}}
+            {R"aa(NOT o: "*xyz*")aa", {}},
+            // Records 7, 8, 13 and 14 have no string occurrence, so a pure-wildcard string filter
+            // is undefined on them and `NOT` doesn't match.
+            {R"aa(NOT *: "zzz")aa", {0, 1, 2, 3, 4, 5, 6, 9, 10, 11, 12}},
+            // The undefined value on records 7, 13 and 14 doesn't make the enclosing OR true.
+            {R"aa(idx: timestamp("8") OR NOT *: "zzz")aa", {0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12}}
     };
     auto structurize_arrays = GENERATE(true, false);
     auto single_file_archive = GENERATE(true, false);
-
-    // Records 7 (`arr: [{"a": 999}, {"b": 1001}]`) and 14 (`o: [0, 5]`) have arrays with no element
-    // compatible with a string, so the filter is undefined on them and `NOT` doesn't match. With
-    // structurized arrays their schemas resolve `*` to no string-compatible node and are still
-    // folded to a match under inversion.
-    queries_and_results.emplace_back(
-            R"aa(NOT *: "zzz")aa",
-            structurize_arrays
-                    ? std::vector<int64_t>{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14}
-                    : std::vector<int64_t>{0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13}
-    );
 
     TestOutputCleaner const test_cleanup{{std::string{cTestSearchArchiveDirectory}}};
 
@@ -818,14 +784,33 @@ TEST_CASE("clp-s-search", "[clp-s][search]") {
     REQUIRE_NOTHROW(search(expr, false, {0}));
 }
 
+// Expanding an OR over two string leaves of different storage classes used to throw while building
+// the per-schema string dictionary queries, depending on the order the leaves were visited. The
+// order below is the one that threw.
+TEST_CASE("clp-s-search-mixed-node-string-pattern-order", "[clp-s][search]") {
+    auto const single_file_archive = GENERATE(true, false);
+    CAPTURE(single_file_archive);
+    TestOutputCleaner const test_cleanup{{std::string{cTestSearchArchiveDirectory}}};
+    REQUIRE_NOTHROW(
+            std::ignore = compress_archive(
+                    get_test_input_local_path(cTestSearchMixedTypesFile),
+                    std::string{cTestSearchArchiveDirectory},
+                    std::string{cTestIdxKey},
+                    false,
+                    single_file_archive,
+                    false
+            )
+    );
+
+    REQUIRE_NOTHROW(search(R"aa(nested.msg: "*Abc*" OR msg: "*Abc*")aa", false, {0, 3}));
+}
+
 // Pins the per-element definedness rules documented on `QueryRunner::evaluate_array_filter`:
 // negation matches neither a record with no element at the filter's path (idx 3, 4 for `o.k`;
 // idx 5 for `o.j`) nor one whose elements at the path are all of an incompatible type (idx 0, 1
 // for a string pattern), while `NOT o.k: *` (NEXISTS) is defined on every record. A KQL literal is
 // type-directed per element, so `7` is the string "7" against a string element (`NOT o.k: 7` keeps
-// idx 6). `!=` is constructed programmatically (KQL cannot express it), with the column's string
-// types removed so that NarrowTypes' negated-equality string rewrite does not change the filter
-// under test.
+// idx 6). `!=` is constructed programmatically (KQL cannot express it).
 TEST_CASE("clp-s-search-unstructured-array", "[clp-s][search]") {
     using namespace clp_s::search::ast;
 
@@ -886,7 +871,6 @@ TEST_CASE("clp-s-search-unstructured-array", "[clp-s][search]") {
     for (auto const& [value, inverted, expected_results] : neq_queries) {
         CAPTURE(value, inverted);
         auto column{ColumnDescriptor::create_from_escaped_tokens({"o"}, "")};
-        column->remove_matching_types(LiteralType::ClpStringT | LiteralType::VarStringT);
         auto operand{ValueLiteral::create_from_int(value)};
         auto neq_expr{FilterExpr::create(column, FilterOperation::NEQ, operand, inverted)};
         REQUIRE_NOTHROW(search(neq_expr, false, expected_results));
@@ -1073,7 +1057,9 @@ TEST_CASE("clp-s-search-structurized-array-mixed-types", "[clp-s][search]") {
             {R"aa(NOT arr.k > 2)aa", {}},
             {R"aa(NOT arr.k > 4)aa", {4, 5}},
             {R"aa(NOT arr.k < 2)aa", {6, 7}},
-            {R"aa(NOT arr.k: plain)aa", {0, 1, 2, 6, 7, 8}},
+            {R"aa(NOT arr.k: plain)aa", {6, 7, 8}},
+            {R"aa(NOT arr.k: "a b")aa", {3, 6, 7, 8}},
+            {R"aa(NOT arr.k: 42)aa", {0, 1, 2, 3, 4, 5, 6, 7, 8}},
             {R"aa(NOT arr.k: 3)aa", {0, 1, 2, 3, 6, 7, 8}},
             {R"aa(NOT arr.k: *)aa", {9}},
             {R"aa(arr.k: plain AND arr.k: "a b")aa", {0, 1, 2}},
@@ -1113,9 +1099,9 @@ TEST_CASE("clp-s-search-clpp", "[clp-s][search][clpp]") {
             // StructurizedText, so it is resolved without decomposition.
             {R"aa(msg: "xxx")aa", {}},
             {R"aa(NOT msg: "xxx")aa", {1, 2, 3, 4, 5, 6}},
-            // Records 7 and 14 have unstructured arrays with no element compatible with a string,
-            // so the filter is undefined on them and `NOT` doesn't match.
-            {R"aa(NOT *: "zzz")aa", {0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13}},
+            // Records 7, 8, 13 and 14 have no string-compatible occurrence, so the filter is
+            // undefined on them and `NOT` doesn't match.
+            {R"aa(NOT *: "zzz")aa", {0, 1, 2, 3, 4, 5, 6, 9, 10, 11, 12}},
             {R"aa(idx: 0 OR NOT msg: "xxx")aa", {0, 1, 2, 3, 4, 5, 6}}
     };
     std::vector<std::pair<std::string, std::vector<int64_t>>> const decomposed_queries_and_results{
@@ -1153,16 +1139,14 @@ TEST_CASE("clp-s-search-clpp", "[clp-s][search][clpp]") {
 // preserved.
 //
 // In the test input, `msg` is a StructurizedText node (idx 0 and idx 7), an Integer node (idx 1),
-// an UnstructuredArray node (idx 5) and a VarString node (idx 6), and `nested.msg` is a
+// an UnstructuredArray node (idx 5) and an UnstructurizedText node (idx 6), and `nested.msg` is a
 // StructurizedText node (idx 3) and an Integer node (idx 4); idx 2 has no `msg` at all. The cases
 // below cover value, inverted-value, existence, wildcard-path, and shape() filters over these
-// nodes, including the `NarrowTypes` OR-EXISTS rewrite for inverted string filters — and the
-// `NOT *: <value>` cases pin that the rewrite leaves pure wildcard columns untouched. An inverted
-// value filter requires a compatible occurrence: `NOT msg: "Msg 0*"` drops idx 1 (`msg` is only
-// an Integer the pattern can't match) and idx 5 (an array with no string element). Value filters
-// against StructurizedText require decomposition support and must fail cleanly without it, unless
-// the value has no wildcards and the parsing spec wouldn't structurize it (it then can't match any
-// StructurizedText, so no decomposition is attempted).
+// nodes. An inverted value filter requires a compatible occurrence: `NOT msg: "Msg 0*"` drops
+// idx 1 (`msg` is only an Integer the pattern can't match) and idx 5 (an array with no string
+// element). Value filters against StructurizedText require decomposition support and must fail
+// cleanly without it, unless the value has no wildcards and the parsing spec wouldn't structurize
+// it (it then can't match any StructurizedText, so no decomposition is attempted).
 TEST_CASE("clp-s-search-clpp-mixed-type-columns", "[clp-s][search][clpp]") {
     std::vector<std::pair<std::string, std::vector<int64_t>>> const queries_and_results{
             {R"aa(msg: *)aa", {0, 1, 5, 6, 7}},
@@ -1186,11 +1170,12 @@ TEST_CASE("clp-s-search-clpp-mixed-type-columns", "[clp-s][search][clpp]") {
             {R"aa(NOT (msg: "Msg 0*" OR msg: "Msg 1*"))aa", {6, 7}},
             {R"aa(NOT msg: "two words")aa", {0, 6}},
             {R"aa(NOT *.msg: "Msg 0*")aa", {3, 6, 7}},
-            // idx 5's only `msg`-shaped occurrence is an unstructured array with no string
-            // element, so a string-pattern filter is undefined on it and `NOT *: ...` drops it.
-            {R"aa(NOT *: "Msg 0*")aa", {1, 2, 3, 4, 6, 7}},
-            {R"aa(NOT *: plain)aa", {0, 1, 2, 3, 4, 7}},
-            {R"aa(NOT *: "two words")aa", {0, 1, 2, 3, 4, 6}},
+            // idx 1 and idx 4 bind `msg` only to an Integer, and idx 5's only `msg`-shaped
+            // occurrence is an unstructured array with no string element, so a string filter is
+            // undefined on them and `NOT *: ...` drops them.
+            {R"aa(NOT *: "Msg 0*")aa", {2, 3, 6, 7}},
+            {R"aa(NOT *: plain)aa", {0, 2, 3, 7}},
+            {R"aa(NOT *: "two words")aa", {0, 2, 3, 6}},
     };
     auto const single_file_archive = GENERATE(true, false);
     TestOutputCleaner const test_cleanup{{std::string{cTestSearchArchiveDirectory}}};

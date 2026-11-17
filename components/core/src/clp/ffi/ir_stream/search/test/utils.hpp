@@ -40,10 +40,6 @@ public:
         return m_matchable_node_ids;
     }
 
-    [[nodiscard]] auto get_matchable_node_ids_from_literal_type(
-            clp_s::search::ast::LiteralType type
-    ) const -> std::vector<SchemaTree::Node::id_t>;
-
     [[nodiscard]] auto get_matchable_node_ids_from_schema_tree_type(
             SchemaTree::Node::Type type
     ) const -> std::vector<SchemaTree::Node::id_t>;

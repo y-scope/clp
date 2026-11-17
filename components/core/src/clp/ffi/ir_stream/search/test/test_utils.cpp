@@ -90,30 +90,28 @@ requires std::same_as<IntegralValueType, value_int_t>
 ) -> bool;
 
 /**
- * Checks filter evaluation against and variable strings.
+ * Checks filter evaluation against strings in every supported representation.
  * @param filter_to_test
  * @param filter_operand_literal_type
  * @return Whether all evaluations match their expected results.
  */
-[[nodiscard]] auto check_filter_evaluation_against_var_strings(
+[[nodiscard]] auto check_filter_evaluation_against_strings(
         FilterExpr const* filter_to_test,
         LiteralType filter_operand_literal_type
 ) -> bool;
 
 /**
- * Checks filter evaluation against and encoded text ASTs (Clp strings).
+ * Encodes the given text into a `Value` holding an `EncodedTextAst`.
  * @tparam encoded_variable_t
- * @param filter_to_test
- * @param filter_operand_literal_type
- * @return Whether the filter evaluation results match expectation.
+ * @param text
+ * @return The encoded value.
  */
 template <typename encoded_variable_t>
 requires std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
          || std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>
-[[nodiscard]] auto check_filter_evaluation_against_encoded_text_asts(
-        FilterExpr const* filter_to_test,
-        LiteralType filter_operand_literal_type
-) -> bool;
+[[nodiscard]] auto encode_text_value(std::string_view text) -> Value {
+    return Value{EncodedTextAst<encoded_variable_t>::parse_and_encode_from(text)};
+}
 
 /**
  * Checks filter evaluation against all supported values.
@@ -228,45 +226,11 @@ auto check_filter_evaluation_against_bool_values(
     );
 }
 
-auto check_filter_evaluation_against_var_strings(
+auto check_filter_evaluation_against_strings(
         FilterExpr const* filter_to_test,
         LiteralType filter_operand_literal_type
 ) -> bool {
-    if (LiteralType::VarStringT != filter_operand_literal_type) {
-        std::optional<Value> const empty_value_to_evaluate;
-        auto const actual_match_result{evaluate_filter_against_literal_type_value_pair(
-                filter_to_test,
-                filter_operand_literal_type,
-                empty_value_to_evaluate,
-                false
-        )};
-        REQUIRE_FALSE(actual_match_result.has_error());
-        return false == actual_match_result.value();
-    }
-
-    std::vector<ValueToMatchedFilterOpsPair> const value_to_matched_filter_ops_pairs{
-            {Value{std::string{cRefTestString}}, {FilterOperation::EQ}},
-            {Value{std::string{cRefTestString} + std::string{cRefTestString}},
-             {FilterOperation::EQ}},
-            {Value{std::string{cRefTestString.data(), cRefTestString.size() / 2}},
-             {FilterOperation::NEQ}}
-    };
-
-    return assert_filter_evaluation_results_on_values(
-            filter_to_test,
-            filter_operand_literal_type,
-            value_to_matched_filter_ops_pairs
-    );
-}
-
-template <typename encoded_variable_t>
-requires std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
-         || std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>
-auto check_filter_evaluation_against_encoded_text_asts(
-        FilterExpr const* filter_to_test,
-        LiteralType filter_operand_literal_type
-) -> bool {
-    if (LiteralType::ClpStringT != filter_operand_literal_type) {
+    if (LiteralType::StringT != filter_operand_literal_type) {
         std::optional<Value> const empty_value_to_evaluate;
         auto const actual_match_result{evaluate_filter_against_literal_type_value_pair(
                 filter_to_test,
@@ -281,10 +245,15 @@ auto check_filter_evaluation_against_encoded_text_asts(
     std::string const matched{"The test ID=" + std::string{cRefTestString}};
     std::string const unmatched{"This is an unmatched string."};
     std::vector<ValueToMatchedFilterOpsPair> const value_to_matched_filter_ops_pairs{
-            {Value{EncodedTextAst<encoded_variable_t>::parse_and_encode_from(matched)},
+            {Value{std::string{cRefTestString}}, {FilterOperation::EQ}},
+            {Value{std::string{cRefTestString} + std::string{cRefTestString}},
              {FilterOperation::EQ}},
-            {Value{EncodedTextAst<encoded_variable_t>::parse_and_encode_from(unmatched)},
+            {Value{std::string{cRefTestString.data(), cRefTestString.size() / 2}},
              {FilterOperation::NEQ}},
+            {encode_text_value<four_byte_encoded_variable_t>(matched), {FilterOperation::EQ}},
+            {encode_text_value<four_byte_encoded_variable_t>(unmatched), {FilterOperation::NEQ}},
+            {encode_text_value<eight_byte_encoded_variable_t>(matched), {FilterOperation::EQ}},
+            {encode_text_value<eight_byte_encoded_variable_t>(unmatched), {FilterOperation::NEQ}},
     };
 
     return assert_filter_evaluation_results_on_values(
@@ -352,29 +321,9 @@ check_filter_evaluation(FilterExpr const* filter_to_test, LiteralType filter_ope
     }
 
     if (false
-        == check_filter_evaluation_against_var_strings(filter_to_test, filter_operand_literal_type))
+        == check_filter_evaluation_against_strings(filter_to_test, filter_operand_literal_type))
     {
-        WARN("Failed to evaluate filter against var strings.");
-        return false;
-    }
-
-    if (false
-        == check_filter_evaluation_against_encoded_text_asts<four_byte_encoded_variable_t>(
-                filter_to_test,
-                filter_operand_literal_type
-        ))
-    {
-        WARN("Failed to evaluate filter against encoded text ASTs (four-byte-encoded).");
-        return false;
-    }
-
-    if (false
-        == check_filter_evaluation_against_encoded_text_asts<eight_byte_encoded_variable_t>(
-                filter_to_test,
-                filter_operand_literal_type
-        ))
-    {
-        WARN("Failed to evaluate filter against encoded text ASTs (eight-byte-encoded).");
+        WARN("Failed to evaluate filter against strings.");
         return false;
     }
 
@@ -471,17 +420,11 @@ TEST_CASE("ffi_ir_stream_search_filter_evaluation", "[ffi][ir_stream][search]") 
             {FilterExpr::create(column_descriptor, FilterOperation::NEQ, ref_bool_literal),
              LiteralType::BooleanT},
 
-            // VarString
+            // String
             {FilterExpr::create(column_descriptor, FilterOperation::EQ, ref_str_literal),
-             LiteralType::VarStringT},
+             LiteralType::StringT},
             {FilterExpr::create(column_descriptor, FilterOperation::NEQ, ref_str_literal),
-             LiteralType::VarStringT},
-
-            // ClpString
-            {FilterExpr::create(column_descriptor, FilterOperation::EQ, ref_str_literal),
-             LiteralType::ClpStringT},
-            {FilterExpr::create(column_descriptor, FilterOperation::NEQ, ref_str_literal),
-             LiteralType::ClpStringT},
+             LiteralType::StringT},
     };
 
     auto const [filter_expr, filter_operand_literal_type]
@@ -489,5 +432,39 @@ TEST_CASE("ffi_ir_stream_search_filter_evaluation", "[ffi][ir_stream][search]") 
     auto const filter_to_test{std::dynamic_pointer_cast<FilterExpr>(filter_expr)};
     REQUIRE_FALSE((nullptr == filter_to_test));
     REQUIRE(check_filter_evaluation(filter_to_test.get(), filter_operand_literal_type));
+}
+
+// Checks that a literal without a space is compared against an encoded value instead of being
+// pruned because the value's representation doesn't match the literal's former storage class.
+TEST_CASE("ffi_ir_stream_search_exact_string_literal_evaluation", "[ffi][ir_stream][search]") {
+    constexpr std::string_view cColumnName{"test_column"};
+    auto column_descriptor{
+            ColumnDescriptor::create_from_escaped_tokens({std::string{cColumnName}}, "")
+    };
+    auto exact_literal{ValueLiteral::create_from_string(std::string{cRefTestString})};
+    std::string const encoded_text{"The test ID=" + std::string{cRefTestString}};
+    std::vector<Value> const values{
+            encode_text_value<four_byte_encoded_variable_t>(encoded_text),
+            encode_text_value<eight_byte_encoded_variable_t>(encoded_text),
+    };
+
+    for (auto const& value : values) {
+        for (auto const op : {FilterOperation::EQ, FilterOperation::NEQ}) {
+            CAPTURE(op);
+            auto const filter{std::dynamic_pointer_cast<FilterExpr>(
+                    FilterExpr::create(column_descriptor, op, exact_literal)
+            )};
+            REQUIRE(nullptr != filter);
+            auto const result{evaluate_filter_against_literal_type_value_pair(
+                    filter.get(),
+                    LiteralType::StringT,
+                    value,
+                    false
+            )};
+            REQUIRE_FALSE(result.has_error());
+            bool const expected{FilterOperation::NEQ == op};
+            REQUIRE(expected == result.value());
+        }
+    }
 }
 }  // namespace clp::ffi::ir_stream::search::test

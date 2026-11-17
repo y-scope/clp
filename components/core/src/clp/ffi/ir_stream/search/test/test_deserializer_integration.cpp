@@ -159,13 +159,30 @@ TEMPLATE_TEST_CASE(
     nlohmann::json const nested_obj_0 = {{cObjKey, base_obj_0}};
     nlohmann::json const nested_obj_1 = {{cObjKey, base_obj_1}};
 
+    // A pair whose `cStrKey` values all contain a space, so they are serialized as encoded text
+    // ASTs rather than plain strings.
+    nlohmann::json const space_only_obj_0{
+            {cIntKey, cIntBase - 1},
+            {cStrKey, fmt::format("Space only {}", cTestSubStr)}
+    };
+    nlohmann::json const space_only_obj_1{
+            {cIntKey, cIntBase + 1},
+            {cStrKey, fmt::format("Another space only {}", cTestSubStr)}
+    };
+
     JsonPair const json_pair_0{base_obj_0, base_obj_1};
     JsonPair const json_pair_1{base_obj_1, base_obj_0};
     JsonPair const json_pair_2{nested_obj_0, nested_obj_1};
     JsonPair const json_pair_3{nested_obj_1, nested_obj_0};
+    JsonPair const json_pair_4{space_only_obj_0, space_only_obj_1};
 
-    std::vector<JsonPair> const
-            json_pairs_to_serialize{json_pair_0, json_pair_1, json_pair_2, json_pair_3};
+    std::vector<JsonPair> const json_pairs_to_serialize{
+            json_pair_0,
+            json_pair_1,
+            json_pair_2,
+            json_pair_3,
+            json_pair_4
+    };
 
     auto const ir_stream_bytes{
             serialize_json_pairs_into_kv_pair_ir_stream<TestType>(json_pairs_to_serialize)
@@ -176,11 +193,17 @@ TEMPLATE_TEST_CASE(
     auto const [kql_query_str, expected_json_pairs] = GENERATE_COPY(
             std::make_pair(
                     fmt::format("{}: {}", cStrKey, wildcard_str_query),
-                    std::vector<JsonPair>{json_pair_0, json_pair_1}
+                    std::vector<JsonPair>{json_pair_0, json_pair_1, json_pair_4}
             ),
             std::make_pair(
                     fmt::format("*.{}.*: {}", cStrKey, wildcard_str_query),
                     json_pairs_to_serialize
+            ),
+            // A space-containing value is compared against a literal without a space even though
+            // the value is stored as an encoded text AST, so `NOT` is defined and matches.
+            std::make_pair(
+                    fmt::format("NOT {}: \"VarStr:{}\"", cStrKey, cTestSubStr),
+                    std::vector<JsonPair>{json_pair_0, json_pair_4}
             ),
             std::make_pair(
                     fmt::format("*.{}.*: {}", cObjKey, wildcard_str_query),
@@ -192,13 +215,14 @@ TEMPLATE_TEST_CASE(
             ),
             std::make_pair(
                     fmt::format("{} >= {}", cIntKey, cIntBase),
-                    std::vector<JsonPair>{json_pair_0}
+                    std::vector<JsonPair>{json_pair_0, json_pair_4}
             ),
             std::make_pair(
                     fmt::format("*.{} >= {}", cIntKey, cIntBase),
                     std::vector<JsonPair>{
                             json_pair_0,
                             json_pair_2,
+                            json_pair_4,
                     }
             ),
             std::make_pair(
@@ -211,7 +235,7 @@ TEMPLATE_TEST_CASE(
             ),
             std::make_pair(
                     fmt::format("@*.{} <= {} AND *.{} >= {}", cIntKey, cIntBase, cIntKey, cIntBase),
-                    std::vector<JsonPair>{json_pair_0, json_pair_2}
+                    std::vector<JsonPair>{json_pair_0, json_pair_2, json_pair_4}
             ),
             std::make_pair(
                     fmt::format("@*.{} >= {} AND *.{} <= {}", cIntKey, cIntBase, cIntKey, cIntBase),
@@ -237,7 +261,7 @@ TEMPLATE_TEST_CASE(
                             cIntKey,
                             cIntBase
                     ),
-                    std::vector<JsonPair>{json_pair_0, json_pair_2}
+                    std::vector<JsonPair>{json_pair_0, json_pair_2, json_pair_4}
             ),
             std::make_pair(
                     fmt::format(
