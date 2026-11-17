@@ -27,6 +27,10 @@ data:
       query_job_polling:
         initial_backoff_ms: {{ .query_job_polling.initial_backoff_ms | int }}
         max_backoff_ms: {{ .query_job_polling.max_backoff_ms | int }}
+      query_result_listener:
+        advertised_host: "{{ include "clp.fullname" $ }}-query-result-listener"
+        handshake_timeout_secs: {{ .query_result_listener.handshake_timeout_secs | int }}
+        port: 3003
       stream_file_extraction_timeout_secs: {{ .stream_file_extraction_timeout_secs | int }}
     {{- else }}
     api_server: null

@@ -7,6 +7,8 @@ metadata:
     {{- include "clp.labels" . | nindent 4 }}
     app.kubernetes.io/component: "api-server"
 spec:
+  # Must stay at one replica: a streamed query's results reach the listener of whichever replica
+  # the query task connects to, which must be the replica holding the query's session.
   replicas: 1
   selector:
     matchLabels:
@@ -58,6 +60,8 @@ spec:
           ports:
             - name: "api-server"
               containerPort: 3001
+            - name: "query-results"
+              containerPort: 3003
           volumeMounts:
             - name: "config"
               mountPath: "/etc/clp-config.yaml"
