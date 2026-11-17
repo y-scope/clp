@@ -29,9 +29,18 @@ impl<CancellationType: Future<Output = ()> + Send + 'static> CancellationGuard<C
     }
 
     /// Requests the cancellation, and waits for the request to finish.
+    ///
+    /// The request finishes even if the returned future is dropped while it waits.
     pub(super) async fn request(mut self) {
-        if let Some(cancellation) = self.cancellation.take() {
-            cancellation.await;
+        let Some(cancellation) = self.cancellation.take() else {
+            return;
+        };
+        // Spawned so that dropping this future detaches the request instead of dropping it halfway.
+        if let Err(error) = tokio::spawn(cancellation).await {
+            tracing::warn!(
+                error = % error,
+                "The task requesting the cancellation of a session's query job failed."
+            );
         }
     }
 }
