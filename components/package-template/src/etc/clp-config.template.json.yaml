@@ -17,6 +17,10 @@ telemetry:
 #    initial_backoff_ms: 100
 #    max_backoff_ms: 5000
 #  stream_file_extraction_timeout_secs: 270
+#
+#  # The listener that receives the results query tasks stream back for `POST /query/stream`.
+#  query_result_listener:
+#    handshake_timeout_secs: 10
 
 ## log-ingestor config. Currently, the config is applicable only if `logs_input.type` is "s3".
 #log_ingestor:

@@ -744,6 +744,21 @@ class QueryJobPollingConfig(BaseModel):
     max_backoff_ms: int = Field(default=5000, alias="max_backoff")
 
 
+class QueryResultListener(BaseModel):
+    """The API server's listener that receives the results query tasks stream back to it."""
+
+    DEFAULT_PORT: ClassVar[int] = 3003
+
+    port: Port = DEFAULT_PORT
+    advertised_host: DomainStr = "localhost"
+    handshake_timeout_secs: PositiveInt = 10
+
+    def transform_for_container(self) -> None:
+        """Advertises the API server's container hostname and listens on the default port."""
+        self.advertised_host = API_SERVER_COMPONENT_NAME
+        self.port = self.DEFAULT_PORT
+
+
 class ApiServer(BaseModel):
     DEFAULT_PORT: ClassVar[int] = 3001
 
@@ -751,10 +766,12 @@ class ApiServer(BaseModel):
     port: Port = DEFAULT_PORT
     query_job_polling: QueryJobPollingConfig = QueryJobPollingConfig()
     stream_file_extraction_timeout_secs: PositiveInt = 270
+    query_result_listener: QueryResultListener = QueryResultListener()
 
     def transform_for_container(self):
         self.host = API_SERVER_COMPONENT_NAME
         self.port = self.DEFAULT_PORT
+        self.query_result_listener.transform_for_container()
 
 
 class LogIngestor(BaseModel):
