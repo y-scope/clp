@@ -1023,35 +1023,11 @@ pub(crate) struct StreamingQueryResultEvent {
 /// The data of a streaming query's `end` event.
 #[derive(Serialize, ToSchema)]
 pub(crate) struct StreamingQueryEndEvent {
-    /// The terminal status of the query's job: `Succeeded`, `Failed`, `Cancelled` or `Killed`.
+    /// The terminal status of the query's job.
     status: QueryJobStatus,
 
     /// The number of results streamed.
     num_results_emitted: u64,
-
-    /// The number of results dropped because another attempt of their query task had already
-    /// streamed them.
-    num_duplicates_dropped: u64,
-}
-
-impl StreamingQueryEndEvent {
-    /// Factory function.
-    ///
-    /// # Returns
-    ///
-    /// A newly created `end` event of a job that terminated with `status`, after its session
-    /// collected `session_stats`.
-    const fn new(status: QueryJobStatus, session_stats: SessionStats) -> Self {
-        let SessionStats {
-            num_results_emitted,
-            num_duplicates_dropped,
-        } = session_stats;
-        Self {
-            status,
-            num_results_emitted,
-            num_duplicates_dropped,
-        }
-    }
 }
 
 /// The data of a streaming query's `error` event.
@@ -1111,8 +1087,9 @@ fn encode_streaming_query_events(
 /// Encodes `event`, an event of the streaming query whose job is `query_job_id`, as a Server-Sent
 /// Event.
 ///
-/// A [`SessionEvent::Failed`] is logged with `query_job_id`, and its error isn't sent to the
-/// client.
+/// A [`SessionEvent::Ended`] is logged with `query_job_id` and the session's statistics, of which
+/// only the number of results streamed is sent to the client. A [`SessionEvent::Failed`] is logged
+/// with `query_job_id`, and its error isn't sent to the client.
 ///
 /// # Returns
 ///
@@ -1136,7 +1113,24 @@ fn encode_session_event(
     match event {
         SessionEvent::Results(batch) => Ok(batch),
         SessionEvent::Ended { status, stats } => {
-            encode_event("end", &StreamingQueryEndEvent::new(status, stats))
+            let SessionStats {
+                num_results_emitted,
+                num_duplicates_dropped,
+            } = stats;
+            tracing::info!(
+                query_job_id,
+                status = ? status,
+                num_results_emitted,
+                num_duplicates_dropped,
+                "A streaming query ended."
+            );
+            encode_event(
+                "end",
+                &StreamingQueryEndEvent {
+                    status,
+                    num_results_emitted,
+                },
+            )
         }
         SessionEvent::Failed(error) => {
             tracing::error!(query_job_id, error = % error, "A streaming query failed.");
@@ -1256,7 +1250,7 @@ mod tests {
                 FIRST_BATCH,
                 SECOND_BATCH,
                 "event: end\ndata: ",
-                r#"{"status":"Cancelled","num_results_emitted":3,"num_duplicates_dropped":1}"#,
+                r#"{"status":"Cancelled","num_results_emitted":3}"#,
                 "\n\n",
             ]
             .concat()

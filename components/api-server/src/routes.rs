@@ -272,8 +272,7 @@ struct QueryResultsUri {
             example = "event: job\ndata: {\"query_job_id\":1}\n\ndata: \
                 {\"archive_id\":\"018e90e5-8b2a-4a61-a2fc-cac799936caf\",\
                 \"timestamp_millisecs\":1633036800000,\"message\":\"Example log message\"}\n\n\
-                event: end\ndata: {\"status\":\"Succeeded\",\"num_results_emitted\":1,\
-                \"num_duplicates_dropped\":0}\n\n"
+                event: end\ndata: {\"status\":\"Succeeded\",\"num_results_emitted\":1}\n\n"
         ),
         (status = BAD_REQUEST, body = String, content_type = "text/plain",
             description = "The request body is not valid JSON or could not be read."),
