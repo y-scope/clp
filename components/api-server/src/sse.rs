@@ -69,11 +69,13 @@ impl ResultEncoder for SseEncoder {
 /// # Type Parameters
 ///
 /// * `EventStreamType` - The stream of the encoded events, whose error ends the response.
-pub struct SseResponse<EventStreamType> {
+pub struct SseResponse<EventStreamType: Stream<Item = Result<Bytes, serde_json::Error>>> {
     events: EventStreamType,
 }
 
-impl<EventStreamType> SseResponse<EventStreamType> {
+impl<EventStreamType: Stream<Item = Result<Bytes, serde_json::Error>>>
+    SseResponse<EventStreamType>
+{
     /// Factory function.
     ///
     /// # Returns
