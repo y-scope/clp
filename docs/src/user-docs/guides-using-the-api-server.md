@@ -76,8 +76,8 @@ following commands to submit a query to clp-json and stream the results.
 
 ## Example: Streaming search results in a single request
 
-The API server can also submit a search query and stream its results back in the same response,
-while the query runs, without buffering them:
+Use `POST /query/stream` to submit a search query and receive results in the same response as the
+query job runs in the background.
 
 ```shell
 curl -N -X POST http://localhost:3001/query/stream \
@@ -91,11 +91,12 @@ curl -N -X POST http://localhost:3001/query/stream \
     }'
 ```
 
-The request has only the `query` of `POST /query`; it takes no `output`.
+:::{tip}
+Use the `-N` flag to disable curl's output buffering so you can see events as they arrive.
+:::
 
-The response is a stream of [Server-sent Events][server-sent-events]: a `job` event with the query
-job's ID, one event per result, and an `end` event with the job's terminal status once the job has
-terminated:
+The response uses [server-sent events][server-sent-events]. This example shows a search
+that returns one result and finishes successfully.
 
 ```text
 event: job
@@ -107,12 +108,14 @@ event: end
 data: {"status":"Succeeded","num_results_emitted":1}
 ```
 
-Results from different archives arrive in no particular order. A query job that fails still ends
-the stream with an `end` event, whose `status` is `Failed`. If the API server can no longer stream
-the query after its job was submitted (e.g., it can't read the job's status), an `error` event
-replaces the `end` event, and the job's cancellation is requested. If the client disconnects before
-the `end` event, the query job's cancellation is requested too.
+* The `job` event arrives first and contains the query job ID.
+* Each unnamed event carries one search result. Results from different archives can arrive in any
+  order.
+* The `end` event closes the stream and reports the job's terminal status.
+
+For more details, see the [streaming search API reference][streaming-search-api].
 
 [OpenAPI]: https://swagger.io/specification/
 [server-sent-events]: https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events
+[streaming-search-api]: https://petstore.swagger.io/?url=https://docs.yscope.com/clp/DOCS_VAR_CLP_GIT_REF/_static/generated/api-server-openapi.json#/default/stream_query
 [swagger-ui]: https://petstore.swagger.io/?url=https://docs.yscope.com/clp/DOCS_VAR_CLP_GIT_REF/_static/generated/api-server-openapi.json
