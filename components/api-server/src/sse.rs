@@ -338,6 +338,36 @@ mod tests {
         Ok(())
     }
 
+    #[tokio::test(start_paused = true)]
+    async fn an_sse_response_ends_when_its_event_stream_ends() -> Result<()> {
+        use std::task::Poll;
+
+        use futures::stream;
+        use http_body_util::BodyExt;
+
+        const EVENT: &[u8] = b"data: 1\n\n";
+
+        let mut has_ended = false;
+        let event_stream = stream::iter([Ok::<_, serde_json::Error>(Bytes::from_static(EVENT))])
+            .chain(stream::poll_fn(move |_| {
+                assert!(
+                    !has_ended,
+                    "the event stream shouldn't be polled after it has ended"
+                );
+                has_ended = true;
+                Poll::Ready(None)
+            }));
+        let mut body = SseResponse::new(event_stream).into_response().into_body();
+
+        assert_eq!(next_frame_data(&mut body).await?, EVENT);
+        assert!(
+            tokio::time::timeout(KEEP_ALIVE_INTERVAL.saturating_mul(2), body.frame())
+                .await?
+                .is_none()
+        );
+        Ok(())
+    }
+
     /// Waits for the next frame of `body`, for longer than [`KEEP_ALIVE_INTERVAL`].
     ///
     /// # Returns
