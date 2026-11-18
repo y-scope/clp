@@ -1007,6 +1007,7 @@ pub(crate) enum StreamingQueryEventData {
 
 /// The data of a streaming query's `job` event.
 #[derive(Serialize, ToSchema)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct StreamingQueryJobEvent {
     /// The ID of the query's job.
     query_job_id: u64,
@@ -1015,6 +1016,7 @@ pub(crate) struct StreamingQueryJobEvent {
 /// The data of a streaming query's result event.
 #[expect(dead_code, reason = "only documents an `OpenAPI` schema")]
 #[derive(ToSchema)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct StreamingQueryResultEvent {
     /// The ID of the archive that contains the result.
     #[schema(value_type = String)]
@@ -1029,6 +1031,7 @@ pub(crate) struct StreamingQueryResultEvent {
 
 /// The data of a streaming query's `end` event.
 #[derive(Serialize, ToSchema)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct StreamingQueryEndEvent {
     /// The terminal status of the query's job.
     status: QueryJobStatus,
@@ -1039,6 +1042,7 @@ pub(crate) struct StreamingQueryEndEvent {
 
 /// The data of a streaming query's `error` event.
 #[derive(Serialize, ToSchema)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct StreamingQueryErrorEvent {
     /// A generic description of the error.
     message: String,
