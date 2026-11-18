@@ -1065,7 +1065,8 @@ impl QueryJobPollingBackoff {
     }
 }
 
-/// Encodes the `events` of a streaming query's job as Server-Sent Events.
+/// Encodes `event_stream`, a stream of the events of a streaming query's job, as Server-Sent
+/// Events.
 ///
 /// # Returns
 ///
@@ -1073,11 +1074,11 @@ impl QueryJobPollingBackoff {
 /// that [`encode_session_event`] encodes.
 fn encode_streaming_query_events(
     query_job_id: u64,
-    events: impl Stream<Item = SessionEvent<Bytes>>,
+    event_stream: impl Stream<Item = SessionEvent<Bytes>>,
 ) -> impl Stream<Item = Result<Bytes, serde_json::Error>> {
     let job_event = encode_event("job", &StreamingQueryJobEvent { query_job_id });
     futures::stream::once(futures::future::ready(job_event))
-        .chain(events.map(move |event| encode_session_event(query_job_id, event)))
+        .chain(event_stream.map(move |event| encode_session_event(query_job_id, event)))
 }
 
 /// Encodes `event`, an event of the streaming query whose job is `query_job_id`, as a Server-Sent
@@ -1204,7 +1205,7 @@ mod tests {
         const FIRST_BATCH: &str = "data: a\n\n";
         const SECOND_BATCH: &str = "data: b\n\ndata: c\n\n";
 
-        let events = stream::iter([
+        let event_stream = stream::iter([
             SessionEvent::Results(Bytes::from_static(FIRST_BATCH.as_bytes())),
             SessionEvent::Results(Bytes::from_static(SECOND_BATCH.as_bytes())),
             SessionEvent::Ended {
@@ -1216,7 +1217,7 @@ mod tests {
             },
         ]);
 
-        let encoded_events = encode_streaming_query_events(QUERY_JOB_ID, events)
+        let encoded_events = encode_streaming_query_events(QUERY_JOB_ID, event_stream)
             .try_collect::<Vec<_>>()
             .await?
             .concat();
@@ -1244,12 +1245,12 @@ mod tests {
 
         const BATCH: &str = "data: a\n\n";
 
-        let events = stream::iter([
+        let event_stream = stream::iter([
             SessionEvent::Results(Bytes::from_static(BATCH.as_bytes())),
             SessionEvent::Failed(SessionEventError::Encoding("an internal detail".to_owned())),
         ]);
 
-        let encoded_events = encode_streaming_query_events(QUERY_JOB_ID, events)
+        let encoded_events = encode_streaming_query_events(QUERY_JOB_ID, event_stream)
             .try_collect::<Vec<_>>()
             .await?
             .concat();
@@ -1273,14 +1274,15 @@ mod tests {
         use futures::channel::mpsc;
         use query_result_listener::test_utils::TIMEOUT;
 
-        let (event_sender, events) = mpsc::unbounded::<SessionEvent<Bytes>>();
-        let mut encoded_events = Box::pin(encode_streaming_query_events(QUERY_JOB_ID, events));
-        tokio::time::timeout(TIMEOUT, encoded_events.next())
+        let (event_sender, event_stream) = mpsc::unbounded::<SessionEvent<Bytes>>();
+        let mut encoded_event_stream =
+            Box::pin(encode_streaming_query_events(QUERY_JOB_ID, event_stream));
+        tokio::time::timeout(TIMEOUT, encoded_event_stream.next())
             .await?
             .expect("the events should start with the job event")?;
         assert!(!event_sender.is_closed());
 
-        drop(encoded_events);
+        drop(encoded_event_stream);
 
         assert!(event_sender.is_closed());
         Ok(())

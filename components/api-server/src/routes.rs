@@ -309,11 +309,11 @@ async fn stream_query(
                 tracing::error!(error = % error, "Failed to submit a streaming query.");
             })
     });
-    let events = submission.await.map_err(|error| {
+    let event_stream = submission.await.map_err(|error| {
         tracing::error!(error = % error, "The task submitting a streaming query failed.");
         HandlerError::InternalServer
     })??;
-    Ok(SseResponse::new(events))
+    Ok(SseResponse::new(event_stream))
 }
 
 /// Query parameters for the query results endpoint.

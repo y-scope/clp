@@ -70,7 +70,7 @@ impl ResultEncoder for SseEncoder {
 ///
 /// * `EventStreamType` - The stream of the encoded events, whose error ends the response.
 pub struct SseResponse<EventStreamType: Stream<Item = Result<Bytes, serde_json::Error>>> {
-    events: EventStreamType,
+    event_stream: EventStreamType,
 }
 
 impl<EventStreamType: Stream<Item = Result<Bytes, serde_json::Error>>>
@@ -81,8 +81,8 @@ impl<EventStreamType: Stream<Item = Result<Bytes, serde_json::Error>>>
     /// # Returns
     ///
     /// The newly created response.
-    pub const fn new(events: EventStreamType) -> Self {
-        Self { events }
+    pub const fn new(event_stream: EventStreamType) -> Self {
+        Self { event_stream }
     }
 }
 
@@ -99,7 +99,7 @@ impl<EventStreamType: Stream<Item = Result<Bytes, serde_json::Error>> + Send + '
                 (CONTENT_TYPE, "text/event-stream"),
                 (CACHE_CONTROL, "no-cache"),
             ],
-            Body::from_stream(with_keep_alive_comments(self.events)),
+            Body::from_stream(with_keep_alive_comments(self.event_stream)),
         )
             .into_response()
     }
@@ -139,7 +139,7 @@ pub fn encode_event<DataType: Serialize>(
 /// [`axum::response::sse::KeepAlive::default`].
 const KEEP_ALIVE_INTERVAL: Duration = Duration::from_secs(15);
 
-/// Adds keep-alive comments to `events`.
+/// Adds keep-alive comments to `event_stream`.
 ///
 /// # Type Parameters
 ///
@@ -147,17 +147,17 @@ const KEEP_ALIVE_INTERVAL: Duration = Duration::from_secs(15);
 ///
 /// # Returns
 ///
-/// A stream that yields the items of `events` as they are, and a keep-alive comment whenever it has
-/// yielded nothing for [`KEEP_ALIVE_INTERVAL`].
+/// A stream that yields the items of `event_stream` as they are, and a keep-alive comment whenever
+/// it has yielded nothing for [`KEEP_ALIVE_INTERVAL`].
 fn with_keep_alive_comments<EventStreamType: Stream<Item = Result<Bytes, serde_json::Error>>>(
-    events: EventStreamType,
+    event_stream: EventStreamType,
 ) -> impl Stream<Item = Result<Bytes, serde_json::Error>> {
     const KEEP_ALIVE_COMMENT: &[u8] = b":\n\n";
 
     stream! {
-        let mut events = pin!(events);
+        let mut event_stream = pin!(event_stream);
         loop {
-            match tokio::time::timeout(KEEP_ALIVE_INTERVAL, events.next()).await {
+            match tokio::time::timeout(KEEP_ALIVE_INTERVAL, event_stream.next()).await {
                 Ok(Some(event)) => yield event,
                 Ok(None) => break,
                 Err(_) => yield Ok(Bytes::from_static(KEEP_ALIVE_COMMENT)),
@@ -324,13 +324,13 @@ mod tests {
         const EVENT_DELAY: Duration = Duration::from_secs(10);
 
         let keep_alive_comment = axum_sse_body(vec![Event::DEFAULT_KEEP_ALIVE]).await;
-        let events = stream::once(async {
+        let event_stream = stream::once(async {
             tokio::time::sleep(EVENT_DELAY).await;
             Ok::<_, serde_json::Error>(Bytes::from_static(EVENT))
         })
         .chain(stream::pending());
         let start = Instant::now();
-        let mut body = SseResponse::new(events).into_response().into_body();
+        let mut body = SseResponse::new(event_stream).into_response().into_body();
 
         assert_eq!(next_frame_data(&mut body).await?, EVENT);
         assert_eq!(next_frame_data(&mut body).await?, keep_alive_comment);
