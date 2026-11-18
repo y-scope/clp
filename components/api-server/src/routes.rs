@@ -305,21 +305,15 @@ async fn stream_query(
         client
             .submit_streaming_query(streaming_query_config.query)
             .await
-            .inspect(|submitted_streaming_query| {
-                tracing::info!(
-                    query_job_id = submitted_streaming_query.query_job_id,
-                    "Submitted a streaming query."
-                );
-            })
             .inspect_err(|error| {
                 tracing::error!(error = % error, "Failed to submit a streaming query.");
             })
     });
-    let submitted_streaming_query = submission.await.map_err(|error| {
+    let events = submission.await.map_err(|error| {
         tracing::error!(error = % error, "The task submitting a streaming query failed.");
         HandlerError::InternalServer
     })??;
-    Ok(submitted_streaming_query.into_sse_response())
+    Ok(SseResponse::new(events))
 }
 
 /// Query parameters for the query results endpoint.

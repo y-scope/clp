@@ -48,7 +48,6 @@ use utoipa::ToSchema;
 
 pub use crate::error::ClientError;
 use crate::sse::SseEncoding;
-use crate::sse::SseResponse;
 use crate::sse::encode_event;
 
 /// Default job statuses to include when the caller does not specify `job_status`.
@@ -261,38 +260,6 @@ impl From<QueryOutputConfig> for QueryOutput {
     }
 }
 
-/// A streaming query whose job has been submitted, with the stream of the job's events.
-///
-/// # Type Parameters
-///
-/// * `EventStreamType` - The stream of the job's events.
-pub struct SubmittedStreamingQuery<EventStreamType> {
-    /// The ID of the submitted query job.
-    pub(crate) query_job_id: u64,
-
-    /// The stream of the job's events.
-    pub(crate) events: EventStreamType,
-}
-
-impl<EventStreamType: Stream<Item = SessionEvent<Bytes>> + Send + 'static>
-    SubmittedStreamingQuery<EventStreamType>
-{
-    /// Builds the Server-Sent Events response of the streaming query.
-    ///
-    /// # Returns
-    ///
-    /// The newly created response, which streams the events that
-    /// [`encode_streaming_query_events`] encodes.
-    pub(crate) fn into_sse_response(
-        self,
-    ) -> SseResponse<impl Stream<Item = Result<Bytes, serde_json::Error>> + Send + 'static> {
-        SseResponse::new(encode_streaming_query_events(
-            self.query_job_id,
-            self.events,
-        ))
-    }
-}
-
 #[derive(Clone)]
 pub struct Client {
     #[allow(clippy::struct_field_names)]
@@ -347,13 +314,13 @@ impl Client {
     /// Submits a query job that runs `query` and streams its results to a new session of the
     /// client's query result listener.
     ///
+    /// If the query fails, or the returned stream is dropped before the job terminates, the job's
+    /// cancellation is requested.
+    ///
     /// # Returns
     ///
-    /// The submitted streaming query on success. Its events come from
-    /// [`OpenSession::into_events`](query_result_listener::session::OpenSession::into_events),
-    /// which finds the job terminated by reading its status with the backoff of the API
-    /// server's query job polling configuration, and requests the job's cancellation with
-    /// [`Client::cancel_query_job`], logging the request's outcome.
+    /// The job's events encoded as Server-Sent Events on success: a `job` event, then the job's
+    /// results, and finally an `end` or `error` event.
     ///
     /// # Errors
     ///
@@ -364,10 +331,8 @@ impl Client {
     pub async fn submit_streaming_query(
         &self,
         query: SearchQuery,
-    ) -> Result<
-        SubmittedStreamingQuery<impl Stream<Item = SessionEvent<Bytes>> + Send + use<>>,
-        ClientError,
-    > {
+    ) -> Result<impl Stream<Item = Result<Bytes, serde_json::Error>> + Send + use<>, ClientError>
+    {
         let open_session = self
             .query_result_listener
             .open_session(SessionConfig::default())?;
@@ -376,6 +341,7 @@ impl Client {
             output: QueryOutput::Network(open_session.network_output().clone()),
         };
         let query_job_id = self.submit_query(&query_job_config).await?;
+        tracing::info!(query_job_id, "Submitted a streaming query.");
 
         let wait_for_termination = {
             let client = self.clone();
@@ -402,10 +368,10 @@ impl Client {
                 }
             }
         };
-        Ok(SubmittedStreamingQuery {
+        Ok(encode_streaming_query_events(
             query_job_id,
-            events: open_session.into_events(wait_for_termination, request_cancellation),
-        })
+            open_session.into_events(wait_for_termination, request_cancellation),
+        ))
     }
 
     /// Asynchronously fetches the results of a completed query job.
