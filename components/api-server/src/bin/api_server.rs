@@ -57,7 +57,7 @@ fn read_config_and_credentials(
 /// * Forwards [`ResultListener::bind`]'s return values on failure.
 fn bind_query_result_listener(
     config: &package::config::QueryResultListener,
-) -> anyhow::Result<ResultListener<SseEncoding>> {
+) -> anyhow::Result<Arc<ResultListener<SseEncoding>>> {
     let listener = ResultListener::bind(ListenerConfig {
         bind_addr: SocketAddr::from((Ipv4Addr::UNSPECIFIED, config.port.get())),
         advertised_host: config.advertised_host.clone(),
@@ -72,7 +72,7 @@ fn bind_query_result_listener(
         advertised_host = % config.advertised_host,
         "Listening for the results of streaming queries."
     );
-    Ok(listener)
+    Ok(Arc::new(listener))
 }
 
 async fn shutdown_signal() {
@@ -132,7 +132,7 @@ async fn main() -> anyhow::Result<()> {
     let router = api_server::routes::from_app_state(api_server::routes::AppState {
         client,
         webui_client,
-        query_result_listener: Arc::new(query_result_listener),
+        query_result_listener,
     })?;
     startup_counter.add(1, &[opentelemetry::KeyValue::new("type", "start")]);
 
