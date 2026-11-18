@@ -237,7 +237,7 @@ struct QueryResultsUri {
     path = "/query/stream",
     description = "Submits a new query job and streams its results back as Server-Sent Events \
         (SSE) in the same response while the job runs. If the client disconnects before the query \
-        job terminates, the job will be cancelled.",
+        job terminates, the job's cancellation is requested.",
     request_body(
         content = StreamingQueryConfig,
         example = json!({
@@ -265,10 +265,9 @@ struct QueryResultsUri {
                 - `end` closes the stream and reports the job's terminal status in a \
                 `StreamingQueryEndEvent` payload. If the job failed, the status is `Failed`.\n\
                 - `error` closes the stream in place of `end` if the API server encounters an \
-                error after job submission, such as a failure to encode a result or read the job's \
-                status. The `StreamingQueryErrorEvent` payload reports the server error. The \
-                server requests cancellation, but the job may still be running when you receive \
-                the event.",
+                error after job submission, such as a failure to read the job's status. The \
+                `StreamingQueryErrorEvent` payload reports the server error. The server requests \
+                cancellation, but the job may still be running when you receive the event.",
             example = "event: job\ndata: {\"query_job_id\":1}\n\ndata: \
                 {\"archive_id\":\"018e90e5-8b2a-4a61-a2fc-cac799936caf\",\
                 \"timestamp_millisecs\":1633036800000,\"message\":\"Example log message\"}\n\n\
