@@ -13,13 +13,10 @@ use axum::response::sse::Event;
 use axum::response::sse::KeepAlive;
 use axum::routing::get;
 use clp_rust_utils::job_config::QueryJobConfig;
-use clp_rust_utils::job_config::QueryJobStatus;
 use clp_rust_utils::logs_input::LogsInputError;
 use clp_rust_utils::timeline::Bucket;
 use futures::Stream;
 use futures::StreamExt;
-use query_result_listener::session::SessionEvent;
-use query_result_listener::session::SessionStats;
 use serde::Deserialize;
 use serde::Serialize;
 use thiserror::Error;
@@ -37,11 +34,9 @@ use crate::client::CompressionUsage;
 use crate::client::CompressionUsageParams;
 use crate::client::QueryConfig;
 use crate::client::StreamingQueryConfig;
-use crate::client::SubmittedStreamingQuery;
 use crate::client::ValidatedCompressionUsageParams;
 pub use crate::sse::SseEncoding;
 use crate::sse::SseResponse;
-use crate::sse::encode_event;
 use crate::webui_client::WebuiClient;
 
 /// Shared application state passed to all route handlers.
@@ -113,11 +108,11 @@ mod api_doc {
     use super::CompressionUsage;
     use super::OpenApi;
     use super::OpenApiRouter;
-    use super::StreamingQueryEndEvent;
-    use super::StreamingQueryErrorEvent;
-    use super::StreamingQueryJobEvent;
     use super::webui;
     use crate::client::CompressionJobStatus;
+    use crate::client::StreamingQueryEndEvent;
+    use crate::client::StreamingQueryErrorEvent;
+    use crate::client::StreamingQueryJobEvent;
 
     #[derive(utoipa::OpenApi)]
     #[openapi(
@@ -325,87 +320,6 @@ async fn stream_query(
         HandlerError::InternalServer
     })??;
     Ok(submitted_streaming_query.into_sse_response())
-}
-
-impl<EventStreamType: Stream<Item = SessionEvent<Bytes>> + Send + 'static>
-    SubmittedStreamingQuery<EventStreamType>
-{
-    /// Builds the Server-Sent Events response of the streaming query.
-    ///
-    /// The response sends a `job` event whose data is a [`StreamingQueryJobEvent`], then each batch
-    /// of the job's results as it is, and finally an `end` event whose data is a
-    /// [`StreamingQueryEndEvent`], or an `error` event whose data is a
-    /// [`StreamingQueryErrorEvent`]. The error that ends the job's events is logged with the job's
-    /// ID, and isn't sent to the client.
-    ///
-    /// # Returns
-    ///
-    /// The newly created response.
-    fn into_sse_response(
-        self,
-    ) -> SseResponse<impl Stream<Item = Result<Bytes, serde_json::Error>> + Send + 'static> {
-        let Self {
-            query_job_id,
-            events,
-        } = self;
-        let job_event = encode_event("job", &StreamingQueryJobEvent { query_job_id });
-        let events = events.map(move |event| match event {
-            SessionEvent::Results(batch) => Ok(batch),
-            SessionEvent::Ended {
-                status,
-                stats:
-                    SessionStats {
-                        num_results_emitted,
-                        num_duplicates_dropped,
-                    },
-            } => encode_event(
-                "end",
-                &StreamingQueryEndEvent {
-                    status,
-                    num_results_emitted,
-                    num_duplicates_dropped,
-                },
-            ),
-            SessionEvent::Failed(error) => {
-                tracing::error!(query_job_id, error = % error, "A streaming query failed.");
-                encode_event(
-                    "error",
-                    &StreamingQueryErrorEvent {
-                        message: HandlerError::InternalServer.to_string(),
-                    },
-                )
-            }
-        });
-        SseResponse::new(futures::stream::iter([job_event]).chain(events))
-    }
-}
-
-/// The data of a streaming query's `job` event.
-#[derive(Serialize, ToSchema)]
-struct StreamingQueryJobEvent {
-    /// The ID of the query's job, which `DELETE /query/{query_job_id}` cancels.
-    query_job_id: u64,
-}
-
-/// The data of a streaming query's `end` event.
-#[derive(Serialize, ToSchema)]
-struct StreamingQueryEndEvent {
-    /// The terminal status of the query's job: `Succeeded`, `Failed`, `Cancelled` or `Killed`.
-    status: QueryJobStatus,
-
-    /// The number of results streamed.
-    num_results_emitted: u64,
-
-    /// The number of results dropped because another attempt of their query task had already
-    /// streamed them.
-    num_duplicates_dropped: u64,
-}
-
-/// The data of a streaming query's `error` event.
-#[derive(Serialize, ToSchema)]
-struct StreamingQueryErrorEvent {
-    /// A generic description of the error.
-    message: String,
 }
 
 /// Query parameters for the query results endpoint.
@@ -699,9 +613,6 @@ mod tests {
 
     use super::*;
 
-    /// The ID of the query job whose streaming query response a test builds.
-    const QUERY_JOB_ID: u64 = 7;
-
     #[test]
     fn timeline_errors_preserve_details_and_map_to_internal_server_error() {
         let error = ClientError::from(clp_rust_utils::timeline::Error::NegativeCount { count: -1 });
@@ -753,112 +664,6 @@ mod tests {
             response_body.contains("output.type: unknown variant `network`"),
             "{response_body}"
         );
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn streaming_query_response_sends_the_job_event_the_batches_as_they_are_and_the_end() {
-        use futures::stream;
-
-        const FIRST_BATCH: &str = "data: a\n\n";
-        const SECOND_BATCH: &str = "data: b\n\ndata: c\n\n";
-
-        let events = stream::iter([
-            SessionEvent::Results(Bytes::from_static(FIRST_BATCH.as_bytes())),
-            SessionEvent::Results(Bytes::from_static(SECOND_BATCH.as_bytes())),
-            SessionEvent::Ended {
-                status: QueryJobStatus::Cancelled,
-                stats: SessionStats {
-                    num_results_emitted: 3,
-                    num_duplicates_dropped: 1,
-                },
-            },
-        ]);
-
-        let submitted_streaming_query = SubmittedStreamingQuery {
-            query_job_id: QUERY_JOB_ID,
-            events,
-        };
-
-        let body = get_body(
-            submitted_streaming_query
-                .into_sse_response()
-                .into_response(),
-        )
-        .await;
-
-        assert_eq!(
-            body,
-            [
-                &format!("event: job\ndata: {{\"query_job_id\":{QUERY_JOB_ID}}}\n\n"),
-                FIRST_BATCH,
-                SECOND_BATCH,
-                "event: end\ndata: ",
-                r#"{"status":"Cancelled","num_results_emitted":3,"num_duplicates_dropped":1}"#,
-                "\n\n",
-            ]
-            .concat()
-        );
-    }
-
-    #[tokio::test]
-    async fn streaming_query_response_ends_with_an_error_event_without_the_errors_details() {
-        use futures::stream;
-        use query_result_listener::session::SessionEventError;
-
-        const BATCH: &str = "data: a\n\n";
-
-        let events = stream::iter([
-            SessionEvent::Results(Bytes::from_static(BATCH.as_bytes())),
-            SessionEvent::Failed(SessionEventError::Encoding("an internal detail".to_owned())),
-        ]);
-
-        let submitted_streaming_query = SubmittedStreamingQuery {
-            query_job_id: QUERY_JOB_ID,
-            events,
-        };
-
-        let body = get_body(
-            submitted_streaming_query
-                .into_sse_response()
-                .into_response(),
-        )
-        .await;
-
-        assert_eq!(
-            body,
-            [
-                &format!("event: job\ndata: {{\"query_job_id\":{QUERY_JOB_ID}}}\n\n"),
-                BATCH,
-                "event: error\ndata: ",
-                r#"{"message":"Internal server error"}"#,
-                "\n\n",
-            ]
-            .concat()
-        );
-    }
-
-    #[tokio::test]
-    async fn dropping_the_streaming_query_response_drops_its_events() -> anyhow::Result<()> {
-        use futures::channel::mpsc;
-
-        let (event_sender, events) = mpsc::unbounded::<SessionEvent<Bytes>>();
-        let submitted_streaming_query = SubmittedStreamingQuery {
-            query_job_id: QUERY_JOB_ID,
-            events,
-        };
-        let mut body = submitted_streaming_query
-            .into_sse_response()
-            .into_response()
-            .into_body();
-        body.frame()
-            .await
-            .expect("the body should start with the job event")?;
-        assert!(!event_sender.is_closed());
-
-        drop(body);
-
-        assert!(event_sender.is_closed());
         Ok(())
     }
 

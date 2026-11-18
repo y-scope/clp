@@ -39,6 +39,7 @@ use pin_project_lite::pin_project;
 use query_result_listener::listener::ResultListener;
 use query_result_listener::session::SessionConfig;
 use query_result_listener::session::SessionEvent;
+use query_result_listener::session::SessionStats;
 use serde::Deserialize;
 use serde::Serialize;
 use sqlx::Row;
@@ -47,6 +48,8 @@ use utoipa::ToSchema;
 
 pub use crate::error::ClientError;
 use crate::sse::SseEncoding;
+use crate::sse::SseResponse;
+use crate::sse::encode_event;
 
 /// Default job statuses to include when the caller does not specify `job_status`.
 /// Covers all terminal states that consumed compute resources (succeeded, failed).
@@ -269,6 +272,25 @@ pub struct SubmittedStreamingQuery<EventStreamType> {
 
     /// The stream of the job's events.
     pub(crate) events: EventStreamType,
+}
+
+impl<EventStreamType: Stream<Item = SessionEvent<Bytes>> + Send + 'static>
+    SubmittedStreamingQuery<EventStreamType>
+{
+    /// Builds the Server-Sent Events response of the streaming query.
+    ///
+    /// # Returns
+    ///
+    /// The newly created response, which streams the events that
+    /// [`encode_streaming_query_events`] encodes.
+    pub(crate) fn into_sse_response(
+        self,
+    ) -> SseResponse<impl Stream<Item = Result<Bytes, serde_json::Error>> + Send + 'static> {
+        SseResponse::new(encode_streaming_query_events(
+            self.query_job_id,
+            self.events,
+        ))
+    }
 }
 
 #[derive(Clone)]
@@ -998,6 +1020,54 @@ where
     }
 }
 
+/// The data of a streaming query's `job` event.
+#[derive(Serialize, ToSchema)]
+pub(crate) struct StreamingQueryJobEvent {
+    /// The ID of the query's job, which `DELETE /query/{query_job_id}` cancels.
+    query_job_id: u64,
+}
+
+/// The data of a streaming query's `end` event.
+#[derive(Serialize, ToSchema)]
+pub(crate) struct StreamingQueryEndEvent {
+    /// The terminal status of the query's job: `Succeeded`, `Failed`, `Cancelled` or `Killed`.
+    status: QueryJobStatus,
+
+    /// The number of results streamed.
+    num_results_emitted: u64,
+
+    /// The number of results dropped because another attempt of their query task had already
+    /// streamed them.
+    num_duplicates_dropped: u64,
+}
+
+impl StreamingQueryEndEvent {
+    /// Factory function.
+    ///
+    /// # Returns
+    ///
+    /// A newly created `end` event of a job that terminated with `status`, after its session
+    /// collected `session_stats`.
+    const fn new(status: QueryJobStatus, session_stats: SessionStats) -> Self {
+        let SessionStats {
+            num_results_emitted,
+            num_duplicates_dropped,
+        } = session_stats;
+        Self {
+            status,
+            num_results_emitted,
+            num_duplicates_dropped,
+        }
+    }
+}
+
+/// The data of a streaming query's `error` event.
+#[derive(Serialize, ToSchema)]
+pub(crate) struct StreamingQueryErrorEvent {
+    /// A generic description of the error.
+    message: String,
+}
+
 /// The backoff between the reads of a query job's status: the first delay is the configured initial
 /// backoff, and each next delay doubles the previous one, up to the configured maximum backoff.
 struct QueryJobPollingBackoff {
@@ -1029,11 +1099,71 @@ impl QueryJobPollingBackoff {
     }
 }
 
+/// Encodes the `events` of a streaming query's job as Server-Sent Events.
+///
+/// # Returns
+///
+/// A stream that yields a `job` event whose data is a [`StreamingQueryJobEvent`], then the events
+/// that [`encode_session_event`] encodes.
+fn encode_streaming_query_events(
+    query_job_id: u64,
+    events: impl Stream<Item = SessionEvent<Bytes>>,
+) -> impl Stream<Item = Result<Bytes, serde_json::Error>> {
+    let job_event = encode_event("job", &StreamingQueryJobEvent { query_job_id });
+    futures::stream::once(futures::future::ready(job_event))
+        .chain(events.map(move |event| encode_session_event(query_job_id, event)))
+}
+
+/// Encodes `event`, an event of the streaming query whose job is `query_job_id`, as a Server-Sent
+/// Event.
+///
+/// A [`SessionEvent::Failed`] is logged with `query_job_id`, and its error isn't sent to the
+/// client.
+///
+/// # Returns
+///
+/// On success:
+///
+/// * The batch of [`SessionEvent::Results`] as it is.
+/// * An `end` event whose data is a [`StreamingQueryEndEvent`] for [`SessionEvent::Ended`].
+/// * An `error` event whose data is a [`StreamingQueryErrorEvent`] for [`SessionEvent::Failed`].
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * Forwards [`encode_event`]'s return values on failure.
+fn encode_session_event(
+    query_job_id: u64,
+    event: SessionEvent<Bytes>,
+) -> Result<Bytes, serde_json::Error> {
+    const STREAMING_QUERY_ERROR_MESSAGE: &str = "Internal server error";
+
+    match event {
+        SessionEvent::Results(batch) => Ok(batch),
+        SessionEvent::Ended { status, stats } => {
+            encode_event("end", &StreamingQueryEndEvent::new(status, stats))
+        }
+        SessionEvent::Failed(error) => {
+            tracing::error!(query_job_id, error = % error, "A streaming query failed.");
+            encode_event(
+                "error",
+                &StreamingQueryErrorEvent {
+                    message: STREAMING_QUERY_ERROR_MESSAGE.to_owned(),
+                },
+            )
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
 
     use super::*;
+
+    /// The ID of the query job whose events a test encodes.
+    const QUERY_JOB_ID: u64 = 7;
 
     #[test]
     fn parse_job_status_pending_not_in_defaults() {
@@ -1098,5 +1228,95 @@ mod tests {
                 Duration::from_millis(expected_delay_ms)
             );
         }
+    }
+
+    #[tokio::test]
+    async fn streaming_query_events_are_the_job_event_the_batches_as_they_are_and_the_end()
+    -> anyhow::Result<()> {
+        use futures::stream;
+
+        const FIRST_BATCH: &str = "data: a\n\n";
+        const SECOND_BATCH: &str = "data: b\n\ndata: c\n\n";
+
+        let events = stream::iter([
+            SessionEvent::Results(Bytes::from_static(FIRST_BATCH.as_bytes())),
+            SessionEvent::Results(Bytes::from_static(SECOND_BATCH.as_bytes())),
+            SessionEvent::Ended {
+                status: QueryJobStatus::Cancelled,
+                stats: SessionStats {
+                    num_results_emitted: 3,
+                    num_duplicates_dropped: 1,
+                },
+            },
+        ]);
+
+        let encoded_events = encode_streaming_query_events(QUERY_JOB_ID, events)
+            .try_collect::<Vec<_>>()
+            .await?
+            .concat();
+
+        assert_eq!(
+            String::from_utf8(encoded_events)?,
+            [
+                &format!("event: job\ndata: {{\"query_job_id\":{QUERY_JOB_ID}}}\n\n"),
+                FIRST_BATCH,
+                SECOND_BATCH,
+                "event: end\ndata: ",
+                r#"{"status":"Cancelled","num_results_emitted":3,"num_duplicates_dropped":1}"#,
+                "\n\n",
+            ]
+            .concat()
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn streaming_query_events_end_with_an_error_event_without_the_errors_details()
+    -> anyhow::Result<()> {
+        use futures::stream;
+        use query_result_listener::session::SessionEventError;
+
+        const BATCH: &str = "data: a\n\n";
+
+        let events = stream::iter([
+            SessionEvent::Results(Bytes::from_static(BATCH.as_bytes())),
+            SessionEvent::Failed(SessionEventError::Encoding("an internal detail".to_owned())),
+        ]);
+
+        let encoded_events = encode_streaming_query_events(QUERY_JOB_ID, events)
+            .try_collect::<Vec<_>>()
+            .await?
+            .concat();
+
+        assert_eq!(
+            String::from_utf8(encoded_events)?,
+            [
+                &format!("event: job\ndata: {{\"query_job_id\":{QUERY_JOB_ID}}}\n\n"),
+                BATCH,
+                "event: error\ndata: ",
+                r#"{"message":"Internal server error"}"#,
+                "\n\n",
+            ]
+            .concat()
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn dropping_the_streaming_query_events_drops_the_jobs_events() -> anyhow::Result<()> {
+        use futures::channel::mpsc;
+
+        let (event_sender, events) = mpsc::unbounded::<SessionEvent<Bytes>>();
+        let mut encoded_events = Box::pin(encode_streaming_query_events(QUERY_JOB_ID, events));
+        encoded_events
+            .next()
+            .await
+            .expect("the events should start with the job event")?;
+        assert!(!event_sender.is_closed());
+
+        drop(encoded_events);
+
+        assert!(event_sender.is_closed());
+        Ok(())
     }
 }
