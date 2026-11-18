@@ -1271,12 +1271,12 @@ mod tests {
     #[tokio::test]
     async fn dropping_the_streaming_query_events_drops_the_jobs_events() -> anyhow::Result<()> {
         use futures::channel::mpsc;
+        use query_result_listener::test_utils::TIMEOUT;
 
         let (event_sender, events) = mpsc::unbounded::<SessionEvent<Bytes>>();
         let mut encoded_events = Box::pin(encode_streaming_query_events(QUERY_JOB_ID, events));
-        encoded_events
-            .next()
-            .await
+        tokio::time::timeout(TIMEOUT, encoded_events.next())
+            .await?
             .expect("the events should start with the job event")?;
         assert!(!event_sender.is_closed());
 
