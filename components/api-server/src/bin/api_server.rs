@@ -124,15 +124,18 @@ async fn main() -> anyhow::Result<()> {
     let query_result_listener =
         bind_query_result_listener(&api_server_config.query_result_listener)?;
 
-    let client =
-        api_server::client::Client::new(config.clone(), mongodb_client.clone(), sql_pool.clone());
+    let client = api_server::client::Client::new(
+        config.clone(),
+        mongodb_client.clone(),
+        sql_pool.clone(),
+        query_result_listener,
+    );
     let webui_client =
         api_server::webui_client::WebuiClient::new(config, sql_pool, mongodb_client).await;
 
     let router = api_server::routes::from_app_state(api_server::routes::AppState {
         client,
         webui_client,
-        query_result_listener,
     })?;
     startup_counter.add(1, &[opentelemetry::KeyValue::new("type", "start")]);
 

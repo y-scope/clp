@@ -1,7 +1,5 @@
 mod webui;
 
-use std::sync::Arc;
-
 use axum::Json;
 use axum::body::Bytes;
 use axum::extract::FromRef;
@@ -20,7 +18,6 @@ use clp_rust_utils::logs_input::LogsInputError;
 use clp_rust_utils::timeline::Bucket;
 use futures::Stream;
 use futures::StreamExt;
-use query_result_listener::listener::ResultListener;
 use query_result_listener::session::SessionEvent;
 use query_result_listener::session::SessionStats;
 use serde::Deserialize;
@@ -54,9 +51,6 @@ pub struct AppState {
     pub client: Client,
     /// Client for the `WebUI`'s routes.
     pub webui_client: WebuiClient,
-
-    /// The listener that the tasks of streaming queries' jobs stream their results to.
-    pub query_result_listener: Arc<ResultListener<SseEncoding>>,
 }
 
 impl FromRef<AppState> for Client {
@@ -68,12 +62,6 @@ impl FromRef<AppState> for Client {
 impl FromRef<AppState> for WebuiClient {
     fn from_ref(state: &AppState) -> Self {
         state.webui_client.clone()
-    }
-}
-
-impl FromRef<AppState> for Arc<ResultListener<SseEncoding>> {
-    fn from_ref(state: &AppState) -> Self {
-        Self::clone(&state.query_result_listener)
     }
 }
 
@@ -307,7 +295,6 @@ struct QueryResultsUri {
 )]
 async fn stream_query(
     State(client): State<Client>,
-    State(query_result_listener): State<Arc<ResultListener<SseEncoding>>>,
     Json(streaming_query_config): Json<StreamingQueryConfig>,
 ) -> Result<SseResponse<impl Stream<Item = Result<Bytes, serde_json::Error>> + use<>>, HandlerError>
 {
@@ -321,7 +308,7 @@ async fn stream_query(
     // for the same reason.
     let submission = tokio::spawn(async move {
         client
-            .submit_streaming_query(&query_result_listener, streaming_query_config.query)
+            .submit_streaming_query(streaming_query_config.query)
             .await
             .inspect(|submitted_streaming_query| {
                 tracing::info!(
@@ -896,10 +883,12 @@ mod tests {
         use std::net::Ipv4Addr;
         use std::net::SocketAddr;
         use std::num::NonZeroU64;
+        use std::sync::Arc;
 
         use clp_rust_utils::types::non_empty_string::ExpectedNonEmpty;
         use non_empty_string::NonEmptyString;
         use query_result_listener::listener::ListenerConfig;
+        use query_result_listener::listener::ResultListener;
 
         let config = Config {
             package: Package {
@@ -920,9 +909,13 @@ mod tests {
         })
         .expect("binding a loopback listener should succeed");
         from_app_state(AppState {
-            client: Client::new(config.clone(), mongodb_client.clone(), sql_pool.clone()),
+            client: Client::new(
+                config.clone(),
+                mongodb_client.clone(),
+                sql_pool.clone(),
+                Arc::new(query_result_listener),
+            ),
             webui_client: WebuiClient::new(config, sql_pool, mongodb_client).await,
-            query_result_listener: Arc::new(query_result_listener),
         })
         .expect("the OpenAPI document should serialize")
     }

@@ -1,5 +1,6 @@
 use std::num::NonZeroU32;
 use std::pin::Pin;
+use std::sync::Arc;
 use std::time::Duration;
 
 use async_stream::stream;
@@ -276,12 +277,14 @@ pub struct Client {
     mongodb_client: mongodb::Client,
     sql_pool: sqlx::Pool<sqlx::MySql>,
     config: Config,
+    query_result_listener: Arc<ResultListener<SseEncoding>>,
 }
 
 impl Client {
     /// Factory function.
     ///
-    /// Creates a client that shares the given `MongoDB` client and `MySQL` connection pool.
+    /// Creates a client that shares the given `MongoDB` client, `MySQL` connection pool and query
+    /// result listener.
     ///
     /// # Returns
     ///
@@ -291,11 +294,13 @@ impl Client {
         config: Config,
         mongodb_client: mongodb::Client,
         sql_pool: sqlx::Pool<sqlx::MySql>,
+        query_result_listener: Arc<ResultListener<SseEncoding>>,
     ) -> Self {
         Self {
             mongodb_client,
             sql_pool,
             config,
+            query_result_listener,
         }
     }
 
@@ -317,8 +322,8 @@ impl Client {
         Ok(query_job::submit(&self.sql_pool, query_job_config).await?)
     }
 
-    /// Submits a query job that runs `query` and streams its results to a new session of
-    /// `query_result_listener`.
+    /// Submits a query job that runs `query` and streams its results to a new session of the
+    /// client's query result listener.
     ///
     /// # Returns
     ///
@@ -336,13 +341,14 @@ impl Client {
     /// * Forwards [`Client::submit_query`]'s return values on failure.
     pub async fn submit_streaming_query(
         &self,
-        query_result_listener: &ResultListener<SseEncoding>,
         query: SearchQuery,
     ) -> Result<
         SubmittedStreamingQuery<impl Stream<Item = SessionEvent<Bytes>> + Send + use<>>,
         ClientError,
     > {
-        let open_session = query_result_listener.open_session(SessionConfig::default())?;
+        let open_session = self
+            .query_result_listener
+            .open_session(SessionConfig::default())?;
         let query_job_config = QueryJobConfig {
             query,
             output: QueryOutput::Network(open_session.network_output().clone()),
