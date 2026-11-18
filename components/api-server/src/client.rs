@@ -26,6 +26,7 @@ use clp_rust_utils::job_config::ResultsCacheOutput;
 use clp_rust_utils::job_config::SearchQuery;
 use clp_rust_utils::timeline;
 use clp_rust_utils::timeline::Bucket;
+use clp_rust_utils::types::ArchiveId;
 use futures::Stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
@@ -986,11 +987,37 @@ where
     }
 }
 
+/// The data of a streaming query's event.
+#[expect(dead_code, reason = "only documents an `OpenAPI` schema")]
+#[derive(ToSchema)]
+#[serde(untagged)]
+pub(crate) enum StreamingQueryEventData {
+    Job(StreamingQueryJobEvent),
+    Result(StreamingQueryResultEvent),
+    End(StreamingQueryEndEvent),
+    Error(StreamingQueryErrorEvent),
+}
+
 /// The data of a streaming query's `job` event.
 #[derive(Serialize, ToSchema)]
 pub(crate) struct StreamingQueryJobEvent {
-    /// The ID of the query's job, which `DELETE /query/{query_job_id}` cancels.
+    /// The ID of the query's job.
     query_job_id: u64,
+}
+
+/// The data of a streaming query's result event.
+#[expect(dead_code, reason = "only documents an `OpenAPI` schema")]
+#[derive(ToSchema)]
+pub(crate) struct StreamingQueryResultEvent {
+    /// The ID of the archive that contains the result.
+    #[schema(value_type = String)]
+    archive_id: ArchiveId,
+
+    /// The result's timestamp, in milliseconds since the Unix epoch.
+    timestamp_millisecs: i64,
+
+    /// The result's message with its trailing newline removed.
+    message: String,
 }
 
 /// The data of a streaming query's `end` event.

@@ -34,6 +34,7 @@ use crate::client::CompressionUsage;
 use crate::client::CompressionUsageParams;
 use crate::client::QueryConfig;
 use crate::client::StreamingQueryConfig;
+use crate::client::StreamingQueryEventData;
 use crate::client::ValidatedCompressionUsageParams;
 pub use crate::sse::SseEncoding;
 use crate::sse::SseResponse;
@@ -253,19 +254,21 @@ struct QueryResultsUri {
     responses(
         (
             status = OK,
-            body = String,
+            body = StreamingQueryEventData,
             content_type = "text/event-stream",
-            description = "Server-Sent Events stream of the query. First comes a `job` event \
-                whose data is a `StreamingQueryJobEvent`. Then comes one unnamed event per \
-                result, whose data is a JSON object with the result's `archive_id`, \
-                `timestamp_millisecs` and `message` (without its trailing newline); results from \
-                different archives arrive in no particular order. Once the job has terminated, \
-                the stream ends with an `end` event whose data is a `StreamingQueryEndEvent`. If \
-                the query fails after its job was submitted (e.g., a result can't be encoded, or \
-                the job's status can't be read), the stream ends instead with an `error` event \
-                whose data is a `StreamingQueryErrorEvent`, and the job's cancellation is \
-                requested. While nothing else is sent, the stream periodically sends an SSE \
-                comment, so that the idle connection stays open.",
+            description = "The API server streams query results using Server-Sent Events. The \
+                schema describes the `data` field of each event.\n\n\
+                - `job` is the first event. Its `StreamingQueryJobEvent` payload identifies the \
+                query job.\n\
+                - Each unnamed event carries one result in a `StreamingQueryResultEvent` payload. \
+                Results from different archives can arrive in any order.\n\
+                - `end` closes the stream and reports the job's terminal status in a \
+                `StreamingQueryEndEvent` payload. If the job failed, the status is `Failed`.\n\
+                - `error` closes the stream in place of `end` if the API server encounters an \
+                error after job submission, such as a failure to encode a result or read the job's \
+                status. The `StreamingQueryErrorEvent` payload reports the server error. The \
+                server requests cancellation, but the job may still be running when you receive \
+                the event.",
             example = "event: job\ndata: {\"query_job_id\":1}\n\ndata: \
                 {\"archive_id\":\"018e90e5-8b2a-4a61-a2fc-cac799936caf\",\
                 \"timestamp_millisecs\":1633036800000,\"message\":\"Example log message\"}\n\n\
