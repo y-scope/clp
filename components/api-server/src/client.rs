@@ -1020,8 +1020,7 @@ pub(crate) struct StreamingQueryJobEvent {
 }
 
 /// The data of a streaming query's result event.
-#[expect(dead_code, reason = "only documents an `OpenAPI` schema")]
-#[derive(ToSchema)]
+#[derive(Serialize, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct StreamingQueryResultEvent {
     /// The ID of the archive that contains the result.
@@ -1323,6 +1322,33 @@ mod tests {
         drop(encoded_event_stream);
 
         assert!(event_sender.is_closed());
+        Ok(())
+    }
+
+    #[test]
+    fn the_sse_encoder_encodes_a_result_as_a_streaming_query_result_event() -> anyhow::Result<()> {
+        use query_result_listener::encoding::ResultEncoder;
+        use query_result_listener::encoding::ResultEncoding;
+        use query_result_listener::test_utils::ARCHIVE_ID;
+
+        use crate::sse::SseEncoding;
+
+        const TIMESTAMP_MILLISECS: i64 = 1;
+        const MESSAGE: &str = "a message";
+
+        let archive_id = ARCHIVE_ID.parse::<ArchiveId>()?;
+        let mut encoder = <SseEncoding as ResultEncoding>::Encoder::new(archive_id)?;
+        encoder.encode(TIMESTAMP_MILLISECS, &format!("{MESSAGE}\n"))?;
+
+        let result_event = StreamingQueryResultEvent {
+            archive_id,
+            timestamp_millisecs: TIMESTAMP_MILLISECS,
+            message: MESSAGE.to_owned(),
+        };
+        assert_eq!(
+            encoder.take_batch(),
+            format!("data: {}\n\n", serde_json::to_string(&result_event)?)
+        );
         Ok(())
     }
 }
