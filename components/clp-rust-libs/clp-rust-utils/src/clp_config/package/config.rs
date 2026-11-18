@@ -1,3 +1,4 @@
+use std::num::NonZeroU16;
 use std::num::NonZeroU32;
 use std::num::NonZeroU64;
 use std::num::NonZeroUsize;
@@ -277,6 +278,9 @@ pub struct ApiServer {
     pub port: u16,
     pub query_job_polling: QueryJobPollingConfig,
     pub stream_file_extraction_timeout_secs: NonZeroU64,
+
+    /// The listener that the tasks of streaming queries' jobs stream their results to.
+    pub query_result_listener: QueryResultListener,
 }
 
 impl Default for ApiServer {
@@ -287,6 +291,7 @@ impl Default for ApiServer {
             query_job_polling: QueryJobPollingConfig::default(),
             stream_file_extraction_timeout_secs: NonZeroU64::new(270)
                 .expect("default stream file extraction timeout should not be zero"),
+            query_result_listener: QueryResultListener::default(),
         }
     }
 }
@@ -306,6 +311,34 @@ impl Default for QueryJobPollingConfig {
         Self {
             initial_backoff_ms: 100,
             max_backoff_ms: 5000,
+        }
+    }
+}
+
+/// Mirror of `clp_py_utils.clp_config.QueryResultListener`.
+///
+/// Configuration of the API server's query result listener, which receives the results that the
+/// tasks of streaming queries' jobs stream to the API server.
+///
+/// # NOTE
+///
+/// * The default values must be kept in sync with the Python definition.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+#[serde(default, deny_unknown_fields)]
+pub struct QueryResultListener {
+    /// The port that the listener binds to on every interface.
+    pub port: NonZeroU16,
+
+    /// How long a query task's connection may take to send its handshake, in seconds.
+    pub handshake_timeout_secs: NonZeroU64,
+}
+
+impl Default for QueryResultListener {
+    fn default() -> Self {
+        Self {
+            port: NonZeroU16::new(3003).expect("default port should not be zero"),
+            handshake_timeout_secs: NonZeroU64::new(10)
+                .expect("default handshake timeout should not be zero"),
         }
     }
 }

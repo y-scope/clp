@@ -74,6 +74,48 @@ following commands to submit a query to clp-json and stream the results.
    data: {"timestamp": 1767225600020, "message": "No logs found" }
    ```
 
+## Example: Streaming search results in a single request
+
+Use `POST /query/stream` to submit a search query and receive results in the same response as the
+query job runs in the background.
+
+```shell
+curl -N -X POST http://localhost:3001/query/stream \
+    -H "Content-Type: application/json" \
+    -d '{
+       "query": {
+          "datasets": ["default"],
+          "query_string": "*log*",
+          "ignore_case": false
+       }
+    }'
+```
+
+:::{tip}
+Use the `-N` flag to disable curl's output buffering so you can see events as they arrive.
+:::
+
+The response uses [server-sent events][server-sent-events]. This example shows a search
+that returns one result and finishes successfully.
+
+```text
+event: job
+data: {"query_job_id":100}
+
+data: {"archive_id":"018e90e5-8b2a-4a61-a2fc-cac799936caf","timestamp_millisecs":1767225600000,"message":"Example log message"}
+
+event: end
+data: {"status":"Succeeded","num_results_emitted":1}
+```
+
+* The `job` event arrives first and contains the query job ID.
+* Each unnamed event carries one search result. Results from different archives can arrive in any
+  order.
+* The `end` event closes the stream and reports the job's terminal status.
+
+For more details, see the [streaming search API reference][streaming-search-api].
+
 [OpenAPI]: https://swagger.io/specification/
 [server-sent-events]: https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events
+[streaming-search-api]: https://petstore.swagger.io/?url=https://docs.yscope.com/clp/DOCS_VAR_CLP_GIT_REF/_static/generated/api-server-openapi.json#/default/stream_query
 [swagger-ui]: https://petstore.swagger.io/?url=https://docs.yscope.com/clp/DOCS_VAR_CLP_GIT_REF/_static/generated/api-server-openapi.json

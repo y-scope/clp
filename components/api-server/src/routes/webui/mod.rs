@@ -46,6 +46,7 @@ fn log_unexpected_error(operation: &str, error: &ClientError) {
         | ClientError::MalformedData
         | ClientError::TimelineNotCommitted(_)
         | ClientError::Timeline(_)
+        | ClientError::QueryResultSession(_)
         | ClientError::TaskJoin(_)
         | ClientError::Aws { .. }
         | ClientError::StreamExtractionTimeout(_)
