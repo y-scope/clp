@@ -320,8 +320,15 @@ impl Client {
     ///
     /// # Returns
     ///
-    /// The job's events encoded as Server-Sent Events on success: a `job` event, then the job's
-    /// results, and finally an `end` or `error` event.
+    /// A stream of the job's events, encoded as Server-Sent Events, on success:
+    ///
+    /// * `job`, the first event, whose [`StreamingQueryJobEvent`] payload identifies the query job.
+    /// * One unnamed event per result, whose [`StreamingQueryResultEvent`] payload carries the
+    ///   result. Results from different archives can arrive in any order.
+    /// * `end`, which closes the stream and reports the job's terminal status in a
+    ///   [`StreamingQueryEndEvent`] payload.
+    /// * `error`, which closes the stream in place of `end` if an error occurs after the job is
+    ///   submitted, with a [`StreamingQueryErrorEvent`] payload.
     ///
     /// # Errors
     ///

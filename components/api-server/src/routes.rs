@@ -236,8 +236,8 @@ struct QueryResultsUri {
     post,
     path = "/query/stream",
     description = "Submits a new query job and streams its results back as Server-Sent Events \
-        (SSE) in the same response while the job runs. If the client disconnects before the job \
-        terminates, the job's cancellation is requested.",
+        (SSE) in the same response while the job runs. If the client disconnects before the query \
+        job terminates, the job will be cancelled.",
     request_body(
         content = StreamingQueryConfig,
         example = json!({
