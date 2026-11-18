@@ -39,7 +39,7 @@ impl<CancellationType: Future<Output = ()> + Send + 'static> CancellationGuard<C
         if let Err(error) = tokio::spawn(cancellation).await {
             tracing::warn!(
                 error = % error,
-                "The task requesting the cancellation of a session's query job failed."
+                "Failed to cancel a session's query job."
             );
         }
     }

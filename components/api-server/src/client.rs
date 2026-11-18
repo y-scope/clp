@@ -1138,7 +1138,7 @@ fn encode_session_event(
                 status = ? status,
                 num_results_emitted,
                 num_duplicates_dropped,
-                "A streaming query ended."
+                "Streaming query ended."
             );
             encode_event(
                 "end",
