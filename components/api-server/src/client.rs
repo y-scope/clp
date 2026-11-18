@@ -336,6 +336,12 @@ impl Client {
     ///
     /// * Forwards [`ResultListener::open_session`]'s return values on failure.
     /// * Forwards [`Client::submit_query`]'s return values on failure.
+    ///
+    /// # Cancel safety
+    ///
+    /// This method isn't cancel safe. If the returned future is dropped while the job is being
+    /// submitted, the job may still be inserted: its tasks then can't stream their results, since
+    /// the session is closed, and its cancellation isn't requested.
     pub async fn submit_streaming_query(
         &self,
         query: SearchQuery,
