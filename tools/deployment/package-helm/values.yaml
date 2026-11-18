@@ -139,7 +139,6 @@ clpConfig:
       initial_backoff_ms: 100
       max_backoff_ms: 5000
     stream_file_extraction_timeout_secs: 270
-    # The listener that receives the results query tasks stream back for `POST /query/stream`.
     query_result_listener:
       handshake_timeout_secs: 10
 
