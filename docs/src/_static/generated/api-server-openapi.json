@@ -125,7 +125,7 @@
     "/query/stream": {
       "post": {
         "tags": [],
-        "description": "Submits a new query job and streams its results back as Server-Sent Events (SSE) in the same response while the job runs. If the client disconnects before the query job terminates, the job will be cancelled.",
+        "description": "Submits a new query job and streams its results back as Server-Sent Events (SSE) in the same response while the job runs. If the client disconnects before the query job terminates, the job's cancellation is requested.",
         "operationId": "stream_query",
         "requestBody": {
           "content": {
@@ -152,7 +152,7 @@
         },
         "responses": {
           "200": {
-            "description": "The API server streams query results using Server-Sent Events. The schema describes the `data` field of each event.\n\n- `job` is the first event. Its `StreamingQueryJobEvent` payload identifies the query job.\n- Each unnamed event carries one result in a `StreamingQueryResultEvent` payload. Results from different archives can arrive in any order.\n- `end` closes the stream and reports the job's terminal status in a `StreamingQueryEndEvent` payload. If the job failed, the status is `Failed`.\n- `error` closes the stream in place of `end` if the API server encounters an error after job submission, such as a failure to encode a result or read the job's status. The `StreamingQueryErrorEvent` payload reports the server error. The server requests cancellation, but the job may still be running when you receive the event.",
+            "description": "The API server streams query results using Server-Sent Events. The schema describes the `data` field of each event.\n\n- `job` is the first event. Its `StreamingQueryJobEvent` payload identifies the query job.\n- Each unnamed event carries one result in a `StreamingQueryResultEvent` payload. Results from different archives can arrive in any order.\n- `end` closes the stream and reports the job's terminal status in a `StreamingQueryEndEvent` payload. If the job failed, the status is `Failed`.\n- `error` closes the stream in place of `end` if the API server encounters an error after job submission, such as a failure to read the job's status. The `StreamingQueryErrorEvent` payload reports the server error. The server requests cancellation, but the job may still be running when you receive the event.",
             "content": {
               "text/event-stream": {
                 "schema": {
@@ -737,7 +737,8 @@
             "$ref": "#/components/schemas/QueryJobStatus",
             "description": "The terminal status of the query's job."
           }
-        }
+        },
+        "additionalProperties": false
       },
       "StreamingQueryErrorEvent": {
         "type": "object",
@@ -750,7 +751,8 @@
             "type": "string",
             "description": "A generic description of the error."
           }
-        }
+        },
+        "additionalProperties": false
       },
       "StreamingQueryEventData": {
         "oneOf": [
@@ -782,7 +784,8 @@
             "description": "The ID of the query's job.",
             "minimum": 0
           }
-        }
+        },
+        "additionalProperties": false
       },
       "StreamingQueryResultEvent": {
         "type": "object",
@@ -806,7 +809,8 @@
             "format": "int64",
             "description": "The result's timestamp, in milliseconds since the Unix epoch."
           }
-        }
+        },
+        "additionalProperties": false
       },
       "TimelineBucket": {
         "type": "object",

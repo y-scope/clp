@@ -199,7 +199,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Submits a new query job and streams its results back as Server-Sent Events (SSE) in the same response while the job runs. If the client disconnects before the query job terminates, the job will be cancelled. */
+        /** @description Submits a new query job and streams its results back as Server-Sent Events (SSE) in the same response while the job runs. If the client disconnects before the query job terminates, the job's cancellation is requested. */
         post: operations["stream_query"];
         delete?: never;
         options?: never;
@@ -1207,7 +1207,7 @@ export interface operations {
              *     - `job` is the first event. Its `StreamingQueryJobEvent` payload identifies the query job.
              *     - Each unnamed event carries one result in a `StreamingQueryResultEvent` payload. Results from different archives can arrive in any order.
              *     - `end` closes the stream and reports the job's terminal status in a `StreamingQueryEndEvent` payload. If the job failed, the status is `Failed`.
-             *     - `error` closes the stream in place of `end` if the API server encounters an error after job submission, such as a failure to encode a result or read the job's status. The `StreamingQueryErrorEvent` payload reports the server error. The server requests cancellation, but the job may still be running when you receive the event.
+             *     - `error` closes the stream in place of `end` if the API server encounters an error after job submission, such as a failure to read the job's status. The `StreamingQueryErrorEvent` payload reports the server error. The server requests cancellation, but the job may still be running when you receive the event.
              */
             200: {
                 headers: {
