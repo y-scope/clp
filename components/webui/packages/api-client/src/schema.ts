@@ -199,7 +199,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Submits a new query job and streams its results back as Server-Sent Events (SSE) in the same response while the job runs. If the client disconnects before the job terminates, the job's cancellation is requested. */
+        /** @description Submits a new query job and streams its results back as Server-Sent Events (SSE) in the same response while the job runs. If the client disconnects before the query job terminates, the job will be cancelled. */
         post: operations["stream_query"];
         delete?: never;
         options?: never;
@@ -654,16 +654,10 @@ export interface components {
         StreamingQueryEndEvent: {
             /**
              * Format: int64
-             * @description The number of results dropped because another attempt of their query task had already
-             *     streamed them.
-             */
-            num_duplicates_dropped: number;
-            /**
-             * Format: int64
              * @description The number of results streamed.
              */
             num_results_emitted: number;
-            /** @description The terminal status of the query's job: `Succeeded`, `Failed`, `Cancelled` or `Killed`. */
+            /** @description The terminal status of the query's job. */
             status: components["schemas"]["QueryJobStatus"];
         };
         /** @description The data of a streaming query's `error` event. */
@@ -671,13 +665,27 @@ export interface components {
             /** @description A generic description of the error. */
             message: string;
         };
+        /** @description The data of a streaming query's event. */
+        StreamingQueryEventData: components["schemas"]["StreamingQueryJobEvent"] | components["schemas"]["StreamingQueryResultEvent"] | components["schemas"]["StreamingQueryEndEvent"] | components["schemas"]["StreamingQueryErrorEvent"];
         /** @description The data of a streaming query's `job` event. */
         StreamingQueryJobEvent: {
             /**
              * Format: int64
-             * @description The ID of the query's job, which `DELETE /query/{query_job_id}` cancels.
+             * @description The ID of the query's job.
              */
             query_job_id: number;
+        };
+        /** @description The data of a streaming query's result event. */
+        StreamingQueryResultEvent: {
+            /** @description The ID of the archive that contains the result. */
+            archive_id: string;
+            /** @description The result's message with its trailing newline removed. */
+            message: string;
+            /**
+             * Format: int64
+             * @description The result's timestamp, in milliseconds since the Unix epoch.
+             */
+            timestamp_millisecs: number;
         };
         /** @description Earliest and latest log entry timestamps across the selected datasets. */
         TimeRange: {
@@ -1193,7 +1201,14 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Server-Sent Events stream of the query. First comes a `job` event whose data is a `StreamingQueryJobEvent`. Then comes one unnamed event per result, whose data is a JSON object with the result's `archive_id`, `timestamp_millisecs` and `message` (without its trailing newline); results from different archives arrive in no particular order. Once the job has terminated, the stream ends with an `end` event whose data is a `StreamingQueryEndEvent`. If the query fails after its job was submitted (e.g., a result can't be encoded, or the job's status can't be read), the stream ends instead with an `error` event whose data is a `StreamingQueryErrorEvent`, and the job's cancellation is requested. While nothing else is sent, the stream periodically sends an SSE comment, so that the idle connection stays open. */
+            /**
+             * @description The API server streams query results using Server-Sent Events. The schema describes the `data` field of each event.
+             *
+             *     - `job` is the first event. Its `StreamingQueryJobEvent` payload identifies the query job.
+             *     - Each unnamed event carries one result in a `StreamingQueryResultEvent` payload. Results from different archives can arrive in any order.
+             *     - `end` closes the stream and reports the job's terminal status in a `StreamingQueryEndEvent` payload. If the job failed, the status is `Failed`.
+             *     - `error` closes the stream in place of `end` if the API server encounters an error after job submission, such as a failure to encode a result or read the job's status. The `StreamingQueryErrorEvent` payload reports the server error. The server requests cancellation, but the job may still be running when you receive the event.
+             */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1206,9 +1221,9 @@ export interface operations {
                      *     data: {"archive_id":"018e90e5-8b2a-4a61-a2fc-cac799936caf","timestamp_millisecs":1633036800000,"message":"Example log message"}
                      *
                      *     event: end
-                     *     data: {"status":"Succeeded","num_results_emitted":1,"num_duplicates_dropped":0}
+                     *     data: {"status":"Succeeded","num_results_emitted":1}
                      */
-                    "text/event-stream": string;
+                    "text/event-stream": components["schemas"]["StreamingQueryEventData"];
                 };
             };
             /** @description The request body is not valid JSON or could not be read. */
