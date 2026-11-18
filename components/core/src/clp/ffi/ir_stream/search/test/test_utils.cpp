@@ -434,37 +434,54 @@ TEST_CASE("ffi_ir_stream_search_filter_evaluation", "[ffi][ir_stream][search]") 
     REQUIRE(check_filter_evaluation(filter_to_test.get(), filter_operand_literal_type));
 }
 
-// Checks that a literal without a space is compared against an encoded value instead of being
-// pruned because the value's representation doesn't match the literal's former storage class.
-TEST_CASE("ffi_ir_stream_search_exact_string_literal_evaluation", "[ffi][ir_stream][search]") {
+// Checks that a string literal is compared against a value of either representation instead of
+// being pruned because the value's representation doesn't match the literal's former storage class.
+// The serializer writes a plain string iff it contains no space and an encoded value otherwise, so
+// each cross-representation pair below is a defined non-match rather than `Pruned`.
+TEST_CASE("ffi_ir_stream_search_string_literal_storage_class", "[ffi][ir_stream][search]") {
     constexpr std::string_view cColumnName{"test_column"};
+    constexpr std::string_view cSpaceLiteral{"The test"};
     auto column_descriptor{
             ColumnDescriptor::create_from_escaped_tokens({std::string{cColumnName}}, "")
     };
-    auto exact_literal{ValueLiteral::create_from_string(std::string{cRefTestString})};
     std::string const encoded_text{"The test ID=" + std::string{cRefTestString}};
-    std::vector<Value> const values{
-            encode_text_value<four_byte_encoded_variable_t>(encoded_text),
-            encode_text_value<eight_byte_encoded_variable_t>(encoded_text),
+    auto exact_literal{ValueLiteral::create_from_string(std::string{cRefTestString})};
+    auto space_literal_operand{ValueLiteral::create_from_string(cSpaceLiteral)};
+
+    auto const check_evaluation = [&](FilterOperation op,
+                                      std::shared_ptr<Literal>& operand,
+                                      Value const& value,
+                                      bool expected) -> void {
+        auto const filter{std::dynamic_pointer_cast<FilterExpr>(
+                FilterExpr::create(column_descriptor, op, operand)
+        )};
+        REQUIRE(nullptr != filter);
+        auto const result{evaluate_filter_against_literal_type_value_pair(
+                filter.get(),
+                LiteralType::StringT,
+                value,
+                false
+        )};
+        REQUIRE_FALSE(result.has_error());
+        REQUIRE(expected == result.value());
     };
 
-    for (auto const& value : values) {
-        for (auto const op : {FilterOperation::EQ, FilterOperation::NEQ}) {
-            CAPTURE(op);
-            auto const filter{std::dynamic_pointer_cast<FilterExpr>(
-                    FilterExpr::create(column_descriptor, op, exact_literal)
-            )};
-            REQUIRE(nullptr != filter);
-            auto const result{evaluate_filter_against_literal_type_value_pair(
-                    filter.get(),
-                    LiteralType::StringT,
-                    value,
-                    false
-            )};
-            REQUIRE_FALSE(result.has_error());
-            bool const expected{FilterOperation::NEQ == op};
-            REQUIRE(expected == result.value());
-        }
+    // A value serialized as encoded text contains a space, so it is a defined non-match for an
+    // exact literal without a space.
+    for (auto const& value :
+         std::vector<Value>{
+                 encode_text_value<four_byte_encoded_variable_t>(encoded_text),
+                 encode_text_value<eight_byte_encoded_variable_t>(encoded_text),
+         })
+    {
+        check_evaluation(FilterOperation::EQ, exact_literal, value, false);
+        check_evaluation(FilterOperation::NEQ, exact_literal, value, true);
     }
+
+    // A value serialized as a plain string contains no space, so it is a defined non-match for a
+    // literal containing a space.
+    Value const plain_value{std::string{cRefTestString}};
+    check_evaluation(FilterOperation::EQ, space_literal_operand, plain_value, false);
+    check_evaluation(FilterOperation::NEQ, space_literal_operand, plain_value, true);
 }
 }  // namespace clp::ffi::ir_stream::search::test

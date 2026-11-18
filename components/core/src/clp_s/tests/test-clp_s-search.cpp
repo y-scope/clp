@@ -920,6 +920,59 @@ TEST_CASE("clp-s-search-multiple-archives-in-one-process", "[clp-s][search]") {
     }
 }
 
+// The string space class drives the storage-class shortcuts: a literal whose string interpretation
+// contains no space can never equal a `ClpString` value, and one that contains a space can never
+// equal a `VarString` value. A wildcard without a literal space may match either class.
+TEST_CASE("clp-s-search-string-space-class", "[clp-s][search]") {
+    using clp_s::search::ast::Literal;
+    using clp_s::search::ast::StringSpaceClass;
+    using clp_s::search::ast::TimestampLiteral;
+    using clp_s::search::ast::ValueLiteral;
+
+    auto const check_class = [](std::shared_ptr<Literal> const& literal,
+                                std::optional<StringSpaceClass> expected) -> void {
+        REQUIRE(expected == literal->get_string_space_class());
+    };
+
+    check_class(ValueLiteral::create_from_string("word"), StringSpaceClass::ContainsNoSpace);
+    check_class(ValueLiteral::create_from_string("two words"), StringSpaceClass::ContainsSpace);
+    check_class(ValueLiteral::create_from_string("w*"), StringSpaceClass::MayContainSpace);
+    check_class(ValueLiteral::create_from_string("a *b"), StringSpaceClass::ContainsSpace);
+    check_class(ValueLiteral::create_from_string(R"(a\*b)"), StringSpaceClass::ContainsNoSpace);
+    check_class(ValueLiteral::create_from_string("null"), StringSpaceClass::ContainsNoSpace);
+
+    check_class(ValueLiteral::create_from_int(42), StringSpaceClass::ContainsNoSpace);
+    check_class(ValueLiteral::create_from_float(4.2), StringSpaceClass::ContainsNoSpace);
+    check_class(ValueLiteral::create_from_bool(true), StringSpaceClass::ContainsNoSpace);
+
+    check_class(TimestampLiteral::create(0), std::nullopt);
+}
+
+// Pins that a storage-class prune during schema matching only happens for a non-inverted `=`
+// filter: `NOT s: abc` must still match records whose `s` is a `ClpString`, so the filter's
+// definition set must not shrink.
+TEST_CASE("clp-s-search-string-storage-class-pruning", "[clp-s][search]") {
+    auto const single_file_archive = GENERATE(true, false);
+
+    TestOutputCleaner const test_cleanup{{std::string{cTestSearchArchiveDirectory}}};
+
+    REQUIRE_NOTHROW(
+            std::ignore = compress_archive(
+                    get_test_input_local_path(cTestSearchPureWildcardFile),
+                    std::string{cTestSearchArchiveDirectory},
+                    std::string{cTestIdxKey},
+                    false,
+                    single_file_archive,
+                    false
+            )
+    );
+
+    REQUIRE_NOTHROW(search(R"aa(s: abc)aa", false, {}));
+    REQUIRE_NOTHROW(search(R"aa(NOT s: abc)aa", false, {5}));
+    REQUIRE_NOTHROW(search(R"aa(a: "x y")aa", false, {}));
+    REQUIRE_NOTHROW(search(R"aa(NOT a: "x y")aa", false, {0}));
+}
+
 TEST_CASE("clp-s-search-pure-wildcard-existence", "[clp-s][search]") {
     std::vector<std::pair<std::string, std::vector<int64_t>>> const queries_and_results{
             {R"aa(*: *)aa", {0, 1, 2, 3, 4, 5}},
@@ -1606,13 +1659,25 @@ TEST_CASE("clp-s-search-epoch-timestamp", "[clp-s][search]") {
 TEST_CASE("clp-s-search-reads-only-required-dictionaries", "[clp-s][search]") {
     using ReadDictionaries = clp_s::ArchiveReader::ReadDictionaries;
     auto const single_file_archive = GENERATE(true, false);
-    std::vector<std::tuple<std::string, std::vector<int64_t>, ReadDictionaries>> const
+    // The final field is whether `SchemaMatch` should prove the query unmatchable and skip the
+    // archive before any dictionary is read.
+    std::vector<std::tuple<std::string, std::vector<int64_t>, ReadDictionaries, bool>> const
             queries_results_and_dictionaries{
-                    {R"aa(b: null)aa", {1}, {}},
-                    {R"aa(a: "x")aa", {0}, {.var_dict = true}},
-                    {R"aa(c: 1)aa", {2}, {.var_dict = true, .array_dict = true}},
-                    {R"aa(e: "y" OR c: 1)aa", {2, 3}, {.var_dict = true, .array_dict = true}},
-                    {R"aa(s: "abc 123")aa", {5}, {.var_dict = true, .log_type_dict = true}},
+                    {R"aa(b: null)aa", {1}, {}, false},
+                    {R"aa(a: "x")aa", {0}, {.var_dict = true}, false},
+                    {R"aa(c: 1)aa", {2}, {.var_dict = true, .array_dict = true}, false},
+                    {R"aa(e: "y" OR c: 1)aa",
+                     {2, 3},
+                     {.var_dict = true, .array_dict = true},
+                     false},
+                    {R"aa(s: "abc 123")aa", {5}, {.var_dict = true, .log_type_dict = true}, false},
+                    {R"aa(s: abc)aa", {}, {}, true},
+                    {R"aa(a: "x y")aa", {}, {}, true},
+                    // The pure wildcard also scans the unstructured array column, whose reader
+                    // needs the array dictionary. The schema containing the `ClpString` column
+                    // never loads the logtype dictionary because that class is skipped for a
+                    // literal without a space.
+                    {R"aa(*: "x")aa", {0}, {.var_dict = true, .array_dict = true}, false},
             };
 
     TestOutputCleaner const test_cleanup{{std::string{cTestSearchArchiveDirectory}}};
@@ -1628,7 +1693,7 @@ TEST_CASE("clp-s-search-reads-only-required-dictionaries", "[clp-s][search]") {
             )
     );
 
-    for (auto const& [query, expected_results, expected_dictionaries] :
+    for (auto const& [query, expected_results, expected_dictionaries, expected_archive_pruned] :
          queries_results_and_dictionaries)
     {
         CAPTURE(query);
@@ -1643,9 +1708,17 @@ TEST_CASE("clp-s-search-reads-only-required-dictionaries", "[clp-s][search]") {
             auto archive_expr = expr->copy();
             REQUIRE_NOTHROW(archive_expr = match_pass->run(archive_expr));
             REQUIRE(nullptr != archive_expr);
-            REQUIRE(nullptr
-                    == std::dynamic_pointer_cast<clp_s::search::ast::EmptyExpr>(archive_expr));
             REQUIRE(ReadDictionaries{} == archive_reader->get_read_dictionaries());
+            bool const archive_pruned{
+                    nullptr
+                    != std::dynamic_pointer_cast<clp_s::search::ast::EmptyExpr>(archive_expr)
+            };
+            REQUIRE(expected_archive_pruned == archive_pruned);
+            if (archive_pruned) {
+                // The query was proven unmatchable during schema matching, so the archive is
+                // skipped before any dictionary is read.
+                continue;
+            }
 
             clp_s::search::Output output_pass(
                     match_pass,
