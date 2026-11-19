@@ -97,10 +97,6 @@ pub fn from_app_state(state: AppState) -> Result<axum::Router, serde_json::Error
 // `utoipa::OpenApi` triggers `clippy::needless_for_each`
 #[allow(clippy::needless_for_each)]
 mod api_doc {
-    use clp_rust_utils::api_server::streaming_query::StreamingQueryEndEvent;
-    use clp_rust_utils::api_server::streaming_query::StreamingQueryErrorEvent;
-    use clp_rust_utils::api_server::streaming_query::StreamingQueryJobEvent;
-
     // Using `super::...` can cause `super` to appear as a tag in the generated OpenAPI
     // documentation. Importing the paths directly prevents this issue.
     use super::__path_cancel_query;
@@ -132,13 +128,7 @@ mod api_doc {
             cancel_query,
             compression_usage
         ),
-        components(schemas(
-            CompressionUsage,
-            CompressionJobStatus,
-            StreamingQueryJobEvent,
-            StreamingQueryEndEvent,
-            StreamingQueryErrorEvent
-        ))
+        components(schemas(CompressionUsage, CompressionJobStatus))
     )]
     pub struct ApiDoc;
 
