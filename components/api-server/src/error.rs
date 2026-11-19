@@ -8,6 +8,7 @@ use clp_rust_utils::job_config::QueryJobStatus;
 use clp_rust_utils::logs_input::LogsInputError;
 use clp_rust_utils::types::ArchiveId;
 use num_enum::TryFromPrimitive;
+use query_result_listener::SessionError;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -47,6 +48,9 @@ pub enum ClientError {
 
     #[error("query job {0}'s results were streamed to a network listener and aren't stored")]
     QueryResultsNotStored(u64),
+
+    #[error(transparent)]
+    QueryResultSession(#[from] SessionError),
 
     #[error("Invalid input: {0}")]
     InvalidInput(String),

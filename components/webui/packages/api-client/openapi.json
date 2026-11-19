@@ -444,6 +444,92 @@
         }
       }
     },
+    "/query/stream": {
+      "post": {
+        "tags": [],
+        "description": "Submits a new query job and streams its results back as Server-Sent Events (SSE) in the same response while the job runs. If the client disconnects before the query job terminates, the job's cancellation is requested.",
+        "operationId": "stream_query",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StreamingQueryConfig"
+              },
+              "example": {
+                "query": {
+                  "datasets": [
+                    "default"
+                  ],
+                  "query_string": "*",
+                  "time_range": {
+                    "begin_timestamp_millisecs": 0,
+                    "end_timestamp_millisecs": 17356896
+                  },
+                  "ignore_case": true
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The API server streams query results using Server-Sent Events. The schema describes the `data` field of each event.\n\n- `job` is the first event. Its `StreamingQueryJobEvent` payload identifies the query job.\n- Each unnamed event carries one result in a `StreamingQueryResultEvent` payload. Results from different archives can arrive in any order.\n- `end` closes the stream and reports the job's terminal status in a `StreamingQueryEndEvent` payload. If the job failed, the status is `Failed`.\n- `error` closes the stream in place of `end` if the API server encounters an error after job submission, such as a failure to read the job's status. The `StreamingQueryErrorEvent` payload reports the server error. The server requests cancellation, but the job may still be running when you receive the event.",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/StreamingQueryEventData"
+                },
+                "example": "event: job\ndata: {\"query_job_id\":1}\n\ndata: {\"archive_id\":\"018e90e5-8b2a-4a61-a2fc-cac799936caf\",\"timestamp_millisecs\":1633036800000,\"message\":\"Example log message\"}\n\nevent: end\ndata: {\"status\":\"Succeeded\",\"num_results_emitted\":1}\n\n"
+              }
+            }
+          },
+          "400": {
+            "description": "The request body is not valid JSON or could not be read.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The request body exceeds the configured size limit.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "The Content-Type header is missing or is not a JSON media type.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The JSON body has missing or unknown fields (including `output`, which only `POST /query` takes), or fields with invalid types or values (e.g., an empty `query.datasets` or `query.query_string`, or a `query.time_range` whose begin timestamp exceeds its end timestamp).",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The query's session couldn't be opened, or its job couldn't be submitted."
+          }
+        }
+      }
+    },
     "/query/{query_job_id}": {
       "delete": {
         "tags": [],
@@ -1152,6 +1238,20 @@
         },
         "additionalProperties": false
       },
+      "QueryJobStatus": {
+        "type": "string",
+        "description": "The status of a query job.",
+        "enum": [
+          "Pending",
+          "Running",
+          "Succeeded",
+          "Failed",
+          "CancelRequested",
+          "Cancelling",
+          "Cancelled",
+          "Killed"
+        ]
+      },
       "QueryOutputConfig": {
         "oneOf": [
           {
@@ -1379,6 +1479,113 @@
             "description": "ID of the stream the file was extracted from."
           }
         }
+      },
+      "StreamingQueryConfig": {
+        "type": "object",
+        "description": "Defines the request configuration for submitting a query job whose results are streamed instead\nof buffered.",
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "$ref": "#/components/schemas/SearchQuery",
+            "description": "The query to run."
+          }
+        },
+        "additionalProperties": false
+      },
+      "StreamingQueryEndEvent": {
+        "type": "object",
+        "description": "The data of a streaming query's `end` event.",
+        "required": [
+          "status",
+          "num_results_emitted"
+        ],
+        "properties": {
+          "num_results_emitted": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The number of results streamed.",
+            "minimum": 0
+          },
+          "status": {
+            "$ref": "#/components/schemas/QueryJobStatus",
+            "description": "The terminal status of the query's job."
+          }
+        },
+        "additionalProperties": false
+      },
+      "StreamingQueryErrorEvent": {
+        "type": "object",
+        "description": "The data of a streaming query's `error` event.",
+        "required": [
+          "message"
+        ],
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "A generic description of the error."
+          }
+        },
+        "additionalProperties": false
+      },
+      "StreamingQueryEventData": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/StreamingQueryJobEvent"
+          },
+          {
+            "$ref": "#/components/schemas/StreamingQueryResultEvent"
+          },
+          {
+            "$ref": "#/components/schemas/StreamingQueryEndEvent"
+          },
+          {
+            "$ref": "#/components/schemas/StreamingQueryErrorEvent"
+          }
+        ],
+        "description": "The data of a streaming query's event."
+      },
+      "StreamingQueryJobEvent": {
+        "type": "object",
+        "description": "The data of a streaming query's `job` event.",
+        "required": [
+          "query_job_id"
+        ],
+        "properties": {
+          "query_job_id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The ID of the query's job.",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "StreamingQueryResultEvent": {
+        "type": "object",
+        "description": "The data of a streaming query's result event.",
+        "required": [
+          "archive_id",
+          "timestamp_millisecs",
+          "message"
+        ],
+        "properties": {
+          "archive_id": {
+            "type": "string",
+            "description": "The ID of the archive that contains the result."
+          },
+          "message": {
+            "type": "string",
+            "description": "The result's message with its trailing newline removed."
+          },
+          "timestamp_millisecs": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The result's timestamp, in milliseconds since the Unix epoch."
+          }
+        },
+        "additionalProperties": false
       },
       "TimeRange": {
         "type": "object",

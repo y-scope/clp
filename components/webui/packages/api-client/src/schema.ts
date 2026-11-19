@@ -190,6 +190,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/query/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Submits a new query job and streams its results back as Server-Sent Events (SSE) in the same response while the job runs. If the client disconnects before the query job terminates, the job's cancellation is requested. */
+        post: operations["stream_query"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/query/{query_job_id}": {
         parameters: {
             query?: never;
@@ -519,6 +536,11 @@ export interface components {
             /** @description The query to run. */
             query: components["schemas"]["SearchQuery"];
         };
+        /**
+         * @description The status of a query job.
+         * @enum {string}
+         */
+        QueryJobStatus: "Pending" | "Running" | "Succeeded" | "Failed" | "CancelRequested" | "Cancelling" | "Cancelled" | "Killed";
         /** @description Defines where a submitted query job's results are buffered. */
         QueryOutputConfig: {
             aggregation?: null | components["schemas"]["Aggregation"];
@@ -619,6 +641,51 @@ export interface components {
             path: string;
             /** @description ID of the stream the file was extracted from. */
             stream_id: string;
+        };
+        /**
+         * @description Defines the request configuration for submitting a query job whose results are streamed instead
+         *     of buffered.
+         */
+        StreamingQueryConfig: {
+            /** @description The query to run. */
+            query: components["schemas"]["SearchQuery"];
+        };
+        /** @description The data of a streaming query's `end` event. */
+        StreamingQueryEndEvent: {
+            /**
+             * Format: int64
+             * @description The number of results streamed.
+             */
+            num_results_emitted: number;
+            /** @description The terminal status of the query's job. */
+            status: components["schemas"]["QueryJobStatus"];
+        };
+        /** @description The data of a streaming query's `error` event. */
+        StreamingQueryErrorEvent: {
+            /** @description A generic description of the error. */
+            message: string;
+        };
+        /** @description The data of a streaming query's event. */
+        StreamingQueryEventData: components["schemas"]["StreamingQueryJobEvent"] | components["schemas"]["StreamingQueryResultEvent"] | components["schemas"]["StreamingQueryEndEvent"] | components["schemas"]["StreamingQueryErrorEvent"];
+        /** @description The data of a streaming query's `job` event. */
+        StreamingQueryJobEvent: {
+            /**
+             * Format: int64
+             * @description The ID of the query's job.
+             */
+            query_job_id: number;
+        };
+        /** @description The data of a streaming query's result event. */
+        StreamingQueryResultEvent: {
+            /** @description The ID of the archive that contains the result. */
+            archive_id: string;
+            /** @description The result's message with its trailing newline removed. */
+            message: string;
+            /**
+             * Format: int64
+             * @description The result's timestamp, in milliseconds since the Unix epoch.
+             */
+            timestamp_millisecs: number;
         };
         /** @description Earliest and latest log entry timestamps across the selected datasets. */
         TimeRange: {
@@ -1098,6 +1165,104 @@ export interface operations {
                     "text/plain": string;
                 };
             };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    stream_query: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "query": {
+                 *         "datasets": [
+                 *           "default"
+                 *         ],
+                 *         "query_string": "*",
+                 *         "time_range": {
+                 *           "begin_timestamp_millisecs": 0,
+                 *           "end_timestamp_millisecs": 17356896
+                 *         },
+                 *         "ignore_case": true
+                 *       }
+                 *     }
+                 */
+                "application/json": components["schemas"]["StreamingQueryConfig"];
+            };
+        };
+        responses: {
+            /**
+             * @description The API server streams query results using Server-Sent Events. The schema describes the `data` field of each event.
+             *
+             *     - `job` is the first event. Its `StreamingQueryJobEvent` payload identifies the query job.
+             *     - Each unnamed event carries one result in a `StreamingQueryResultEvent` payload. Results from different archives can arrive in any order.
+             *     - `end` closes the stream and reports the job's terminal status in a `StreamingQueryEndEvent` payload. If the job failed, the status is `Failed`.
+             *     - `error` closes the stream in place of `end` if the API server encounters an error after job submission, such as a failure to read the job's status. The `StreamingQueryErrorEvent` payload reports the server error. The server requests cancellation, but the job may still be running when you receive the event.
+             */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example event: job
+                     *     data: {"query_job_id":1}
+                     *
+                     *     data: {"archive_id":"018e90e5-8b2a-4a61-a2fc-cac799936caf","timestamp_millisecs":1633036800000,"message":"Example log message"}
+                     *
+                     *     event: end
+                     *     data: {"status":"Succeeded","num_results_emitted":1}
+                     */
+                    "text/event-stream": components["schemas"]["StreamingQueryEventData"];
+                };
+            };
+            /** @description The request body is not valid JSON or could not be read. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
+                };
+            };
+            /** @description The request body exceeds the configured size limit. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
+                };
+            };
+            /** @description The Content-Type header is missing or is not a JSON media type. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
+                };
+            };
+            /** @description The JSON body has missing or unknown fields (including `output`, which only `POST /query` takes), or fields with invalid types or values (e.g., an empty `query.datasets` or `query.query_string`, or a `query.time_range` whose begin timestamp exceeds its end timestamp). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
+                };
+            };
+            /** @description The query's session couldn't be opened, or its job couldn't be submitted. */
             500: {
                 headers: {
                     [name: string]: unknown;

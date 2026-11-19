@@ -184,7 +184,7 @@ pub struct NetworkOutput {
     pub session_token: SessionToken,
 }
 
-/// Mirror of `job_orchestration.scheduler.constants.QueryJobStatus`. Must be kept in sync.
+/// The status of a query job.
 #[derive(
     Clone,
     Copy,
