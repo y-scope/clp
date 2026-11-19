@@ -7,14 +7,13 @@
 namespace clp_s::search {
 /**
  * Determines whether a literal's string interpretation can never equal a string value stored as
- * `node_type`, using the clp-s storage invariant that a `ClpString` value always contains a space
- * and a `VarString` value never does.
+ * `node_type`, using invariants about how data is classified into different node types.
  *
  * @param literal
  * @param node_type
- * @return Whether `literal` can never equal a value stored as `node_type`. Always false for any
- * other node type, and for a literal with no string interpretation, since the comparison is then
- * undefined rather than a defined non-match.
+ * @return Whether `literal` can never equal a value stored as `node_type`, admitting
+ * false-negatives for some node types. Always false for a literal with no string
+ * interpretation, since the comparison is then undefined rather than a defined non-match.
  */
 [[nodiscard]] inline auto
 can_never_equal_stored_string(ast::Literal const& literal, NodeType node_type) -> bool {
