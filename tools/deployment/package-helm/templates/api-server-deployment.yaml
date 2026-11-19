@@ -49,6 +49,10 @@ spec:
                   key: "username"
             - name: "OTEL_SERVICE_NAME"
               value: "api-server"
+            - name: "POD_IP"
+              valueFrom:
+                fieldRef:
+                  fieldPath: "status.podIP"
             - name: "RUST_LOG"
               value: "INFO"
           {{- include "clp.createResourceLimits" (dict
@@ -58,6 +62,8 @@ spec:
           ports:
             - name: "api-server"
               containerPort: 3001
+            - name: "query-results"
+              containerPort: 3003
           volumeMounts:
             - name: "config"
               mountPath: "/etc/clp-config.yaml"
@@ -80,7 +86,8 @@ spec:
             "/opt/clp/bin/api_server",
             "--host", "0.0.0.0",
             "--port", "3001",
-            "--config", "/etc/clp-config.yaml"
+            "--config", "/etc/clp-config.yaml",
+            "--query-result-listener-advertised-host", "$(POD_IP)"
           ]
           readinessProbe:
             {{- include "clp.readinessProbeTimings" . | nindent 12 }}

@@ -1,13 +1,17 @@
 use std::num::NonZeroU32;
 use std::pin::Pin;
+use std::sync::Arc;
+use std::time::Duration;
 
 use async_stream::stream;
 use async_stream::try_stream;
+use axum::body::Bytes;
 use chrono::DateTime;
 use chrono::TimeZone;
 use chrono::Utc;
 use clp_rust_utils::aws::AWS_DEFAULT_REGION;
 use clp_rust_utils::clp_config::package::config::Config;
+use clp_rust_utils::clp_config::package::config::QueryJobPollingConfig;
 use clp_rust_utils::clp_config::package::config::StreamOutputStorage;
 use clp_rust_utils::database::mysql::query_job;
 use clp_rust_utils::job_config::Aggregation;
@@ -22,6 +26,7 @@ use clp_rust_utils::job_config::ResultsCacheOutput;
 use clp_rust_utils::job_config::SearchQuery;
 use clp_rust_utils::timeline;
 use clp_rust_utils::timeline::Bucket;
+use clp_rust_utils::types::ArchiveId;
 use futures::Stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
@@ -32,6 +37,10 @@ use mongodb::options::Hint;
 use mongodb::options::ReadPreference;
 use mongodb::options::SelectionCriteria;
 use pin_project_lite::pin_project;
+use query_result_listener::listener::ResultListener;
+use query_result_listener::session::SessionConfig;
+use query_result_listener::session::SessionEvent;
+use query_result_listener::session::SessionStats;
 use serde::Deserialize;
 use serde::Serialize;
 use sqlx::Row;
@@ -39,6 +48,8 @@ use utoipa::IntoParams;
 use utoipa::ToSchema;
 
 pub use crate::error::ClientError;
+use crate::sse::SseEncoding;
+use crate::sse::encode_event;
 
 /// Default job statuses to include when the caller does not specify `job_status`.
 /// Covers all terminal states that consumed compute resources (succeeded, failed).
@@ -256,12 +267,14 @@ pub struct Client {
     mongodb_client: mongodb::Client,
     sql_pool: sqlx::Pool<sqlx::MySql>,
     config: Config,
+    query_result_listener: Arc<ResultListener<SseEncoding>>,
 }
 
 impl Client {
     /// Factory function.
     ///
-    /// Creates a client that shares the given `MongoDB` client and `MySQL` connection pool.
+    /// Creates a client that shares the given `MongoDB` client, `MySQL` connection pool and query
+    /// result listener.
     ///
     /// # Returns
     ///
@@ -271,11 +284,13 @@ impl Client {
         config: Config,
         mongodb_client: mongodb::Client,
         sql_pool: sqlx::Pool<sqlx::MySql>,
+        query_result_listener: Arc<ResultListener<SseEncoding>>,
     ) -> Self {
         Self {
             mongodb_client,
             sql_pool,
             config,
+            query_result_listener,
         }
     }
 
@@ -295,6 +310,82 @@ impl Client {
         query_job_config: &QueryJobConfig,
     ) -> Result<u64, ClientError> {
         Ok(query_job::submit(&self.sql_pool, query_job_config).await?)
+    }
+
+    /// Submits a query job that runs `query` and streams its results to a new session of the
+    /// client's query result listener.
+    ///
+    /// If the query fails, or the returned stream is dropped before the job terminates, the job's
+    /// cancellation is requested.
+    ///
+    /// # Returns
+    ///
+    /// A stream of the job's events, encoded as Server-Sent Events, on success:
+    ///
+    /// * `job`, the first event, whose [`StreamingQueryJobEvent`] payload identifies the query job.
+    /// * One unnamed event per result, whose [`StreamingQueryResultEvent`] payload carries the
+    ///   result. Results from different archives can arrive in any order.
+    /// * `end`, which closes the stream and reports the job's terminal status in a
+    ///   [`StreamingQueryEndEvent`] payload.
+    /// * `error`, which closes the stream in place of `end` if an error occurs after the job is
+    ///   submitted, with a [`StreamingQueryErrorEvent`] payload.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`ResultListener::open_session`]'s return values on failure.
+    /// * Forwards [`Client::submit_query`]'s return values on failure.
+    ///
+    /// # Cancel safety
+    ///
+    /// This method isn't cancel safe. If the returned future is dropped while the job is being
+    /// submitted, the job may still be inserted: its tasks then can't stream their results, since
+    /// the session is closed, and its cancellation isn't requested.
+    pub(crate) async fn submit_streaming_query(
+        &self,
+        query: SearchQuery,
+    ) -> Result<impl Stream<Item = Result<Bytes, serde_json::Error>> + Send + use<>, ClientError>
+    {
+        let open_session = self
+            .query_result_listener
+            .open_session(SessionConfig::default())?;
+        let query_job_config = QueryJobConfig {
+            query,
+            output: QueryOutput::Network(open_session.network_output().clone()),
+        };
+        let query_job_id = self.submit_query(&query_job_config).await?;
+        tracing::info!(query_job_id, "Submitted a streaming query.");
+
+        let wait_for_termination = {
+            let client = self.clone();
+            async move { client.wait_for_query_job_termination(query_job_id).await }
+        };
+        let request_cancellation = {
+            let client = self.clone();
+            async move {
+                match client.cancel_query_job(query_job_id).await {
+                    Ok(()) => tracing::info!(
+                        query_job_id,
+                        "Requested the cancellation of a streaming query's job."
+                    ),
+                    Err(ClientError::QueryJobAlreadyTerminated(_)) => tracing::info!(
+                        query_job_id,
+                        "Skipped the cancellation of a streaming query's job, which had already \
+                         terminated."
+                    ),
+                    Err(error) => tracing::warn!(
+                        query_job_id,
+                        error = % error,
+                        "Failed to request the cancellation of a streaming query's job."
+                    ),
+                }
+            }
+        };
+        Ok(encode_streaming_query_events(
+            query_job_id,
+            open_session.into_events(wait_for_termination, request_cancellation),
+        ))
     }
 
     /// Asynchronously fetches the results of a completed query job.
@@ -478,6 +569,33 @@ impl Client {
             .ok_or(ClientError::QueryJobNotFound(query_job_id))
     }
 
+    /// Waits until a query job terminates, reading its status with the backoff of the API server's
+    /// query job polling configuration.
+    ///
+    /// # Returns
+    ///
+    /// The terminal status of the job on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`Client::get_status`]'s return values on failure.
+    async fn wait_for_query_job_termination(
+        &self,
+        query_job_id: u64,
+    ) -> Result<QueryJobStatus, ClientError> {
+        let mut backoff =
+            QueryJobPollingBackoff::new(&self.get_api_server_config().query_job_polling);
+        loop {
+            let status = self.get_status(query_job_id).await?;
+            if status.is_terminal() {
+                return Ok(status);
+            }
+            tokio::time::sleep(backoff.next_delay()).await;
+        }
+    }
+
     /// Waits until a query succeeds, fails, or begins cancellation.
     ///
     /// # Errors
@@ -487,9 +605,8 @@ impl Client {
     /// * [`ClientError::QueryNotSucceeded`] if the query fails or cancellation has begun.
     /// * Forwards [`Self::get_status`]'s return values on failure.
     async fn wait_for_query_success(&self, query_job_id: u64) -> Result<(), ClientError> {
-        let api_server_config = self.get_api_server_config();
-        let mut delay_ms = api_server_config.query_job_polling.initial_backoff_ms;
-        let max_delay_ms = api_server_config.query_job_polling.max_backoff_ms;
+        let mut backoff =
+            QueryJobPollingBackoff::new(&self.get_api_server_config().query_job_polling);
         loop {
             match self.get_status(query_job_id).await? {
                 QueryJobStatus::Succeeded => {
@@ -503,8 +620,7 @@ impl Client {
                     return Err(ClientError::QueryNotSucceeded);
                 }
                 QueryJobStatus::Running | QueryJobStatus::Pending => {
-                    tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
-                    delay_ms = std::cmp::min(delay_ms.saturating_mul(2), max_delay_ms);
+                    tokio::time::sleep(backoff.next_delay()).await;
                 }
             }
         }
@@ -884,11 +1000,174 @@ where
     }
 }
 
+/// The data of a streaming query's event.
+#[expect(dead_code, reason = "only documents an `OpenAPI` schema")]
+#[derive(ToSchema)]
+#[serde(untagged)]
+pub(crate) enum StreamingQueryEventData {
+    Job(StreamingQueryJobEvent),
+    Result(StreamingQueryResultEvent),
+    End(StreamingQueryEndEvent),
+    Error(StreamingQueryErrorEvent),
+}
+
+/// The data of a streaming query's `job` event.
+#[derive(Serialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct StreamingQueryJobEvent {
+    /// The ID of the query's job.
+    query_job_id: u64,
+}
+
+/// The data of a streaming query's result event.
+#[derive(Serialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct StreamingQueryResultEvent {
+    /// The ID of the archive that contains the result.
+    #[schema(value_type = String)]
+    archive_id: ArchiveId,
+
+    /// The result's timestamp, in milliseconds since the Unix epoch.
+    timestamp_millisecs: i64,
+
+    /// The result's message with its trailing newline removed.
+    message: String,
+}
+
+/// The data of a streaming query's `end` event.
+#[derive(Serialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct StreamingQueryEndEvent {
+    /// The terminal status of the query's job.
+    status: QueryJobStatus,
+
+    /// The number of results streamed.
+    num_results_emitted: u64,
+}
+
+/// The data of a streaming query's `error` event.
+#[derive(Serialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct StreamingQueryErrorEvent {
+    /// A generic description of the error.
+    message: String,
+}
+
+/// The backoff between the reads of a query job's status: the first delay is the configured initial
+/// backoff, and each next delay doubles the previous one, up to the configured maximum backoff.
+struct QueryJobPollingBackoff {
+    delay: Duration,
+    max_delay: Duration,
+}
+
+impl QueryJobPollingBackoff {
+    /// Factory function.
+    ///
+    /// # Returns
+    ///
+    /// A newly created backoff that `config` configures, starting at its first delay.
+    const fn new(config: &QueryJobPollingConfig) -> Self {
+        Self {
+            delay: Duration::from_millis(config.initial_backoff_ms),
+            max_delay: Duration::from_millis(config.max_backoff_ms),
+        }
+    }
+
+    /// # Returns
+    ///
+    /// The delay before the next read of the status. The delay after it is doubled, up to the
+    /// maximum.
+    fn next_delay(&mut self) -> Duration {
+        let delay = self.delay;
+        self.delay = std::cmp::min(self.delay.saturating_mul(2), self.max_delay);
+        delay
+    }
+}
+
+/// Encodes `event_stream`, a stream of the events of a streaming query's job, as Server-Sent
+/// Events.
+///
+/// # Returns
+///
+/// A stream that yields a `job` event whose data is a [`StreamingQueryJobEvent`], then the events
+/// that [`encode_session_event`] encodes.
+fn encode_streaming_query_events(
+    query_job_id: u64,
+    event_stream: impl Stream<Item = SessionEvent<Bytes>>,
+) -> impl Stream<Item = Result<Bytes, serde_json::Error>> {
+    let job_event = encode_event("job", &StreamingQueryJobEvent { query_job_id });
+    futures::stream::once(futures::future::ready(job_event))
+        .chain(event_stream.map(move |event| encode_session_event(query_job_id, event)))
+}
+
+/// Encodes `event`, an event of the streaming query whose job is `query_job_id`, as a Server-Sent
+/// Event.
+///
+/// A [`SessionEvent::Ended`] is logged with `query_job_id` and the session's statistics, of which
+/// only the number of results streamed is sent to the client. A [`SessionEvent::Failed`] is logged
+/// with `query_job_id`, and its error isn't sent to the client.
+///
+/// # Returns
+///
+/// On success:
+///
+/// * The batch of [`SessionEvent::Results`] as it is.
+/// * An `end` event whose data is a [`StreamingQueryEndEvent`] for [`SessionEvent::Ended`].
+/// * An `error` event whose data is a [`StreamingQueryErrorEvent`] for [`SessionEvent::Failed`].
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * Forwards [`encode_event`]'s return values on failure.
+fn encode_session_event(
+    query_job_id: u64,
+    event: SessionEvent<Bytes>,
+) -> Result<Bytes, serde_json::Error> {
+    const STREAMING_QUERY_ERROR_MESSAGE: &str = "Internal server error";
+
+    match event {
+        SessionEvent::Results(batch) => Ok(batch),
+        SessionEvent::Ended { status, stats } => {
+            let SessionStats {
+                num_results_emitted,
+                num_duplicates_dropped,
+            } = stats;
+            tracing::info!(
+                query_job_id,
+                status = ? status,
+                num_results_emitted,
+                num_duplicates_dropped,
+                "Streaming query ended."
+            );
+            encode_event(
+                "end",
+                &StreamingQueryEndEvent {
+                    status,
+                    num_results_emitted,
+                },
+            )
+        }
+        SessionEvent::Failed(error) => {
+            tracing::error!(query_job_id, error = % error, "A streaming query failed.");
+            encode_event(
+                "error",
+                &StreamingQueryErrorEvent {
+                    message: STREAMING_QUERY_ERROR_MESSAGE.to_owned(),
+                },
+            )
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
 
     use super::*;
+
+    /// The ID of the query job whose events a test encodes.
+    const QUERY_JOB_ID: u64 = 7;
 
     #[test]
     fn parse_job_status_pending_not_in_defaults() {
@@ -938,5 +1217,138 @@ mod tests {
                 "output: {output:?}"
             );
         }
+    }
+
+    #[test]
+    fn query_job_polling_backoff_doubles_its_delay_up_to_the_maximum() {
+        let mut backoff = QueryJobPollingBackoff::new(&QueryJobPollingConfig {
+            initial_backoff_ms: 100,
+            max_backoff_ms: 500,
+        });
+
+        for expected_delay_ms in [100, 200, 400, 500, 500] {
+            assert_eq!(
+                backoff.next_delay(),
+                Duration::from_millis(expected_delay_ms)
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn streaming_query_events_are_the_job_event_the_batches_as_they_are_and_the_end()
+    -> anyhow::Result<()> {
+        use futures::stream;
+
+        const FIRST_BATCH: &str = "data: a\n\n";
+        const SECOND_BATCH: &str = "data: b\n\ndata: c\n\n";
+
+        let event_stream = stream::iter([
+            SessionEvent::Results(Bytes::from_static(FIRST_BATCH.as_bytes())),
+            SessionEvent::Results(Bytes::from_static(SECOND_BATCH.as_bytes())),
+            SessionEvent::Ended {
+                status: QueryJobStatus::Cancelled,
+                stats: SessionStats {
+                    num_results_emitted: 3,
+                    num_duplicates_dropped: 1,
+                },
+            },
+        ]);
+
+        let encoded_events = encode_streaming_query_events(QUERY_JOB_ID, event_stream)
+            .try_collect::<Vec<_>>()
+            .await?
+            .concat();
+
+        assert_eq!(
+            String::from_utf8(encoded_events)?,
+            [
+                &format!("event: job\ndata: {{\"query_job_id\":{QUERY_JOB_ID}}}\n\n"),
+                FIRST_BATCH,
+                SECOND_BATCH,
+                "event: end\ndata: ",
+                r#"{"status":"Cancelled","num_results_emitted":3}"#,
+                "\n\n",
+            ]
+            .concat()
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn streaming_query_events_end_with_an_error_event_without_the_errors_details()
+    -> anyhow::Result<()> {
+        use futures::stream;
+        use query_result_listener::session::SessionEventError;
+
+        const BATCH: &str = "data: a\n\n";
+
+        let event_stream = stream::iter([
+            SessionEvent::Results(Bytes::from_static(BATCH.as_bytes())),
+            SessionEvent::Failed(SessionEventError::Encoding("an internal detail".to_owned())),
+        ]);
+
+        let encoded_events = encode_streaming_query_events(QUERY_JOB_ID, event_stream)
+            .try_collect::<Vec<_>>()
+            .await?
+            .concat();
+
+        assert_eq!(
+            String::from_utf8(encoded_events)?,
+            [
+                &format!("event: job\ndata: {{\"query_job_id\":{QUERY_JOB_ID}}}\n\n"),
+                BATCH,
+                "event: error\ndata: ",
+                r#"{"message":"Internal server error"}"#,
+                "\n\n",
+            ]
+            .concat()
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn dropping_the_streaming_query_events_drops_the_jobs_events() -> anyhow::Result<()> {
+        use futures::channel::mpsc;
+        use query_result_listener::test_utils::TIMEOUT;
+
+        let (event_sender, event_stream) = mpsc::unbounded::<SessionEvent<Bytes>>();
+        let mut encoded_event_stream =
+            Box::pin(encode_streaming_query_events(QUERY_JOB_ID, event_stream));
+        tokio::time::timeout(TIMEOUT, encoded_event_stream.next())
+            .await?
+            .expect("the events should start with the job event")?;
+        assert!(!event_sender.is_closed());
+
+        drop(encoded_event_stream);
+
+        assert!(event_sender.is_closed());
+        Ok(())
+    }
+
+    #[test]
+    fn the_sse_encoder_encodes_a_result_as_a_streaming_query_result_event() -> anyhow::Result<()> {
+        use query_result_listener::encoding::ResultEncoder;
+        use query_result_listener::encoding::ResultEncoding;
+        use query_result_listener::test_utils::ARCHIVE_ID;
+
+        use crate::sse::SseEncoding;
+
+        const TIMESTAMP_MILLISECS: i64 = 1;
+        const MESSAGE: &str = "a message";
+
+        let archive_id = ARCHIVE_ID.parse::<ArchiveId>()?;
+        let mut encoder = <SseEncoding as ResultEncoding>::Encoder::new(archive_id)?;
+        encoder.encode(TIMESTAMP_MILLISECS, &format!("{MESSAGE}\n"))?;
+
+        let result_event = StreamingQueryResultEvent {
+            archive_id,
+            timestamp_millisecs: TIMESTAMP_MILLISECS,
+            message: MESSAGE.to_owned(),
+        };
+        assert_eq!(
+            encoder.take_batch(),
+            format!("data: {}\n\n", serde_json::to_string(&result_event)?)
+        );
+        Ok(())
     }
 }

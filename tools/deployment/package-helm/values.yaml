@@ -139,6 +139,8 @@ clpConfig:
       initial_backoff_ms: 16
       max_backoff_ms: 256
     stream_file_extraction_timeout_secs: 270
+    query_result_listener:
+      handshake_timeout_secs: 10
 
   database:
     type: "mariadb"  # "mariadb" or "mysql"

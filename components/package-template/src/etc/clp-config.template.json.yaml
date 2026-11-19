@@ -17,6 +17,8 @@ telemetry:
 #    initial_backoff_ms: 16
 #    max_backoff_ms: 256
 #  stream_file_extraction_timeout_secs: 270
+#  query_result_listener:
+#    handshake_timeout_secs: 10
 
 ## log-ingestor config. Currently, the config is applicable only if `logs_input.type` is "s3".
 #log_ingestor:
