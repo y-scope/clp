@@ -9,6 +9,9 @@ use axum::body::Bytes;
 use chrono::DateTime;
 use chrono::TimeZone;
 use chrono::Utc;
+use clp_rust_utils::api_server::streaming_query::StreamingQueryEndEvent;
+use clp_rust_utils::api_server::streaming_query::StreamingQueryErrorEvent;
+use clp_rust_utils::api_server::streaming_query::StreamingQueryJobEvent;
 use clp_rust_utils::aws::AWS_DEFAULT_REGION;
 use clp_rust_utils::clp_config::package::config::Config;
 use clp_rust_utils::clp_config::package::config::QueryJobPollingConfig;
@@ -26,7 +29,6 @@ use clp_rust_utils::job_config::ResultsCacheOutput;
 use clp_rust_utils::job_config::SearchQuery;
 use clp_rust_utils::timeline;
 use clp_rust_utils::timeline::Bucket;
-use clp_rust_utils::types::ArchiveId;
 use futures::Stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
@@ -217,15 +219,6 @@ impl From<QueryConfig> for QueryJobConfig {
     }
 }
 
-/// Defines the request configuration for submitting a query job whose results are streamed instead
-/// of buffered.
-#[derive(Debug, Deserialize, ToSchema)]
-#[serde(deny_unknown_fields)]
-pub struct StreamingQueryConfig {
-    /// The query to run.
-    pub query: SearchQuery,
-}
-
 /// Defines where a submitted query job's results are buffered.
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 #[serde(deny_unknown_fields, tag = "type", rename_all = "snake_case")]
@@ -342,6 +335,9 @@ impl Client {
     /// This method isn't cancel safe. If the returned future is dropped while the job is being
     /// submitted, the job may still be inserted: its tasks then can't stream their results, since
     /// the session is closed, and its cancellation isn't requested.
+    ///
+    /// [`StreamingQueryResultEvent`]:
+    ///   clp_rust_utils::api_server::streaming_query::StreamingQueryResultEvent
     pub(crate) async fn submit_streaming_query(
         &self,
         query: SearchQuery,
@@ -1000,59 +996,6 @@ where
     }
 }
 
-/// The data of a streaming query's event.
-#[expect(dead_code, reason = "only documents an `OpenAPI` schema")]
-#[derive(ToSchema)]
-#[serde(untagged)]
-pub(crate) enum StreamingQueryEventData {
-    Job(StreamingQueryJobEvent),
-    Result(StreamingQueryResultEvent),
-    End(StreamingQueryEndEvent),
-    Error(StreamingQueryErrorEvent),
-}
-
-/// The data of a streaming query's `job` event.
-#[derive(Serialize, ToSchema)]
-#[serde(deny_unknown_fields)]
-pub(crate) struct StreamingQueryJobEvent {
-    /// The ID of the query's job.
-    query_job_id: u64,
-}
-
-/// The data of a streaming query's result event.
-#[derive(Serialize, ToSchema)]
-#[serde(deny_unknown_fields)]
-pub(crate) struct StreamingQueryResultEvent {
-    /// The ID of the archive that contains the result.
-    #[schema(value_type = String)]
-    archive_id: ArchiveId,
-
-    /// The result's timestamp, in milliseconds since the Unix epoch.
-    timestamp_millisecs: i64,
-
-    /// The result's message with its trailing newline removed.
-    message: String,
-}
-
-/// The data of a streaming query's `end` event.
-#[derive(Serialize, ToSchema)]
-#[serde(deny_unknown_fields)]
-pub(crate) struct StreamingQueryEndEvent {
-    /// The terminal status of the query's job.
-    status: QueryJobStatus,
-
-    /// The number of results streamed.
-    num_results_emitted: u64,
-}
-
-/// The data of a streaming query's `error` event.
-#[derive(Serialize, ToSchema)]
-#[serde(deny_unknown_fields)]
-pub(crate) struct StreamingQueryErrorEvent {
-    /// A generic description of the error.
-    message: String,
-}
-
 /// The backoff between the reads of a query job's status: the first delay is the configured initial
 /// backoff, and each next delay doubles the previous one, up to the configured maximum backoff.
 struct QueryJobPollingBackoff {
@@ -1322,33 +1265,6 @@ mod tests {
         drop(encoded_event_stream);
 
         assert!(event_sender.is_closed());
-        Ok(())
-    }
-
-    #[test]
-    fn the_sse_encoder_encodes_a_result_as_a_streaming_query_result_event() -> anyhow::Result<()> {
-        use query_result_listener::encoding::ResultEncoder;
-        use query_result_listener::encoding::ResultEncoding;
-        use query_result_listener::test_utils::ARCHIVE_ID;
-
-        use crate::sse::SseEncoding;
-
-        const TIMESTAMP_MILLISECS: i64 = 1;
-        const MESSAGE: &str = "a message";
-
-        let archive_id = ARCHIVE_ID.parse::<ArchiveId>()?;
-        let mut encoder = <SseEncoding as ResultEncoding>::Encoder::new(archive_id)?;
-        encoder.encode(TIMESTAMP_MILLISECS, &format!("{MESSAGE}\n"))?;
-
-        let result_event = StreamingQueryResultEvent {
-            archive_id,
-            timestamp_millisecs: TIMESTAMP_MILLISECS,
-            message: MESSAGE.to_owned(),
-        };
-        assert_eq!(
-            encoder.take_batch(),
-            format!("data: {}\n\n", serde_json::to_string(&result_event)?)
-        );
         Ok(())
     }
 }
