@@ -754,10 +754,17 @@ mod tests {
     use super::ArchiveOutputStorage;
     use super::Database;
     use super::LogsInput;
+    use super::Package;
     use super::SpiderTaskExecutorConfig;
+    use super::StorageEngine;
     use super::StreamOutput;
     use super::StreamOutputStorage;
     use crate::dataset::DatasetName;
+
+    #[test]
+    fn package_defaults_to_clp_s_storage_engine() {
+        assert_eq!(Package::default().storage_engine, StorageEngine::ClpS);
+    }
 
     #[test]
     fn deserialize_logs_input_s3_config() {
