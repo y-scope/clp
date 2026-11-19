@@ -502,8 +502,6 @@ auto QueryRunner::evaluate_wildcard_filter(FilterExpr* expr, int32_t schema) -> 
     auto const& storage{m_wildcard_string_storage[column]};
     if (storage.clp) {
         if (can_never_equal_stored_string(*literal, NodeType::ClpString)) {
-            // The literal can never equal a `ClpString` value, but the class's scalar node is a
-            // compatible occurrence in every record, so it supplies the filter's definedness.
             any_defined = true;
         } else {
             auto* const q{m_expr_clp_query.at(expr)};
@@ -522,7 +520,6 @@ auto QueryRunner::evaluate_wildcard_filter(FilterExpr* expr, int32_t schema) -> 
         if (storage.var && false == storage.text
             && can_never_equal_stored_string(*literal, NodeType::VarString))
         {
-            // As for the `ClpString` class, the scalar node supplies the filter's definedness.
             any_defined = true;
         } else {
             auto* const matching_vars{m_expr_var_match_map.at(expr)};

@@ -158,9 +158,6 @@ TEMPLATE_TEST_CASE(
     };
     nlohmann::json const nested_obj_0 = {{cObjKey, base_obj_0}};
     nlohmann::json const nested_obj_1 = {{cObjKey, base_obj_1}};
-
-    // A pair whose `cStrKey` values all contain a space, so they are serialized as encoded text
-    // ASTs rather than plain strings.
     nlohmann::json const space_only_obj_0{
             {cIntKey, cIntBase - 1},
             {cStrKey, fmt::format("Space only {}", cTestSubStr)}
@@ -199,8 +196,6 @@ TEMPLATE_TEST_CASE(
                     fmt::format("*.{}.*: {}", cStrKey, wildcard_str_query),
                     json_pairs_to_serialize
             ),
-            // A space-containing value is compared against a literal without a space even though
-            // the value is stored as an encoded text AST, so `NOT` is defined and matches.
             std::make_pair(
                     fmt::format("NOT {}: \"VarStr:{}\"", cStrKey, cTestSubStr),
                     std::vector<JsonPair>{json_pair_0, json_pair_4}

@@ -233,8 +233,6 @@ auto evaluate_string_filter_op_against_value(
     }
 
     if (value.is<std::string>()) {
-        // The serializer writes a plain string iff it contains no space, so a pattern with a
-        // literal space can never match one.
         if (StringSpaceClass::ContainsSpace == operand->get_string_space_class()) {
             return FilterOperation::NEQ == op;
         }
@@ -249,8 +247,6 @@ auto evaluate_string_filter_op_against_value(
     if (value.is<clp::ffi::EightByteEncodedTextAst>()
         || value.is<clp::ffi::FourByteEncodedTextAst>())
     {
-        // The serializer writes an encoded value iff the string contains a space, so a pattern
-        // without a space can never equal one. Avoid decoding it to match.
         if (StringSpaceClass::ContainsNoSpace == operand->get_string_space_class()) {
             return FilterOperation::NEQ == op;
         }
