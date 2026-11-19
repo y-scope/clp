@@ -170,15 +170,14 @@ fn with_keep_alive_comments<EventStreamType: Stream<Item = Result<Bytes, serde_j
 mod tests {
     use anyhow::Result;
     use axum::response::sse::Event;
-    use clp_rust_utils::api_server::streaming_query::StreamingQueryResultEvent;
     use query_result_listener::test_utils::ARCHIVE_ID;
 
     use super::*;
 
     /// # Returns
     ///
-    /// The event that [`Event::json_data`] encodes for the [`StreamingQueryResultEvent`] made of
-    /// `archive_id`, `timestamp_millisecs` and `message`.
+    /// The event that [`Event::json_data`] encodes for the result made of `archive_id`,
+    /// `timestamp_millisecs` and `message`.
     ///
     /// # Panics
     ///
@@ -188,6 +187,8 @@ mod tests {
         timestamp_millisecs: i64,
         message: String,
     ) -> Event {
+        use clp_rust_utils::api_server::streaming_query::StreamingQueryResultEvent;
+
         Event::default()
             .json_data(StreamingQueryResultEvent {
                 archive_id,
