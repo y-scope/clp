@@ -139,24 +139,6 @@ public:
     [[nodiscard]] virtual auto get_string_space_class() const -> std::optional<StringSpaceClass> {
         return std::nullopt;
     }
-
-    /**
-     * @return Whether the literal's string interpretation can never equal a `ClpString` value,
-     * whose values all contain a space. Returns false if the literal has no string
-     * interpretation, since the comparison is then undefined rather than a defined non-match.
-     */
-    [[nodiscard]] auto can_never_equal_clp_string() const -> bool {
-        return StringSpaceClass::ContainsNoSpace == get_string_space_class();
-    }
-
-    /**
-     * @return Whether the literal's string interpretation can never equal a `VarString` value,
-     * whose values never contain a space. Returns false if the literal has no string
-     * interpretation, since the comparison is then undefined rather than a defined non-match.
-     */
-    [[nodiscard]] auto can_never_equal_var_string() const -> bool {
-        return StringSpaceClass::ContainsSpace == get_string_space_class();
-    }
 };
 }  // namespace clp_s::search::ast
 

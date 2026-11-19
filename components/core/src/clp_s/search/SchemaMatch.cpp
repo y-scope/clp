@@ -40,6 +40,7 @@
 #include <clp_s/search/ast/SearchUtils.hpp>
 #include <clp_s/search/ast/ValueLiteral.hpp>
 #include <clp_s/search/ClppMatcher.hpp>
+#include <clp_s/search/string_storage_utils.hpp>
 #include <clpp/Defs.hpp>
 #include <clpp/Interpretation.hpp>
 
@@ -292,14 +293,7 @@ is_unmatchable_node_for_positive_equality(ast::FilterExpr const& filter, SchemaN
     if (nullptr == operand) {
         return false;
     }
-    switch (node.get_type()) {
-        case NodeType::ClpString:
-            return operand->can_never_equal_clp_string();
-        case NodeType::VarString:
-            return operand->can_never_equal_var_string();
-        default:
-            return false;
-    }
+    return can_never_equal_stored_string(*operand, node.get_type());
 }
 
 auto existence_filter_holds_when_absent(ast::FilterExpr const& filter) -> bool {

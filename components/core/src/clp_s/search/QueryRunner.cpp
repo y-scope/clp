@@ -23,6 +23,7 @@
 #include <clp_s/ReaderUtils.hpp>
 #include <clp_s/Schema.hpp>
 #include <clp_s/search/ast/EmptyExpr.hpp>
+#include <clp_s/search/string_storage_utils.hpp>
 
 #include "../../clp/Defs.h"
 #include "../../clp/GrepCore.hpp"
@@ -500,7 +501,7 @@ auto QueryRunner::evaluate_wildcard_filter(FilterExpr* expr, int32_t schema) -> 
     };
     auto const& storage{m_wildcard_string_storage[column]};
     if (storage.clp) {
-        if (literal->can_never_equal_clp_string()) {
+        if (can_never_equal_stored_string(*literal, NodeType::ClpString)) {
             // The literal can never equal a `ClpString` value, but the class's scalar node is a
             // compatible occurrence in every record, so it supplies the filter's definedness.
             any_defined = true;
@@ -518,7 +519,9 @@ auto QueryRunner::evaluate_wildcard_filter(FilterExpr* expr, int32_t schema) -> 
     }
 
     if (storage.var || storage.text) {
-        if (storage.var && false == storage.text && literal->can_never_equal_var_string()) {
+        if (storage.var && false == storage.text
+            && can_never_equal_stored_string(*literal, NodeType::VarString))
+        {
             // As for the `ClpString` class, the scalar node supplies the filter's definedness.
             any_defined = true;
         } else {
@@ -1391,10 +1394,7 @@ EvaluatedValue QueryRunner::constant_propagate(std::shared_ptr<Expression> const
             auto const node_type{
                     m_schema_tree->get_node(filter->get_column()->get_bound_node_id()).get_type()
             };
-            auto const& operand{*filter->get_operand()};
-            if ((NodeType::ClpString == node_type && operand.can_never_equal_clp_string())
-                || (NodeType::VarString == node_type && operand.can_never_equal_var_string()))
-            {
+            if (can_never_equal_stored_string(*filter->get_operand(), node_type)) {
                 return fold_unmatchable_string_filter(*filter);
             }
             bool can_match{};
@@ -1438,7 +1438,7 @@ auto QueryRunner::propagate_pure_wildcard_string_filter(
         throw ReaderUtils::OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
     }
     if (has_clp_storage) {
-        if (filter->get_operand()->can_never_equal_clp_string()) {
+        if (can_never_equal_stored_string(*filter->get_operand(), NodeType::ClpString)) {
             m_expr_clp_query[expr.get()] = nullptr;
         } else {
             auto* const query{get_or_build_clp_query(filter_string)};
@@ -1448,7 +1448,7 @@ auto QueryRunner::propagate_pure_wildcard_string_filter(
     }
     if (has_var_storage) {
         if (storage.var && false == storage.text
-            && filter->get_operand()->can_never_equal_var_string())
+            && can_never_equal_stored_string(*filter->get_operand(), NodeType::VarString))
         {
             m_expr_var_match_map[expr.get()] = get_empty_var_match_set();
         } else {

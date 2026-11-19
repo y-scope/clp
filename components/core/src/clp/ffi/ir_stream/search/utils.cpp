@@ -23,6 +23,7 @@ using clp_s::search::ast::FilterOperation;
 using clp_s::search::ast::Literal;
 using clp_s::search::ast::literal_type_bitmask_t;
 using clp_s::search::ast::LiteralType;
+using clp_s::search::ast::StringSpaceClass;
 
 /**
  * Evaluates a numerical filter operation by applying the specified `FilterOperation` to two
@@ -234,7 +235,7 @@ auto evaluate_string_filter_op_against_value(
     if (value.is<std::string>()) {
         // The serializer writes a plain string iff it contains no space, so a pattern with a
         // literal space can never match one.
-        if (operand->can_never_equal_var_string()) {
+        if (StringSpaceClass::ContainsSpace == operand->get_string_space_class()) {
             return FilterOperation::NEQ == op;
         }
         return evaluate_string_filter_op(
@@ -250,7 +251,7 @@ auto evaluate_string_filter_op_against_value(
     {
         // The serializer writes an encoded value iff the string contains a space, so a pattern
         // without a space can never equal one. Avoid decoding it to match.
-        if (operand->can_never_equal_clp_string()) {
+        if (StringSpaceClass::ContainsNoSpace == operand->get_string_space_class()) {
             return FilterOperation::NEQ == op;
         }
         auto const value_operand{YSTDLIB_ERROR_HANDLING_TRYX(

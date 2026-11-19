@@ -25,6 +25,7 @@ set(
         SchemaMatch.hpp
         SearchTelemetry.cpp
         SearchTelemetry.hpp
+        string_storage_utils.hpp
         TelemetryContext.cpp
         TelemetryContext.hpp
 )
