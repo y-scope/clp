@@ -309,8 +309,8 @@ pub struct QueryJobPollingConfig {
 impl Default for QueryJobPollingConfig {
     fn default() -> Self {
         Self {
-            initial_backoff_ms: 100,
-            max_backoff_ms: 5000,
+            initial_backoff_ms: 16,
+            max_backoff_ms: 256,
         }
     }
 }
