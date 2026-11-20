@@ -44,19 +44,6 @@ pub struct ValidatedCompressionUsageParams {
 impl TryFrom<CompressionUsageParams> for ValidatedCompressionUsageParams {
     type Error = ClientError;
 
-    /// Validates the parameters and resolves the requested job statuses into
-    /// [`CompressionJobStatus`] variants.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * [`ClientError::InvalidInput`] if:
-    ///   * `time_range_begin_millisecs > time_range_end_millisecs`
-    ///   * `time_range_begin_millisecs` or `time_range_end_millisecs` is outside the representable
-    ///     range
-    ///   * `limit <= 0`
-    ///   * `job_status` contains unrecognized or duplicate values, or only empty values
     fn try_from(value: CompressionUsageParams) -> Result<Self, Self::Error> {
         if value.time_range_begin_millisecs > value.time_range_end_millisecs {
             return Err(ClientError::InvalidInput(
