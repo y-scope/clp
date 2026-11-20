@@ -171,17 +171,8 @@ mod tests {
     use anyhow::Result;
     use axum::response::sse::Event;
     use query_result_listener::test_utils::ARCHIVE_ID;
-    use serde::Serialize;
 
     use super::*;
-
-    /// The data of a query result's event.
-    #[derive(Serialize)]
-    struct StreamingQueryResult {
-        archive_id: ArchiveId,
-        timestamp_millisecs: i64,
-        message: String,
-    }
 
     /// # Returns
     ///
@@ -196,8 +187,10 @@ mod tests {
         timestamp_millisecs: i64,
         message: String,
     ) -> Event {
+        use clp_rust_utils::api_server::streaming_query::StreamingQueryResultEvent;
+
         Event::default()
-            .json_data(StreamingQueryResult {
+            .json_data(StreamingQueryResultEvent {
                 archive_id,
                 timestamp_millisecs,
                 message,

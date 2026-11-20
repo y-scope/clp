@@ -12,6 +12,8 @@ use axum::response::Sse;
 use axum::response::sse::Event;
 use axum::response::sse::KeepAlive;
 use axum::routing::get;
+use clp_rust_utils::api_server::streaming_query::StreamingQueryConfig;
+use clp_rust_utils::api_server::streaming_query::StreamingQueryEventData;
 use clp_rust_utils::job_config::QueryJobConfig;
 use clp_rust_utils::logs_input::LogsInputError;
 use clp_rust_utils::timeline::Bucket;
@@ -33,8 +35,6 @@ use crate::client::ClientError;
 use crate::client::CompressionUsage;
 use crate::client::CompressionUsageParams;
 use crate::client::QueryConfig;
-use crate::client::StreamingQueryConfig;
-use crate::client::StreamingQueryEventData;
 use crate::client::ValidatedCompressionUsageParams;
 pub use crate::sse::SseEncoding;
 use crate::sse::SseResponse;
@@ -111,9 +111,6 @@ mod api_doc {
     use super::OpenApiRouter;
     use super::webui;
     use crate::client::CompressionJobStatus;
-    use crate::client::StreamingQueryEndEvent;
-    use crate::client::StreamingQueryErrorEvent;
-    use crate::client::StreamingQueryJobEvent;
 
     #[derive(utoipa::OpenApi)]
     #[openapi(
@@ -131,13 +128,7 @@ mod api_doc {
             cancel_query,
             compression_usage
         ),
-        components(schemas(
-            CompressionUsage,
-            CompressionJobStatus,
-            StreamingQueryJobEvent,
-            StreamingQueryEndEvent,
-            StreamingQueryErrorEvent
-        ))
+        components(schemas(CompressionUsage, CompressionJobStatus))
     )]
     pub struct ApiDoc;
 
