@@ -29,11 +29,9 @@ auto SchemaNode::node_to_literal_type(NodeType type) -> clp_s::search::ast::Lite
         case NodeType::StructurizedText:
         case NodeType::ParentRule:
         case NodeType::UnstructurizedText:
-            return clp_s::search::ast::LiteralType::StringT;
         case NodeType::ClpString:
-            return clp_s::search::ast::LiteralType::ClpStringT;
         case NodeType::VarString:
-            return clp_s::search::ast::LiteralType::VarStringT;
+            return clp_s::search::ast::LiteralType::StringT;
         case NodeType::Boolean:
             return clp_s::search::ast::LiteralType::BooleanT;
         case NodeType::UnstructuredArray:

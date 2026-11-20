@@ -203,31 +203,21 @@ auto EvaluateRangeIndexFilters::evaluate_filter(
                     }
                     break;
                 case nlohmann::json::value_t::string: {
-                    if (false
-                        == col->matches_any(
-                                ast::LiteralType::VarStringT | ast::LiteralType::ClpStringT
-                                | ast::LiteralType::StringT
-                        ))
-                    {
+                    if (false == col->matches_type(ast::LiteralType::StringT)) {
                         break;
                     }
                     auto tmp_string{cur_field.template get<std::string>()};
-                    bool contains_space{std::string::npos != tmp_string.find(' ')};
-                    if (false == contains_space) {
-                        std::optional<clp::ffi::Value> str_value{
-                                clp::ffi::Value{std::move(tmp_string)}
-                        };
-                        if (evaluate_expr(ast::LiteralType::VarStringT, str_value)) {
-                            return true;
-                        }
+                    std::optional<clp::ffi::Value> str_value;
+                    if (std::string::npos == tmp_string.find(' ')) {
+                        str_value.emplace(std::move(tmp_string));
                     } else {
-                        std::optional<clp::ffi::Value> const str_value{clp::ffi::Value{
+                        str_value.emplace(
                                 clp::ffi::EncodedTextAst<clp::ir::four_byte_encoded_variable_t>::
                                         parse_and_encode_from(tmp_string)
-                        }};
-                        if (evaluate_expr(ast::LiteralType::ClpStringT, str_value)) {
-                            return true;
-                        }
+                        );
+                    }
+                    if (evaluate_expr(ast::LiteralType::StringT, str_value)) {
+                        return true;
                     }
                 } break;
                 case nlohmann::json::value_t::null:

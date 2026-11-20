@@ -449,14 +449,14 @@ auto ColumnScan::can_build_filter(
             return true;
         case LiteralType::BooleanT:
             return is_equality_operation(operation);
-        case LiteralType::ClpStringT:
-            return is_equality_operation(operation) && clp_queries.contains(filter);
-        case LiteralType::VarStringT:
         case LiteralType::StringT: {
             if (false == is_equality_operation(operation)) {
                 return false;
             }
-            auto const matching_vars = var_matches.find(filter);
+            if (clp_queries.contains(filter)) {
+                return true;
+            }
+            auto const matching_vars{var_matches.find(filter)};
             return var_matches.end() != matching_vars && nullptr != matching_vars->second;
         }
         case LiteralType::NullT:
@@ -628,24 +628,21 @@ auto ColumnScan::build_filter(
                     static_cast<uint8_t>(operand_value)
             );
         }
-        case LiteralType::ClpStringT: {
-            auto* const query = clp_queries.at(filter);
-            return build_clp_string_filter(
-                    m_num_messages,
-                    clp_string_readers,
-                    node_id,
-                    operation,
-                    query
-            );
-        }
-        case LiteralType::VarStringT:
         case LiteralType::StringT: {
-            auto const* matching_vars = var_matches.at(filter);
+            if (auto const query{clp_queries.find(filter)}; clp_queries.end() != query) {
+                return build_clp_string_filter(
+                        m_num_messages,
+                        clp_string_readers,
+                        node_id,
+                        operation,
+                        query->second
+                );
+            }
             return build_var_string_filter(
                     m_num_messages,
                     get_var_string_readers(),
                     operation,
-                    *matching_vars
+                    *var_matches.at(filter)
             );
         }
         case LiteralType::TimestampT: {

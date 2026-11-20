@@ -494,34 +494,6 @@ TEST_CASE("clp-s-search-literal-operation-compatibility", "[clp-s][search]") {
                     true
             },
             std::tuple{
-                    "string word as VarStringT",
-                    ValueLiteral::create_from_string("word"),
-                    LiteralType::VarStringT,
-                    true,
-                    false
-            },
-            std::tuple{
-                    "string two words as ClpStringT",
-                    ValueLiteral::create_from_string("two words"),
-                    LiteralType::ClpStringT,
-                    true,
-                    false
-            },
-            std::tuple{
-                    "string word as ClpStringT",
-                    ValueLiteral::create_from_string("word"),
-                    LiteralType::ClpStringT,
-                    false,
-                    false
-            },
-            std::tuple{
-                    "string two words as VarStringT",
-                    ValueLiteral::create_from_string("two words"),
-                    LiteralType::VarStringT,
-                    false,
-                    false
-            },
-            std::tuple{
                     "string word as ArrayT",
                     ValueLiteral::create_from_string("word"),
                     LiteralType::ArrayT,
@@ -624,8 +596,6 @@ TEST_CASE("clp-s-search-non-value-literal-operation-compatibility", "[clp-s][sea
          {LiteralType::IntegerT,
           LiteralType::FloatT,
           LiteralType::TimestampT,
-          LiteralType::ClpStringT,
-          LiteralType::VarStringT,
           LiteralType::BooleanT,
           LiteralType::ArrayT,
           LiteralType::NullT,
@@ -739,6 +709,8 @@ TEST_CASE("clp-s-search-narrow-numeric-wildcards-neq", "[clp-s][search]") {
 TEST_CASE("clp-s-search", "[clp-s][search]") {
     std::vector<std::pair<std::string, std::vector<int64_t>>> queries_and_results{
             {R"aa(NOT a: b)aa", {0}},
+            {R"aa(NOT a: 42)aa", {0}},
+            {R"aa(NOT var_string: "a b")aa", {9}},
             {R"aa(msg: "Msg 1: \"Abc123\"")aa", {1}},
             {R"aa(msg: "Msg 2: 'Abc123'")aa", {2}},
             {R"aa(msg: "Msg 3: \nAbc123")aa", {3}},
@@ -818,14 +790,33 @@ TEST_CASE("clp-s-search", "[clp-s][search]") {
     REQUIRE_NOTHROW(search(expr, false, {0}));
 }
 
+// Expanding an OR over two string leaves of different storage classes used to throw while building
+// the per-schema string dictionary queries, depending on the order the leaves were visited. The
+// order below is the one that threw.
+TEST_CASE("clp-s-search-mixed-node-string-pattern-order", "[clp-s][search]") {
+    auto const single_file_archive = GENERATE(true, false);
+    CAPTURE(single_file_archive);
+    TestOutputCleaner const test_cleanup{{std::string{cTestSearchArchiveDirectory}}};
+    REQUIRE_NOTHROW(
+            std::ignore = compress_archive(
+                    get_test_input_local_path(cTestSearchMixedTypesFile),
+                    std::string{cTestSearchArchiveDirectory},
+                    std::string{cTestIdxKey},
+                    false,
+                    single_file_archive,
+                    false
+            )
+    );
+
+    REQUIRE_NOTHROW(search(R"aa(nested.msg: "*Abc*" OR msg: "*Abc*")aa", false, {0, 3}));
+}
+
 // Pins the per-element definedness rules documented on `QueryRunner::evaluate_array_filter`:
 // negation matches neither a record with no element at the filter's path (idx 3, 4 for `o.k`;
 // idx 5 for `o.j`) nor one whose elements at the path are all of an incompatible type (idx 0, 1
 // for a string pattern), while `NOT o.k: *` (NEXISTS) is defined on every record. A KQL literal is
 // type-directed per element, so `7` is the string "7" against a string element (`NOT o.k: 7` keeps
-// idx 6). `!=` is constructed programmatically (KQL cannot express it), with the column's string
-// types removed so that NarrowTypes' negated-equality string rewrite does not change the filter
-// under test.
+// idx 6). `!=` is constructed programmatically (KQL cannot express it).
 TEST_CASE("clp-s-search-unstructured-array", "[clp-s][search]") {
     using namespace clp_s::search::ast;
 
@@ -886,7 +877,6 @@ TEST_CASE("clp-s-search-unstructured-array", "[clp-s][search]") {
     for (auto const& [value, inverted, expected_results] : neq_queries) {
         CAPTURE(value, inverted);
         auto column{ColumnDescriptor::create_from_escaped_tokens({"o"}, "")};
-        column->remove_matching_types(LiteralType::ClpStringT | LiteralType::VarStringT);
         auto operand{ValueLiteral::create_from_int(value)};
         auto neq_expr{FilterExpr::create(column, FilterOperation::NEQ, operand, inverted)};
         REQUIRE_NOTHROW(search(neq_expr, false, expected_results));
@@ -934,6 +924,59 @@ TEST_CASE("clp-s-search-multiple-archives-in-one-process", "[clp-s][search]") {
         CAPTURE(query);
         REQUIRE_NOTHROW(search(query, false, expected_results));
     }
+}
+
+// The string space class drives the storage-class shortcuts: a literal whose string interpretation
+// contains no space can never equal a `ClpString` value, and one that contains a space can never
+// equal a `VarString` value. A wildcard without a literal space may match either class.
+TEST_CASE("clp-s-search-string-space-class", "[clp-s][search]") {
+    using clp_s::search::ast::Literal;
+    using clp_s::search::ast::StringSpaceClass;
+    using clp_s::search::ast::TimestampLiteral;
+    using clp_s::search::ast::ValueLiteral;
+
+    auto const check_class = [](std::shared_ptr<Literal> const& literal,
+                                std::optional<StringSpaceClass> expected) -> void {
+        REQUIRE(expected == literal->get_string_space_class());
+    };
+
+    check_class(ValueLiteral::create_from_string("word"), StringSpaceClass::ContainsNoSpace);
+    check_class(ValueLiteral::create_from_string("two words"), StringSpaceClass::ContainsSpace);
+    check_class(ValueLiteral::create_from_string("w*"), StringSpaceClass::MayContainSpace);
+    check_class(ValueLiteral::create_from_string("a *b"), StringSpaceClass::ContainsSpace);
+    check_class(ValueLiteral::create_from_string(R"(a\*b)"), StringSpaceClass::ContainsNoSpace);
+    check_class(ValueLiteral::create_from_string("null"), StringSpaceClass::ContainsNoSpace);
+
+    check_class(ValueLiteral::create_from_int(42), StringSpaceClass::ContainsNoSpace);
+    check_class(ValueLiteral::create_from_float(4.2), StringSpaceClass::ContainsNoSpace);
+    check_class(ValueLiteral::create_from_bool(true), StringSpaceClass::ContainsNoSpace);
+
+    check_class(TimestampLiteral::create(0), std::nullopt);
+}
+
+// Pins that a storage-class prune during schema matching only happens for a non-inverted `=`
+// filter: `NOT s: abc` must still match records whose `s` is a `ClpString`, so the filter's
+// definition set must not shrink.
+TEST_CASE("clp-s-search-string-storage-class-pruning", "[clp-s][search]") {
+    auto const single_file_archive = GENERATE(true, false);
+
+    TestOutputCleaner const test_cleanup{{std::string{cTestSearchArchiveDirectory}}};
+
+    REQUIRE_NOTHROW(
+            std::ignore = compress_archive(
+                    get_test_input_local_path(cTestSearchPureWildcardFile),
+                    std::string{cTestSearchArchiveDirectory},
+                    std::string{cTestIdxKey},
+                    false,
+                    single_file_archive,
+                    false
+            )
+    );
+
+    REQUIRE_NOTHROW(search(R"aa(s: abc)aa", false, {}));
+    REQUIRE_NOTHROW(search(R"aa(NOT s: abc)aa", false, {5}));
+    REQUIRE_NOTHROW(search(R"aa(a: "x y")aa", false, {}));
+    REQUIRE_NOTHROW(search(R"aa(NOT a: "x y")aa", false, {0}));
 }
 
 TEST_CASE("clp-s-search-pure-wildcard-existence", "[clp-s][search]") {
@@ -1073,7 +1116,9 @@ TEST_CASE("clp-s-search-structurized-array-mixed-types", "[clp-s][search]") {
             {R"aa(NOT arr.k > 2)aa", {}},
             {R"aa(NOT arr.k > 4)aa", {4, 5}},
             {R"aa(NOT arr.k < 2)aa", {6, 7}},
-            {R"aa(NOT arr.k: plain)aa", {0, 1, 2, 6, 7, 8}},
+            {R"aa(NOT arr.k: plain)aa", {6, 7, 8}},
+            {R"aa(NOT arr.k: "a b")aa", {3, 6, 7, 8}},
+            {R"aa(NOT arr.k: 42)aa", {0, 1, 2, 3, 4, 5, 6, 7, 8}},
             {R"aa(NOT arr.k: 3)aa", {0, 1, 2, 3, 6, 7, 8}},
             {R"aa(NOT arr.k: *)aa", {9}},
             {R"aa(arr.k: plain AND arr.k: "a b")aa", {0, 1, 2}},
@@ -1153,16 +1198,14 @@ TEST_CASE("clp-s-search-clpp", "[clp-s][search][clpp]") {
 // preserved.
 //
 // In the test input, `msg` is a StructurizedText node (idx 0 and idx 7), an Integer node (idx 1),
-// an UnstructuredArray node (idx 5) and a VarString node (idx 6), and `nested.msg` is a
+// an UnstructuredArray node (idx 5) and an UnstructurizedText node (idx 6), and `nested.msg` is a
 // StructurizedText node (idx 3) and an Integer node (idx 4); idx 2 has no `msg` at all. The cases
 // below cover value, inverted-value, existence, wildcard-path, and shape() filters over these
-// nodes, including the `NarrowTypes` OR-EXISTS rewrite for inverted string filters — and the
-// `NOT *: <value>` cases pin that the rewrite leaves pure wildcard columns untouched. An inverted
-// value filter requires a compatible occurrence: `NOT msg: "Msg 0*"` drops idx 1 (`msg` is only
-// an Integer the pattern can't match) and idx 5 (an array with no string element). Value filters
-// against StructurizedText require decomposition support and must fail cleanly without it, unless
-// the value has no wildcards and the parsing spec wouldn't structurize it (it then can't match any
-// StructurizedText, so no decomposition is attempted).
+// nodes. An inverted value filter requires a compatible occurrence: `NOT msg: "Msg 0*"` drops
+// idx 1 (`msg` is only an Integer the pattern can't match) and idx 5 (an array with no string
+// element). Value filters against StructurizedText require decomposition support and must fail
+// cleanly without it, unless the value has no wildcards and the parsing spec wouldn't structurize
+// it (it then can't match any StructurizedText, so no decomposition is attempted).
 TEST_CASE("clp-s-search-clpp-mixed-type-columns", "[clp-s][search][clpp]") {
     std::vector<std::pair<std::string, std::vector<int64_t>>> const queries_and_results{
             {R"aa(msg: *)aa", {0, 1, 5, 6, 7}},
@@ -1621,13 +1664,25 @@ TEST_CASE("clp-s-search-epoch-timestamp", "[clp-s][search]") {
 TEST_CASE("clp-s-search-reads-only-required-dictionaries", "[clp-s][search]") {
     using ReadDictionaries = clp_s::ArchiveReader::ReadDictionaries;
     auto const single_file_archive = GENERATE(true, false);
-    std::vector<std::tuple<std::string, std::vector<int64_t>, ReadDictionaries>> const
+    // The final field is whether `SchemaMatch` should prove the query unmatchable and skip the
+    // archive before any dictionary is read.
+    std::vector<std::tuple<std::string, std::vector<int64_t>, ReadDictionaries, bool>> const
             queries_results_and_dictionaries{
-                    {R"aa(b: null)aa", {1}, {}},
-                    {R"aa(a: "x")aa", {0}, {.var_dict = true}},
-                    {R"aa(c: 1)aa", {2}, {.var_dict = true, .array_dict = true}},
-                    {R"aa(e: "y" OR c: 1)aa", {2, 3}, {.var_dict = true, .array_dict = true}},
-                    {R"aa(s: "abc 123")aa", {5}, {.var_dict = true, .log_type_dict = true}},
+                    {R"aa(b: null)aa", {1}, {}, false},
+                    {R"aa(a: "x")aa", {0}, {.var_dict = true}, false},
+                    {R"aa(c: 1)aa", {2}, {.var_dict = true, .array_dict = true}, false},
+                    {R"aa(e: "y" OR c: 1)aa",
+                     {2, 3},
+                     {.var_dict = true, .array_dict = true},
+                     false},
+                    {R"aa(s: "abc 123")aa", {5}, {.var_dict = true, .log_type_dict = true}, false},
+                    {R"aa(s: abc)aa", {}, {}, true},
+                    {R"aa(a: "x y")aa", {}, {}, true},
+                    // The pure wildcard also scans the unstructured array column, whose reader
+                    // needs the array dictionary. The schema containing the `ClpString` column
+                    // never loads the logtype dictionary because that class is skipped for a
+                    // literal without a space.
+                    {R"aa(*: "x")aa", {0}, {.var_dict = true, .array_dict = true}, false},
             };
 
     TestOutputCleaner const test_cleanup{{std::string{cTestSearchArchiveDirectory}}};
@@ -1643,7 +1698,7 @@ TEST_CASE("clp-s-search-reads-only-required-dictionaries", "[clp-s][search]") {
             )
     );
 
-    for (auto const& [query, expected_results, expected_dictionaries] :
+    for (auto const& [query, expected_results, expected_dictionaries, expected_archive_pruned] :
          queries_results_and_dictionaries)
     {
         CAPTURE(query);
@@ -1658,9 +1713,17 @@ TEST_CASE("clp-s-search-reads-only-required-dictionaries", "[clp-s][search]") {
             auto archive_expr = expr->copy();
             REQUIRE_NOTHROW(archive_expr = match_pass->run(archive_expr));
             REQUIRE(nullptr != archive_expr);
-            REQUIRE(nullptr
-                    == std::dynamic_pointer_cast<clp_s::search::ast::EmptyExpr>(archive_expr));
             REQUIRE(ReadDictionaries{} == archive_reader->get_read_dictionaries());
+            bool const archive_pruned{
+                    nullptr
+                    != std::dynamic_pointer_cast<clp_s::search::ast::EmptyExpr>(archive_expr)
+            };
+            REQUIRE(expected_archive_pruned == archive_pruned);
+            if (archive_pruned) {
+                // The query was proven unmatchable during schema matching, so the archive is
+                // skipped before any dictionary is read.
+                continue;
+            }
 
             clp_s::search::Output output_pass(
                     match_pass,

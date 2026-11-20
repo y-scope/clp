@@ -17,7 +17,6 @@
 #include <simdjson.h>
 
 #include <clp/ReaderInterface.hpp>
-#include <clp_s/Defs.hpp>
 #include <clp_s/search/ColumnScan.hpp>
 
 #include "../../clp/Query.hpp"
@@ -58,8 +57,7 @@ public:
               m_schema_expressions(match->release_schema_expressions()),
               m_ignore_case(ignore_case),
               m_schema_tree(m_archive_reader->get_schema_tree()),
-              m_schemas(m_archive_reader->get_schema_map()),
-              m_flavour(m_archive_reader->flavour()) {}
+              m_schemas(m_archive_reader->get_schema_map()) {}
 
     // Destructor
     virtual ~QueryRunner() = default;
@@ -160,6 +158,16 @@ private:
         Filter
     };
 
+    // The string storage classes present in the current schema for a pure wildcard column.
+    struct WildcardStringStorage {
+        // Whether the schema has a `NodeType::ClpString` occurrence.
+        bool clp{false};
+        // Whether the schema has a `NodeType::VarString` occurrence.
+        bool var{false};
+        // Whether the schema has a `NodeType::UnstructurizedText` occurrence.
+        bool text{false};
+    };
+
     std::shared_ptr<ArchiveReader> m_archive_reader;
     std::shared_ptr<ast::Expression> m_expr;
     std::shared_ptr<SchemaMatch> m_match;
@@ -174,7 +182,6 @@ private:
     std::shared_ptr<SchemaTree> m_schema_tree;
 
     std::shared_ptr<ReaderUtils::SchemaMap> m_schemas;
-    ClpFlavour m_flavour{ClpFlavour::Clps};
 
     std::map<std::string, std::optional<clp::Query>> m_string_query_map;
     std::map<std::string, std::unordered_set<int64_t>> m_string_var_match_map;
@@ -192,6 +199,7 @@ private:
 
     std::vector<ast::ColumnDescriptor*> m_wildcard_columns;
     std::map<ast::ColumnDescriptor*, std::set<int32_t>> m_wildcard_to_searched_basic_columns;
+    std::unordered_map<ast::ColumnDescriptor*, WildcardStringStorage> m_wildcard_string_storage;
     ast::literal_type_bitmask_t m_wildcard_type_mask{0};
     std::unordered_set<int32_t> m_metadata_columns;
 
@@ -576,10 +584,19 @@ private:
     ) -> bool;
 
     /**
-     * Populates the string queries
-     * @param expr
+     * @param query_string
+     * @return The logtype dictionary query for `query_string`, building it on first use.
+     * @return nullptr if no logtype in the archive can match.
      */
-    void populate_string_queries(std::shared_ptr<ast::Expression> const& expr);
+    [[nodiscard]] auto get_or_build_clp_query(std::string const& query_string) -> clp::Query*;
+
+    /**
+     * @param query_string
+     * @return The IDs of the variable dictionary entries matching `query_string`, building them on
+     * first use.
+     */
+    [[nodiscard]] auto get_or_build_var_matches(std::string const& query_string)
+            -> std::unordered_set<int64_t>*;
 
     /**
      * Populates the set of internal columns that get ignored during dynamic wildcard expansion.
@@ -623,12 +640,9 @@ private:
     auto constant_propagate(std::shared_ptr<ast::Expression> const& expr) -> EvaluatedValue;
 
     /**
-     * Propagates what the per-schema string dictionaries prove about a pure-wildcard filter with
-     * string types, setting up the schema's string matching state for it (`m_expr_clp_query` and
-     * `m_expr_var_match_map`). A string type the dictionaries prove cannot match is narrowed away
-     * from the column, but only when the column retains no other type: with an unstructured array
-     * in play, a record's definedness on the filter depends on its string occurrences, so the scan
-     * must still see them even when the dictionary proves they can't match.
+     * Propagates what the per-schema string dictionaries prove about a pure-wildcard filter whose
+     * schema contains at least one string occurrence, setting up the schema's string matching state
+     * for it (`m_expr_clp_query` and `m_expr_var_match_map`).
      * @param expr
      * @param filter `expr`, as a filter whose column is the pure wildcard and matches at least one
      * string type.

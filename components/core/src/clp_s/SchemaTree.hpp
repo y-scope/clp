@@ -33,10 +33,12 @@ namespace clp_s {
  * things like original log order.
  *
  * The clp-s flavour stores a string value as a `ClpString` if it contains a space and as a
- * `VarString` otherwise; search relies on these invariants.
+ * `VarString` otherwise. Search uses this storage invariant only to choose a faster way of
+ * evaluating a filter; it doesn't affect which literals are compatible. Every string NodeType maps
+ * to `LiteralType::StringT`.
  *
  * The following NodeTypes are only used by the clpp flavour, which in turn never uses `ClpString`
- * or `VarString`. These MPT types all map to `LiteralType::StringT`.
+ * or `VarString`.
  *
  * `StructurizedText`: Stores a structurized representation of unstructured text. It is made up of
  * `ParentRule`s and primitive type nodes that are in the text. Whether a string is structurized is

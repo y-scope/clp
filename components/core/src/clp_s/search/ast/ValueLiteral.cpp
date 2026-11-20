@@ -27,11 +27,9 @@ constexpr std::string_view cNullString{"null"};
 constexpr std::string_view cMatchAnyString{"*"};
 
 // The value types an element of an unstructured array is matched as during an array scan (see
-// `QueryRunner::prepare_array_search`). A string element may or may not contain a space, so both
-// string types apply.
+// `QueryRunner::prepare_array_search`).
 constexpr std::array cUnstructuredArrayElementTypes{
-        LiteralType::VarStringT,
-        LiteralType::ClpStringT,
+        LiteralType::StringT,
         LiteralType::IntegerT,
         LiteralType::FloatT,
         LiteralType::BooleanT,
@@ -95,10 +93,7 @@ auto get_int_bounds(double v) -> std::optional<std::pair<int64_t, int64_t>> {
 
 auto ValueLiteral::create_from_int(int64_t v) -> std::shared_ptr<Literal> {
     auto str{std::to_string(v)};
-    auto const types{
-            cIntegralTypes | LiteralType::TimestampT | LiteralType::VarStringT
-            | LiteralType::StringT
-    };
+    auto const types{cIntegralTypes | LiteralType::TimestampT | LiteralType::StringT};
     return std::shared_ptr<Literal>{new ValueLiteral{
             types,
             std::move(str),
@@ -115,8 +110,7 @@ auto ValueLiteral::create_from_float(double v) -> std::shared_ptr<Literal> {
     auto str{ss.str()};
     auto const int_bounds_option{get_int_bounds(v)};
     literal_type_bitmask_t types{
-            LiteralType::FloatT | LiteralType::TimestampT | LiteralType::VarStringT
-            | LiteralType::StringT
+            LiteralType::FloatT | LiteralType::TimestampT | LiteralType::StringT
     };
     if (int_bounds_option.has_value()) {
         types |= LiteralType::IntegerT;
@@ -128,22 +122,16 @@ auto ValueLiteral::create_from_float(double v) -> std::shared_ptr<Literal> {
 
 auto ValueLiteral::create_from_bool(bool v) -> std::shared_ptr<Literal> {
     std::string str{v ? cTrueString : cFalseString};
-    auto const types{LiteralType::BooleanT | LiteralType::VarStringT | LiteralType::StringT};
+    auto const types{LiteralType::BooleanT | LiteralType::StringT};
     return std::shared_ptr<Literal>{
             new ValueLiteral{types, std::move(str), std::nullopt, v, std::nullopt, 0}
     };
 }
 
 auto ValueLiteral::create_from_string(std::string_view v) -> std::shared_ptr<Literal> {
-    literal_type_bitmask_t types{
-            (std::string_view::npos == v.find(' ') ? LiteralType::VarStringT
-                                                   : LiteralType::ClpStringT)
-            | LiteralType::StringT
-    };
+    literal_type_bitmask_t types{LiteralType::StringT};
     if (has_unescaped_wildcards(v)) {
-        literal_type_bitmask_t wildcard_types{
-                LiteralType::ClpStringT | LiteralType::VarStringT | LiteralType::StringT
-        };
+        literal_type_bitmask_t wildcard_types{LiteralType::StringT};
         auto const cleaned_pattern{clp::string_utils::clean_up_wildcard_search_string(v)};
         if (clp::string_utils::consists_only_of(cleaned_pattern, cIntWildcardChars)) {
             wildcard_types |= LiteralType::IntegerT;
@@ -152,7 +140,7 @@ auto ValueLiteral::create_from_string(std::string_view v) -> std::shared_ptr<Lit
             wildcard_types |= LiteralType::FloatT;
         }
         return std::shared_ptr<Literal>{new ValueLiteral{
-                types | LiteralType::ClpStringT,
+                types,
                 std::string{v},
                 std::nullopt,
                 std::nullopt,
@@ -200,18 +188,8 @@ void ValueLiteral::print() const {
     }
 }
 
-auto ValueLiteral::as_clp_string(std::string& ret, FilterOperation op) -> bool {
-    if (false == is_equality_op(op) || 0 == (m_types & LiteralType::ClpStringT)) {
-        return false;
-    }
-    ret = m_string;
-    return true;
-}
-
-auto ValueLiteral::as_var_string(std::string& ret, FilterOperation op) -> bool {
-    if (false == is_equality_op(op)
-        || 0 == (m_types & (LiteralType::VarStringT | LiteralType::StringT)))
-    {
+auto ValueLiteral::as_string(std::string& ret, FilterOperation op) -> bool {
+    if (false == is_equality_op(op) || 0 == (m_types & LiteralType::StringT)) {
         return false;
     }
     ret = m_string;
@@ -282,6 +260,16 @@ auto ValueLiteral::can_match_op(LiteralType type, FilterOperation op) const -> b
     return can_match_scalar_op(type, op);
 }
 
+auto ValueLiteral::get_string_space_class() const -> std::optional<StringSpaceClass> {
+    if (0 == (m_types & LiteralType::StringT)) {
+        return std::nullopt;
+    }
+    if (std::string::npos != m_string.find(' ')) {
+        return StringSpaceClass::ContainsSpace;
+    }
+    return has_wildcard() ? StringSpaceClass::MayContainSpace : StringSpaceClass::ContainsNoSpace;
+}
+
 auto ValueLiteral::can_match_scalar_op(LiteralType type, FilterOperation op) const -> bool {
     switch (type) {
         case LiteralType::IntegerT:
@@ -290,8 +278,6 @@ auto ValueLiteral::can_match_scalar_op(LiteralType type, FilterOperation op) con
         case LiteralType::FloatT:
             return m_float_option.has_value()
                    || (is_equality_op(op) && 0 != (m_wildcard_types & LiteralType::FloatT));
-        case LiteralType::ClpStringT:
-        case LiteralType::VarStringT:
         case LiteralType::StringT:
         case LiteralType::NullT:
             return is_equality_op(op) && matches_type(type);

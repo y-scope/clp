@@ -14,35 +14,9 @@
 #include <fmt/ranges.h>
 #include <ystdlib/error_handling/Result.hpp>
 
-#include "../../../../../clp_s/search/ast/Literal.hpp"
 #include "../../../SchemaTree.hpp"
 
 namespace clp::ffi::ir_stream::search::test {
-namespace {
-using clp_s::search::ast::LiteralType;
-}  // namespace
-
-auto ColumnQueryPossibleMatches::get_matchable_node_ids_from_literal_type(LiteralType type) const
-        -> std::vector<SchemaTree::Node::id_t> {
-    if ((type & m_matchable_types) == 0) {
-        return {};
-    }
-
-    switch (type) {
-        case LiteralType::IntegerT:
-            return get_matchable_node_ids_from_schema_tree_type(SchemaTree::Node::Type::Int);
-        case LiteralType::FloatT:
-            return get_matchable_node_ids_from_schema_tree_type(SchemaTree::Node::Type::Float);
-        case LiteralType::BooleanT:
-            return get_matchable_node_ids_from_schema_tree_type(SchemaTree::Node::Type::Bool);
-        case LiteralType::VarStringT:
-        case LiteralType::ClpStringT:
-            return get_matchable_node_ids_from_schema_tree_type(SchemaTree::Node::Type::Str);
-        default:
-            return {};
-    }
-}
-
 auto ColumnQueryPossibleMatches::get_matchable_node_ids_from_schema_tree_type(
         SchemaTree::Node::Type type
 ) const -> std::vector<SchemaTree::Node::id_t> {
