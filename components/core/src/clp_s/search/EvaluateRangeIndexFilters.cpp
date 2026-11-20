@@ -11,8 +11,10 @@
 
 #include <clp_s/search/ast/ValueLiteral.hpp>
 
+#include "../../clp/ffi/EncodedTextAst.hpp"
 #include "../../clp/ffi/ir_stream/search/utils.hpp"
 #include "../../clp/ffi/Value.hpp"
+#include "../../clp/ir/types.hpp"
 #include "../archive_constants.hpp"
 #include "../ArchiveReaderAdaptor.hpp"
 #include "ast/AndExpr.hpp"
@@ -201,13 +203,21 @@ auto EvaluateRangeIndexFilters::evaluate_filter(
                     }
                     break;
                 case nlohmann::json::value_t::string: {
-                    if (col->matches_type(ast::LiteralType::StringT)) {
-                        std::optional<clp::ffi::Value> str_value{
-                                clp::ffi::Value{cur_field.template get<std::string>()}
-                        };
-                        if (evaluate_expr(ast::LiteralType::StringT, str_value)) {
-                            return true;
-                        }
+                    if (false == col->matches_type(ast::LiteralType::StringT)) {
+                        break;
+                    }
+                    auto tmp_string{cur_field.template get<std::string>()};
+                    std::optional<clp::ffi::Value> str_value;
+                    if (std::string::npos == tmp_string.find(' ')) {
+                        str_value.emplace(std::move(tmp_string));
+                    } else {
+                        str_value.emplace(
+                                clp::ffi::EncodedTextAst<clp::ir::four_byte_encoded_variable_t>::
+                                        parse_and_encode_from(tmp_string)
+                        );
+                    }
+                    if (evaluate_expr(ast::LiteralType::StringT, str_value)) {
+                        return true;
                     }
                 } break;
                 case nlohmann::json::value_t::null:
