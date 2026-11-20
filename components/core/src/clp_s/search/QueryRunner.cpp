@@ -226,7 +226,6 @@ auto QueryRunner::schema_init(int32_t schema_id) -> EvaluatedValue {
     m_expr_var_match_map.clear();
     m_wildcard_to_searched_basic_columns.clear();
     m_wildcard_string_storage.clear();
-    m_wildcard_columns_absent_is_identity.clear();
     m_wildcard_columns.clear();
     m_expr = m_schema_expressions.at(schema_id);
     m_schema = schema_id;
@@ -488,8 +487,10 @@ auto QueryRunner::evaluate_inverted_filter(FilterExpr* expr, int32_t schema) -> 
 
 auto QueryRunner::evaluate_wildcard_filter(FilterExpr* expr, int32_t schema) -> EvaluatedValue {
     bool any_defined{false};
-    auto const collect{[&any_defined](EvaluatedValue const value) -> bool {
+    bool any_unknown{false};
+    auto const collect{[&any_defined, &any_unknown](EvaluatedValue const value) -> bool {
         any_defined |= EvaluatedValue::Unknown != value;
+        any_unknown |= EvaluatedValue::Unknown == value;
         return EvaluatedValue::True == value;
     }};
     auto literal = expr->get_operand();
@@ -566,10 +567,7 @@ auto QueryRunner::evaluate_wildcard_filter(FilterExpr* expr, int32_t schema) -> 
         }
     }
 
-    if (any_defined || absent_occurrences_are_identity(column)) {
-        return EvaluatedValue::False;
-    }
-    return EvaluatedValue::Unknown;
+    return any_defined || false == any_unknown ? EvaluatedValue::False : EvaluatedValue::Unknown;
 }
 
 auto QueryRunner::evaluate_wildcard_basic_column(
@@ -1231,28 +1229,20 @@ void QueryRunner::populate_searched_wildcard_columns(std::shared_ptr<Expression>
         m_wildcard_columns.push_back(col);
         auto& storage{m_wildcard_string_storage[col]};
         literal_type_bitmask_t matching_types{0};
-        // `for_each_node_id` skips the roots stored as unordered-object metadata, but the
-        // `StructurizedText` and `ParentRule` roots are decomposable. They must be visited to know
-        // whether the record is defined through the decomposed filters.
-        auto const& schema_view{(*m_schemas)[m_schema].get_view()};
-        static_cast<void>(schema_view.any_node_id<true>([&](mpt_node_id_t node) -> bool {
+        (*m_schemas)[m_schema].get_view().for_each_node_id([&](mpt_node_id_t node) -> void {
             if (m_metadata_columns.contains(node)) {
-                return false;
+                return;
             }
             auto const& tree_node{m_schema_tree->get_node(node)};
             auto const tree_node_type{tree_node.get_type()};
             // Decomposable nodes have no column reader; schema matching has already expanded the
-            // filter over them. A record in this schema is defined through the decomposed filters,
-            // so the non-decomposable part's absent occurrences are the filter's identity.
+            // filter over them.
             if (tree_node.is_decomposable()) {
-                if (col->excludes_decomposable_nodes()) {
-                    m_wildcard_columns_absent_is_identity.insert(col);
-                }
-                return false;
+                return;
             }
             auto const literal_type{SchemaNode::node_to_literal_type(tree_node_type)};
             if (false == col->matches_type(literal_type)) {
-                return false;
+                return;
             }
             matching_types |= literal_type;
             switch (tree_node_type) {
@@ -1271,15 +1261,9 @@ void QueryRunner::populate_searched_wildcard_columns(std::shared_ptr<Expression>
                     m_wildcard_to_searched_basic_columns[col].insert(node);
                     break;
             }
-            return false;
-        }));
+        });
         col->set_matching_types(matching_types);
     }
-}
-
-auto QueryRunner::absent_occurrences_are_identity(ast::ColumnDescriptor const* column) const
-        -> bool {
-    return m_wildcard_columns_absent_is_identity.contains(column);
 }
 
 void QueryRunner::add_wildcard_columns_to_searched_columns() {
@@ -1371,14 +1355,9 @@ EvaluatedValue QueryRunner::constant_propagate(std::shared_ptr<Expression> const
         } else if (filter->get_column()->is_pure_wildcard()
                    && false == filter->get_column()->matches_any(ast::cAllTypes))
         {
-            // No node in this schema is compatible with the filter, so the leaf is undefined on
-            // every record of the schema. Its inverted flag cannot make an undefined leaf true.
-            // NOTE: The non-decomposable part of a split pure wildcard instead contributes its
-            // identity, which is False before inversion (as in `evaluate_wildcard_filter`).
-            if (absent_occurrences_are_identity(filter->get_column().get())) {
-                return filter->is_inverted() ? EvaluatedValue::True : EvaluatedValue::False;
-            }
-            return EvaluatedValue::False;
+            // No node this column can match in the schema is compatible with the filter, so it is
+            // False before inversion on every record, as in `evaluate_wildcard_filter`.
+            return filter->is_inverted() ? EvaluatedValue::True : EvaluatedValue::False;
         } else if (filter->get_column()->is_pure_wildcard()
                    && filter->get_column()->matches_type(LiteralType::StringT))
         {

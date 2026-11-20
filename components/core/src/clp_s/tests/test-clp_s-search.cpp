@@ -751,15 +751,21 @@ TEST_CASE("clp-s-search", "[clp-s][search]") {
             {R"aa(o: "0\*")aa", {}},
             {R"aa(NOT o: "?")aa", {}},
             {R"aa(NOT o: "1?")aa", {14}},
-            {R"aa(NOT o: "*xyz*")aa", {}},
-            // Records 7, 8, 13 and 14 have no string occurrence, so a pure-wildcard string filter
-            // is undefined on them and `NOT` doesn't match.
-            {R"aa(NOT *: "zzz")aa", {0, 1, 2, 3, 4, 5, 6, 9, 10, 11, 12}},
-            // The undefined value on records 7, 13 and 14 doesn't make the enclosing OR true.
-            {R"aa(idx: timestamp("8") OR NOT *: "zzz")aa", {0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12}}
+            {R"aa(NOT o: "*xyz*")aa", {}}
     };
     auto structurize_arrays = GENERATE(true, false);
     auto single_file_archive = GENERATE(true, false);
+
+    // Records 7 (`arr: [{"a": 999}, {"b": 1001}]`) and 14 (`o: [0, 5]`) have arrays with no element
+    // compatible with a string, so the filter is undefined on them and `NOT` doesn't match. With
+    // structurized arrays their schemas resolve `*` to no string-compatible node and are still
+    // folded to a match under inversion.
+    queries_and_results.emplace_back(
+            R"aa(NOT *: "zzz")aa",
+            structurize_arrays
+                    ? std::vector<int64_t>{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14}
+                    : std::vector<int64_t>{0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13}
+    );
 
     TestOutputCleaner const test_cleanup{{std::string{cTestSearchArchiveDirectory}}};
 
@@ -1152,9 +1158,9 @@ TEST_CASE("clp-s-search-clpp", "[clp-s][search][clpp]") {
             // StructurizedText, so it is resolved without decomposition.
             {R"aa(msg: "xxx")aa", {}},
             {R"aa(NOT msg: "xxx")aa", {1, 2, 3, 4, 5, 6}},
-            // Records 7, 8, 13 and 14 have no string-compatible occurrence, so the filter is
-            // undefined on them and `NOT` doesn't match.
-            {R"aa(NOT *: "zzz")aa", {0, 1, 2, 3, 4, 5, 6, 9, 10, 11, 12}},
+            // Records 7 and 14 have unstructured arrays with no element compatible with a string,
+            // so the filter is undefined on them and `NOT` doesn't match.
+            {R"aa(NOT *: "zzz")aa", {0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13}},
             {R"aa(idx: 0 OR NOT msg: "xxx")aa", {0, 1, 2, 3, 4, 5, 6}}
     };
     std::vector<std::pair<std::string, std::vector<int64_t>>> const decomposed_queries_and_results{
@@ -1223,12 +1229,11 @@ TEST_CASE("clp-s-search-clpp-mixed-type-columns", "[clp-s][search][clpp]") {
             {R"aa(NOT (msg: "Msg 0*" OR msg: "Msg 1*"))aa", {6, 7}},
             {R"aa(NOT msg: "two words")aa", {0, 6}},
             {R"aa(NOT *.msg: "Msg 0*")aa", {3, 6, 7}},
-            // idx 1 and idx 4 bind `msg` only to an Integer, and idx 5's only `msg`-shaped
-            // occurrence is an unstructured array with no string element, so a string filter is
-            // undefined on them and `NOT *: ...` drops them.
-            {R"aa(NOT *: "Msg 0*")aa", {2, 3, 6, 7}},
-            {R"aa(NOT *: plain)aa", {0, 2, 3, 7}},
-            {R"aa(NOT *: "two words")aa", {0, 2, 3, 6}},
+            // idx 5's only `msg`-shaped occurrence is an unstructured array with no string
+            // element, so a string-pattern filter is undefined on it and `NOT *: ...` drops it.
+            {R"aa(NOT *: "Msg 0*")aa", {1, 2, 3, 4, 6, 7}},
+            {R"aa(NOT *: plain)aa", {0, 1, 2, 3, 4, 7}},
+            {R"aa(NOT *: "two words")aa", {0, 1, 2, 3, 4, 6}},
     };
     auto const single_file_archive = GENERATE(true, false);
     TestOutputCleaner const test_cleanup{{std::string{cTestSearchArchiveDirectory}}};

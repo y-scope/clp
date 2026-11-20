@@ -200,9 +200,6 @@ private:
     std::vector<ast::ColumnDescriptor*> m_wildcard_columns;
     std::map<ast::ColumnDescriptor*, std::set<int32_t>> m_wildcard_to_searched_basic_columns;
     std::unordered_map<ast::ColumnDescriptor*, WildcardStringStorage> m_wildcard_string_storage;
-    // Pure-wildcard columns whose absent occurrences are the filter's identity in the current
-    // schema because a decomposable node defines the filter instead.
-    std::unordered_set<ast::ColumnDescriptor const*> m_wildcard_columns_absent_is_identity;
     ast::literal_type_bitmask_t m_wildcard_type_mask{0};
     std::unordered_set<int32_t> m_metadata_columns;
 
@@ -666,17 +663,6 @@ private:
      * @param expr
      */
     void populate_searched_wildcard_columns(std::shared_ptr<ast::Expression> const& expr);
-
-    /**
-     * Determines whether absent occurrences of a pure-wildcard column evaluate to the filter's
-     * identity within the current schema, because the schema's decomposable nodes define the filter
-     * instead.
-     * @param column
-     * @return Whether `column` is the non-decomposable part of a split pure wildcard and the schema
-     * has a decomposable node, so the record is defined through the decomposed filters.
-     */
-    [[nodiscard]] auto absent_occurrences_are_identity(ast::ColumnDescriptor const* column) const
-            -> bool;
 
     /**
      * Adds wildcard columns to searched columns
