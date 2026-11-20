@@ -90,19 +90,10 @@ struct Args {
 /// * This type is partially defined: unused fields are omitted and discarded through
 ///   deserialization.
 /// * The default values must be kept in sync with the Python definition.
-#[derive(Deserialize)]
+#[derive(Default, Deserialize)]
 #[serde(default)]
 struct PackageConfig {
-    /// The API server's config, or `None` if the API server is disabled.
-    api_server: Option<ApiServer>,
-}
-
-impl Default for PackageConfig {
-    fn default() -> Self {
-        Self {
-            api_server: Some(ApiServer::default()),
-        }
-    }
+    api_server: ApiServer,
 }
 
 /// # Returns
@@ -154,6 +145,7 @@ fn set_up_logging(is_verbose: bool) {
         .init();
 }
 
+// yscope-rust-linter: allow(errors-doc): `search` is forwarded through a `tokio::select!` arm
 /// Runs `streaming_query_config`'s search through the API server that the package config at
 /// `host_config_path`, or the default package config, configures, until the search ends or SIGINT
 /// or SIGTERM interrupts it.
@@ -167,7 +159,6 @@ fn set_up_logging(is_verbose: bool) {
 ///
 /// Returns an error if:
 ///
-/// * [`anyhow::Error`] if the package config disables the API server.
 /// * Forwards [`resolve_config_path`]'s return values on failure.
 /// * Forwards [`read_stream_query_url`]'s return values on failure.
 /// * Forwards [`tokio::runtime::Builder::build`]'s return values on failure.
@@ -181,8 +172,7 @@ fn run(
     use tokio::signal::unix::signal;
 
     let config_path = resolve_config_path(host_config_path)?;
-    let stream_query_url = read_stream_query_url(&config_path)?
-        .context("search requires the API server, which the package config disables")?;
+    let stream_query_url = read_stream_query_url(&config_path)?;
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
@@ -261,10 +251,7 @@ fn resolve_config_path(host_config_path: Option<&Path>) -> anyhow::Result<PathBu
 ///
 /// # Returns
 ///
-/// On success:
-///
-/// * The URL of the streaming query route.
-/// * `None` if the config disables the API server with `api_server: null`.
+/// The URL of the streaming query route on success.
 ///
 /// # Errors
 ///
@@ -272,16 +259,12 @@ fn resolve_config_path(host_config_path: Option<&Path>) -> anyhow::Result<PathBu
 ///
 /// * Forwards [`clp_rust_utils::serde::yaml::from_path`]'s return values on failure.
 /// * Forwards [`Url::parse`]'s return values on failure.
-fn read_stream_query_url(config_path: &Path) -> anyhow::Result<Option<Url>> {
+fn read_stream_query_url(config_path: &Path) -> anyhow::Result<Url> {
     let config: Option<PackageConfig> = clp_rust_utils::serde::yaml::from_path(config_path)
         .with_context(|| format!("failed to read {}", config_path.display()))?;
-    let Some(ApiServer { host, port, .. }) = config.unwrap_or_default().api_server else {
-        return Ok(None);
-    };
+    let ApiServer { host, port, .. } = config.unwrap_or_default().api_server;
     let url = format!("http://{host}:{port}/query/stream");
-    Url::parse(&url)
-        .with_context(|| format!("invalid API server URL {url}"))
-        .map(Some)
+    Url::parse(&url).with_context(|| format!("invalid API server URL {url}"))
 }
 
 /// Submits `streaming_query_config`'s query to the streaming query route at `stream_query_url`, and

@@ -367,9 +367,8 @@ To search your compressed logs from the command line, run:
 sbin/search.sh '<query>'
 ```
 
-`search.sh` submits the query to the [API server][api-server], so the API server must be enabled
-(i.e., `api_server` must not be `null` in `etc/clp-config.yaml`). As results arrive, it writes each
-one to stdout as a JSON object on its own line, e.g.:
+`search.sh` submits the query to the [API server][api-server]. As results arrive, it writes each one
+to stdout as a JSON object on its own line, e.g.:
 
 ```json
 {"archive_id":"018e90e5-8b2a-4a61-a2fc-cac799936caf","timestamp_millisecs":1767225600000,"message":"Example log message"}
@@ -402,7 +401,7 @@ searches are case-**sensitive** on the command line.
 
 * `0` if the search succeeded.
 * `1` if it failed (e.g., the query job didn't succeed, the API server can't be reached or rejected
-  the query, or the config can't be read or disables the API server).
+  the query, or the config can't be read).
 * `2` if the arguments are invalid.
 * `130` if it was interrupted (e.g., with Ctrl-C), after which the API server cancels the query job.
 
