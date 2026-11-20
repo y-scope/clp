@@ -26,11 +26,13 @@ const PRESTO_CANCEL_ERROR_NAME = "USER_CANCELED";
  * - Updates the number of search results from the metadata.
  */
 const useUpdateStateWithMetadata = () => {
-    const {
-        updateNumSearchResultsMetadata,
-        updateSearchUiState,
-    } = useSearchStore();
-    const {updateErrorMsg, updateErrorName, sqlInterface} = usePrestoSearchState();
+    const updateNumSearchResultsMetadata = useSearchStore(
+        (state) => state.updateNumSearchResultsMetadata
+    );
+    const updateSearchUiState = useSearchStore((state) => state.updateSearchUiState);
+    const updateErrorMsg = usePrestoSearchState((state) => state.updateErrorMsg);
+    const updateErrorName = usePrestoSearchState((state) => state.updateErrorName);
+    const sqlInterface = usePrestoSearchState((state) => state.sqlInterface);
     const resultsMetadata = useResultsMetadata();
 
     useEffect(() => {
