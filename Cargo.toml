@@ -8,6 +8,7 @@ members = [
     "components/clp-rust-libs/query-result-listener",
     "components/clp-tdl-package",
     "components/compression-coordinator",
+    "components/db-table-creator",
     "components/log-ingestor",
     "components/query-coordinator",
 ]
