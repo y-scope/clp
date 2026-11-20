@@ -96,10 +96,42 @@ struct PackageConfig {
     api_server: ApiServer,
 }
 
+/// A failure of a search, which determines the exit code of `clp-search`.
+enum Failure {
+    /// The query job ended with a terminal status other than `Succeeded`.
+    QueryJob(anyhow::Error),
+
+    /// The API server can't be reached, rejected the query, failed, or broke the stream of the
+    /// query's events.
+    ApiServer(anyhow::Error),
+
+    /// A local error, e.g., the package config can't be read, or a result can't be written.
+    Local(anyhow::Error),
+}
+
+impl Failure {
+    /// Logs the failure.
+    ///
+    /// # Returns
+    ///
+    /// The exit code of a search that fails this way: 1 for [`Failure::QueryJob`], 3 for
+    /// [`Failure::ApiServer`], and 4 for [`Failure::Local`].
+    fn report(self) -> ExitCode {
+        let (exit_code, error) = match self {
+            Self::QueryJob(error) => (1, error),
+            Self::ApiServer(error) => (3, error),
+            Self::Local(error) => (4, error),
+        };
+        tracing::error!(error = % format_args!("{error:#}"), "The search failed.");
+        ExitCode::from(exit_code)
+    }
+}
+
 /// # Returns
 ///
-/// The exit code of the search: 0 if it succeeds or stdout is closed, 1 if it fails, and
-/// [`INTERRUPTED_EXIT_CODE`] if a signal interrupts it. Invalid arguments exit with code 2.
+/// The exit code of the search: 0 if it succeeds or stdout is closed, [`Failure::report`]'s if it
+/// fails, and [`INTERRUPTED_EXIT_CODE`] if a signal interrupts it. Invalid arguments exit with code
+/// 2.
 fn main() -> ExitCode {
     use clap::CommandFactory;
     use clap::error::ErrorKind;
@@ -121,10 +153,7 @@ fn main() -> ExitCode {
     };
 
     set_up_logging(args.verbose);
-    run(args.config.as_deref(), &streaming_query_config).unwrap_or_else(|error| {
-        tracing::error!(error = % format_args!("{error:#}"), "The search failed.");
-        ExitCode::FAILURE
-    })
+    run(args.config.as_deref(), &streaming_query_config).unwrap_or_else(Failure::report)
 }
 
 /// Logs to stderr, at the debug level for this binary if `is_verbose`, and at the info level
@@ -159,32 +188,43 @@ fn set_up_logging(is_verbose: bool) {
 ///
 /// Returns an error if:
 ///
-/// * Forwards [`resolve_config_path`]'s return values on failure.
-/// * Forwards [`read_stream_query_url`]'s return values on failure.
-/// * Forwards [`tokio::runtime::Builder::build`]'s return values on failure.
-/// * Forwards [`tokio::signal::unix::signal`]'s return values on failure.
+/// * Forwards [`resolve_config_path`]'s return values as [`Failure::Local`] on failure.
+/// * Forwards [`read_stream_query_url`]'s return values as [`Failure::Local`] on failure.
+/// * Forwards [`reqwest::ClientBuilder::build`]'s return values as [`Failure::Local`] on failure.
+/// * Forwards [`tokio::runtime::Builder::build`]'s return values as [`Failure::Local`] on failure.
+/// * Forwards [`tokio::signal::unix::signal`]'s return values as [`Failure::Local`] on failure.
 /// * Forwards [`search`]'s return values on failure.
 fn run(
     host_config_path: Option<&Path>,
     streaming_query_config: &StreamingQueryConfig,
-) -> anyhow::Result<ExitCode> {
+) -> Result<ExitCode, Failure> {
     use tokio::signal::unix::SignalKind;
     use tokio::signal::unix::signal;
 
-    let config_path = resolve_config_path(host_config_path)?;
-    let stream_query_url = read_stream_query_url(&config_path)?;
+    let config_path = resolve_config_path(host_config_path).map_err(Failure::Local)?;
+    let stream_query_url = read_stream_query_url(&config_path).map_err(Failure::Local)?;
+    let http_client = reqwest::Client::builder()
+        .no_proxy()
+        .connect_timeout(CONNECT_TIMEOUT)
+        .read_timeout(READ_TIMEOUT)
+        .build()
+        .context("failed to build the HTTP client")
+        .map_err(Failure::Local)?;
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
-        .context("failed to create the runtime")?;
+        .context("failed to create the runtime")
+        .map_err(Failure::Local)?;
     runtime.block_on(async {
         // As the container's PID 1, the process has no default action for these signals.
-        let mut interrupt =
-            signal(SignalKind::interrupt()).context("failed to listen for SIGINT")?;
-        let mut terminate =
-            signal(SignalKind::terminate()).context("failed to listen for SIGTERM")?;
+        let mut interrupt = signal(SignalKind::interrupt())
+            .context("failed to listen for SIGINT")
+            .map_err(Failure::Local)?;
+        let mut terminate = signal(SignalKind::terminate())
+            .context("failed to listen for SIGTERM")
+            .map_err(Failure::Local)?;
         let signal_name = tokio::select! {
-            result = search(stream_query_url, streaming_query_config) => {
+            result = search(&http_client, stream_query_url, streaming_query_config) => {
                 return result.map(|()| ExitCode::SUCCESS);
             }
             _ = interrupt.recv() => "SIGINT",
@@ -267,8 +307,9 @@ fn read_stream_query_url(config_path: &Path) -> anyhow::Result<Url> {
     Url::parse(&url).with_context(|| format!("invalid API server URL {url}"))
 }
 
-/// Submits `streaming_query_config`'s query to the streaming query route at `stream_query_url`, and
-/// writes the data of each result to stdout as it is, on its own line, until the query job ends.
+/// Submits `streaming_query_config`'s query through `http_client` to the streaming query route at
+/// `stream_query_url`, and writes the data of each result to stdout as it is, on its own line,
+/// until the query job ends.
 ///
 /// The response body is read line by line. An `event: <name>` line names the event of the next
 /// `data: <data>` line, and a `data:` line without a name is a result. Other lines, such as
@@ -279,46 +320,47 @@ fn read_stream_query_url(config_path: &Path) -> anyhow::Result<Url> {
 ///
 /// Returns an error if:
 ///
-/// * [`anyhow::Error`] if:
+/// * [`Failure::QueryJob`] if the `end` event's status is terminal but isn't `Succeeded`.
+/// * [`Failure::ApiServer`] if:
 ///   * The API server responds with an unsuccessful status.
-///   * The `end` event's status isn't `Succeeded`.
+///   * The data of a `job`, `end` or `error` event doesn't deserialize.
+///   * The `end` event's status isn't terminal.
 ///   * The API server sends an `error` event, or an event with an unknown name.
 ///   * The response body ends before an `end` or `error` event.
-/// * Forwards [`reqwest::ClientBuilder::build`]'s return values on failure.
-/// * Forwards [`reqwest::RequestBuilder::send`]'s return values on failure.
-/// * Forwards [`reqwest::Response::text`]'s return values on failure.
-/// * Forwards [`tokio::io::Lines::next_line`]'s return values on failure.
-/// * Forwards [`serde_json::from_str`]'s return values on failure.
-/// * Forwards [`Write::flush`]'s return values on failure.
+/// * [`Failure::Local`] if a result can't be written to stdout.
+/// * Forwards [`reqwest::RequestBuilder::send`]'s return values as [`Failure::ApiServer`] on
+///   failure.
+/// * Forwards [`reqwest::Response::text`]'s return values as [`Failure::ApiServer`] on failure.
+/// * Forwards [`tokio::io::Lines::next_line`]'s return values as [`Failure::ApiServer`] on failure.
 ///
 /// # Cancel safety
 ///
 /// Dropping the future closes the connection, after which the API server cancels the query job.
 async fn search(
+    http_client: &reqwest::Client,
     stream_query_url: Url,
     streaming_query_config: &StreamingQueryConfig,
-) -> anyhow::Result<()> {
+) -> Result<(), Failure> {
     use futures::TryStreamExt;
 
-    let response = reqwest::Client::builder()
-        .no_proxy()
-        .connect_timeout(CONNECT_TIMEOUT)
-        .read_timeout(READ_TIMEOUT)
-        .build()
-        .context("failed to build the HTTP client")?
+    let response = http_client
         .post(stream_query_url)
         .header(reqwest::header::ACCEPT, "text/event-stream")
         .json(streaming_query_config)
         .send()
         .await
-        .context("failed to send the query to the API server")?;
+        .context("failed to send the query to the API server")
+        .map_err(Failure::ApiServer)?;
     let status = response.status();
     if !status.is_success() {
         let body = response
             .text()
             .await
-            .context("failed to read the API server's response")?;
-        anyhow::bail!("the API server responded with status {status}: {body}");
+            .context("failed to read the API server's response")
+            .map_err(Failure::ApiServer)?;
+        return Err(Failure::ApiServer(anyhow::anyhow!(
+            "the API server responded with status {status}: {body}"
+        )));
     }
     let mut lines =
         tokio_util::io::StreamReader::new(response.bytes_stream().map_err(std::io::Error::other))
@@ -329,7 +371,8 @@ async fn search(
     while let Some(line) = lines
         .next_line()
         .await
-        .context("failed to read the API server's response")?
+        .context("failed to read the API server's response")
+        .map_err(Failure::ApiServer)?
     {
         if let Some(name) = line.strip_prefix("event: ") {
             event_name = Some(name.to_owned());
@@ -341,32 +384,51 @@ async fn search(
         match event_name.take().as_deref() {
             None => match writeln!(stdout, "{data}").and_then(|()| stdout.flush()) {
                 Err(error) if error.kind() == std::io::ErrorKind::BrokenPipe => return Ok(()),
-                result => result.context("failed to write a result")?,
+                result => result
+                    .context("failed to write a result")
+                    .map_err(Failure::Local)?,
             },
             Some("job") => {
-                let job: StreamingQueryJobEvent =
-                    serde_json::from_str(data).context("invalid `job` event")?;
+                let job: StreamingQueryJobEvent = serde_json::from_str(data)
+                    .context("invalid `job` event")
+                    .map_err(Failure::ApiServer)?;
                 tracing::debug!(query_job_id = job.query_job_id, "Submitted the query job.");
                 query_job_id = Some(job.query_job_id);
             }
             Some("end") => {
-                let StreamingQueryEndEvent { status, .. } =
-                    serde_json::from_str(data).context("invalid `end` event")?;
+                let StreamingQueryEndEvent { status, .. } = serde_json::from_str(data)
+                    .context("invalid `end` event")
+                    .map_err(Failure::ApiServer)?;
                 if status == QueryJobStatus::Succeeded {
                     return Ok(());
                 }
-                match query_job_id {
-                    Some(id) => anyhow::bail!("query job {id} ended with status `{status:?}`"),
-                    None => anyhow::bail!("the query job ended with status `{status:?}`"),
-                }
+                let query_job = query_job_id.map_or_else(
+                    || "the query job".to_owned(),
+                    |id| format!("query job {id}"),
+                );
+                let error = anyhow::anyhow!("{query_job} ended with status `{status:?}`");
+                return Err(if status.is_terminal() {
+                    Failure::QueryJob(error)
+                } else {
+                    Failure::ApiServer(error)
+                });
             }
             Some("error") => {
-                let StreamingQueryErrorEvent { message } =
-                    serde_json::from_str(data).context("invalid `error` event")?;
-                anyhow::bail!("the API server failed during the search: {message}");
+                let StreamingQueryErrorEvent { message } = serde_json::from_str(data)
+                    .context("invalid `error` event")
+                    .map_err(Failure::ApiServer)?;
+                return Err(Failure::ApiServer(anyhow::anyhow!(
+                    "the API server failed during the search: {message}"
+                )));
             }
-            Some(name) => anyhow::bail!("the API server sent an unknown event `{name}`"),
+            Some(name) => {
+                return Err(Failure::ApiServer(anyhow::anyhow!(
+                    "the API server sent an unknown event `{name}`"
+                )));
+            }
         }
     }
-    anyhow::bail!("the API server's response ended before the query job did")
+    Err(Failure::ApiServer(anyhow::anyhow!(
+        "the API server's response ended before the query job did"
+    )))
 }
