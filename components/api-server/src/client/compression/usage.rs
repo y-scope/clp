@@ -12,13 +12,6 @@ use utoipa::ToSchema;
 use crate::client::Client;
 use crate::error::ClientError;
 
-/// Default job statuses to include when the caller does not specify `job_status`.
-/// Covers all terminal states that consumed compute resources (succeeded, failed).
-const DEFAULT_JOB_STATUSES: &[CompressionJobStatus] = &[
-    CompressionJobStatus::Succeeded,
-    CompressionJobStatus::Failed,
-];
-
 /// Query parameters for the compression usage endpoint.
 #[derive(Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
@@ -27,19 +20,14 @@ pub struct CompressionUsageParams {
     pub time_range_begin_millisecs: i64,
     /// End of usage window (epoch milliseconds, exclusive).
     pub time_range_end_millisecs: i64,
-    /// Job statuses to include as a comma-separated list (e.g.
-    /// `job_status=succeeded,failed`). Recognized values (case-insensitive):
-    /// `PENDING`, `RUNNING`, `SUCCEEDED`, `FAILED`.
-    /// Defaults to `SUCCEEDED,FAILED` (all terminal states).
+    /// Job statuses to include as a comma-separated list (e.g. `job_status=succeeded,failed`).
+    /// Recognized values (case-insensitive): `PENDING`, `RUNNING`, `SUCCEEDED`, `FAILED`. Defaults
+    /// to `SUCCEEDED,FAILED` (all terminal states).
     #[serde(default)]
     pub job_status: Option<String>,
     /// Maximum number of jobs to return. Must be > 0; defaults to 1000.
     #[serde(default = "default_limit")]
     pub limit: i64,
-}
-
-const fn default_limit() -> i64 {
-    1000
 }
 
 /// Validated parameters produced by [`TryFrom<CompressionUsageParams>`].
@@ -58,12 +46,14 @@ impl TryFrom<CompressionUsageParams> for ValidatedCompressionUsageParams {
     ///
     /// # Errors
     ///
-    /// Returns [`ClientError::InvalidInput`] if:
-    /// - `time_range_begin_millisecs > time_range_end_millisecs`
-    /// - `time_range_begin_millisecs` or `time_range_end_millisecs` is outside the representable
-    ///   range
-    /// - `limit <= 0`
-    /// - `job_status` contains unrecognized, empty, or duplicate values
+    /// Returns an error if:
+    ///
+    /// * [`ClientError::InvalidInput`] if:
+    ///   * `time_range_begin_millisecs > time_range_end_millisecs`
+    ///   * `time_range_begin_millisecs` or `time_range_end_millisecs` is outside the representable
+    ///     range
+    ///   * `limit <= 0`
+    ///   * `job_status` contains unrecognized or duplicate values, or only empty values
     fn try_from(value: CompressionUsageParams) -> Result<Self, Self::Error> {
         if value.time_range_begin_millisecs > value.time_range_end_millisecs {
             return Err(ClientError::InvalidInput(
@@ -86,11 +76,11 @@ impl TryFrom<CompressionUsageParams> for ValidatedCompressionUsageParams {
             ));
         };
         let job_statuses = match &value.job_status {
-            Some(s) => {
-                let parsed: Vec<CompressionJobStatus> = s
+            Some(job_status) => {
+                let parsed: Vec<CompressionJobStatus> = job_status
                     .split(',')
                     .map(str::trim)
-                    .filter(|t| !t.is_empty())
+                    .filter(|token| !token.is_empty())
                     .map(|token| {
                         token.parse().map_err(|_| {
                             ClientError::InvalidInput(format!("Unknown job_status: {token}"))
@@ -159,26 +149,25 @@ pub struct CompressionUsage {
 }
 
 impl Client {
-    /// Returns compression usage for each job within a time range, optionally
-    /// filtered by job outcome.
+    /// Returns compression usage for each job within a time range, optionally filtered by job
+    /// outcome.
     ///
     /// # Returns
     ///
-    /// A vector of [`CompressionUsage`] (one per job) on success, ordered by
-    /// `start_time` descending.
+    /// A vector of [`CompressionUsage`] (one per job), ordered by `start_time` descending, on
+    /// success.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`sqlx::query::Query::fetch_all`]'s return values on failure.
-    /// * Forwards [`sqlx::Row::try_get`]'s return values on failure.
+    /// * Forwards [`sqlx::query::QueryAs::fetch_all`]'s return values on failure.
     pub async fn get_compression_usage(
         &self,
         params: &ValidatedCompressionUsageParams,
     ) -> Result<Vec<CompressionUsage>, ClientError> {
-        // Build the job-status IN clause dynamically so the DB sees a
-        // static `IN (?, ?, ...)` predicate and can use an index on `j.status`.
+        // Build the job-status IN clause dynamically so the DB sees a static `IN (?, ?, ...)`
+        // predicate and can use an index on `j.status`.
         let placeholders = params
             .job_statuses
             .iter()
@@ -189,19 +178,19 @@ impl Client {
 
         #[rustfmt::skip]
         let sql = format!(
-            // MAX() is used on non-aggregated columns because they are all
-            // functionally dependent on j.id (the primary key). Since each group
-            // contains exactly one row, MAX() simply returns the column's value.
-            // This is used instead of MySQL-only ANY_VALUE() for MariaDB compat.
+            // MAX() is used on non-aggregated columns because they are all functionally dependent
+            // on j.id (the primary key). Since each group contains exactly one row, MAX() simply
+            // returns the column's value. This is used instead of MySQL-only ANY_VALUE() for
+            // MariaDB compat.
             //
-            // sqlx binds DateTime<Utc> as a UTC timestamp, so we compare
-            // directly against the DATETIME columns in the database.
+            // sqlx binds DateTime<Utc> as a UTC timestamp, so we compare directly against the
+            // DATETIME columns in the database.
             //
-            // Task durations are summed regardless of individual task status so
-            // that failed jobs still report the compute resources they consumed.
+            // Task durations are summed regardless of individual task status so that failed jobs
+            // still report the compute resources they consumed.
             //
-            // INNER JOIN filters out jobs with zero tasks (e.g. failed before
-            // task creation) since they consumed no compute resources.
+            // INNER JOIN filters out jobs with zero tasks (e.g. failed before task creation) since
+            // they consumed no compute resources.
             "SELECT \
               j.id, \
               MAX(j.status) AS status, \
@@ -233,6 +222,18 @@ impl Client {
     }
 }
 
+/// Default job statuses to include when the caller does not specify `job_status`.
+///
+/// Covers all terminal states that consumed compute resources (succeeded, failed).
+const DEFAULT_JOB_STATUSES: &[CompressionJobStatus] = &[
+    CompressionJobStatus::Succeeded,
+    CompressionJobStatus::Failed,
+];
+
+const fn default_limit() -> i64 {
+    1000
+}
+
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
@@ -249,7 +250,7 @@ mod tests {
     }
 
     #[test]
-    fn reject_duplicate_job_status() {
+    fn duplicate_job_status_is_rejected() {
         let params = CompressionUsageParams {
             time_range_begin_millisecs: 0,
             time_range_end_millisecs: 1,
