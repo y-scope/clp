@@ -12,7 +12,9 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #if CLP_BUILD_CLP_S_ENABLE_LIBARCHIVE
@@ -191,6 +193,19 @@ auto could_be_json(char const* peek_buf, size_t peek_size) -> bool;
  */
 auto could_be_logtext(char const* peek_buf, size_t peek_size) -> bool;
 
+/**
+ * Tries to presign an S3 URL using AWS Signature Version 4.
+ *
+ * The credentials come from `network_auth.aws_credentials_provider` if it's set, or from the
+ * environment otherwise.
+ * @param url
+ * @param network_auth
+ * @return The presigned URL, or `std::nullopt` on error.
+ * @throw Propagates any exception thrown by `network_auth.aws_credentials_provider`.
+ */
+auto try_presign_s3_url(std::string_view url, NetworkAuthOption const& network_auth)
+        -> std::optional<std::string>;
+
 auto try_create_file_reader(std::string_view const file_path)
         -> std::shared_ptr<clp::ReaderInterface> {
     try {
@@ -202,7 +217,11 @@ auto try_create_file_reader(std::string_view const file_path)
 }
 
 #if CLP_BUILD_CLP_S_ENABLE_CURL
-auto try_sign_url(std::string& url) -> bool {
+/**
+ * Gets AWS credentials from the environment variables.
+ * @return The credentials, or `std::nullopt` if the access key ID or secret access key isn't set.
+ */
+auto get_aws_credentials_from_env() -> std::optional<AwsCredentials> {
     auto const aws_access_key = std::getenv(cAwsAccessKeyIdEnvVar);
     auto const aws_secret_access_key = std::getenv(cAwsSecretAccessKeyEnvVar);
     if (nullptr == aws_access_key || nullptr == aws_secret_access_key) {
@@ -211,56 +230,106 @@ auto try_sign_url(std::string& url) -> bool {
                 cAwsAccessKeyIdEnvVar,
                 cAwsSecretAccessKeyEnvVar
         );
-        return false;
+        return std::nullopt;
     }
     std::optional<std::string> optional_aws_session_token{std::nullopt};
     auto const aws_session_token = std::getenv(cAwsSessionTokenEnvVar);
     if (nullptr != aws_session_token) {
         optional_aws_session_token = std::string{aws_session_token};
     }
-
-    clp::aws::AwsAuthenticationSigner signer{
-            aws_access_key,
-            aws_secret_access_key,
-            optional_aws_session_token
+    return AwsCredentials{
+            .access_key_id = aws_access_key,
+            .secret_access_key = aws_secret_access_key,
+            .session_token = std::move(optional_aws_session_token)
     };
+}
+
+/**
+ * Gets AWS credentials from the given provider.
+ * @param provider
+ * @return The credentials, or `std::nullopt` if the provider returned no credentials or incomplete
+ * credentials.
+ * @throw Propagates any exception thrown by `provider`.
+ */
+auto get_aws_credentials_from_provider(AwsCredentialsProvider const& provider)
+        -> std::optional<AwsCredentials> {
+    auto credentials{provider()};
+    if (false == credentials.has_value()) {
+        SPDLOG_ERROR(
+                "AWS credentials provider returned no credentials for presigned url authentication."
+        );
+        return std::nullopt;
+    }
+    if (credentials->access_key_id.empty() || credentials->secret_access_key.empty()
+        || (credentials->session_token.has_value() && credentials->session_token->empty()))
+    {
+        SPDLOG_ERROR(
+                "AWS credentials provider returned incomplete credentials for presigned url "
+                "authentication."
+        );
+        return std::nullopt;
+    }
+    return credentials;
+}
+
+auto try_presign_s3_url(std::string_view url, NetworkAuthOption const& network_auth)
+        -> std::optional<std::string> {
+    // A provided callback is the only source of credentials, so that a failure to get credentials
+    // from it can never fall back to the identity in the environment.
+    auto credentials{
+            nullptr == network_auth.aws_credentials_provider
+                    ? get_aws_credentials_from_env()
+                    : get_aws_credentials_from_provider(network_auth.aws_credentials_provider)
+    };
+    if (false == credentials.has_value()) {
+        return std::nullopt;
+    }
 
     try {
-        clp::aws::S3Url s3_url{url};
-        if (auto const rc = signer.generate_presigned_url(s3_url, url);
+        clp::aws::AwsAuthenticationSigner const signer{
+                std::move(credentials->access_key_id),
+                std::move(credentials->secret_access_key),
+                std::move(credentials->session_token),
+                network_auth.presigned_url_expire_time
+        };
+        clp::aws::S3Url const s3_url{std::string{url}};
+        std::string presigned_url;
+        if (auto const rc = signer.generate_presigned_url(s3_url, presigned_url);
             clp::ErrorCode::ErrorCode_Success != rc)
         {
-            return false;
+            SPDLOG_ERROR("Failed to presign url - {}", rc);
+            return std::nullopt;
         }
+        return presigned_url;
     } catch (std::exception const& e) {
-        return false;
+        SPDLOG_ERROR("Failed to presign url - {}", e.what());
+        return std::nullopt;
     }
-    return true;
 }
 
 auto try_create_network_reader(std::string_view const url, NetworkAuthOption const& auth)
         -> std::shared_ptr<clp::ReaderInterface> {
-    std::string request_url{url};
-    switch (auth.method) {
-        case AuthMethod::S3PresignedUrlV4:
-            if (false == try_sign_url(request_url)) {
-                return nullptr;
-            }
-            break;
-        case AuthMethod::None:
-            break;
-        default:
-            return nullptr;
+    auto const request_url{try_authenticate_url(url, auth)};
+    if (false == request_url.has_value()) {
+        return nullptr;
     }
 
     try {
-        return std::make_shared<clp::NetworkReader>(request_url);
+        return std::make_shared<clp::NetworkReader>(request_url.value());
     } catch (clp::NetworkReader::OperationFailed const& e) {
         SPDLOG_ERROR("Failed to open url for reading - {}", e.what());
         return nullptr;
     }
 }
 #else
+auto try_presign_s3_url(
+        [[maybe_unused]] std::string_view url,
+        [[maybe_unused]] NetworkAuthOption const& network_auth
+) -> std::optional<std::string> {
+    SPDLOG_ERROR("This build of clp-s does not support presigned urls (libcurl excluded).");
+    return std::nullopt;
+}
+
 auto try_create_network_reader(
         [[maybe_unused]] std::string_view const url,
         [[maybe_unused]] NetworkAuthOption const& auth
@@ -503,6 +572,18 @@ auto try_process_general_purpose_archive_with_libarchive(
     return false;
 }
 #endif
+
+auto try_authenticate_url(std::string_view url, NetworkAuthOption const& network_auth)
+        -> std::optional<std::string> {
+    switch (network_auth.method) {
+        case AuthMethod::None:
+            return std::string{url};
+        case AuthMethod::S3PresignedUrlV4:
+            return try_presign_s3_url(url, network_auth);
+        default:
+            return std::nullopt;
+    }
+}
 
 auto try_create_reader(Path const& path, NetworkAuthOption const& network_auth)
         -> std::shared_ptr<clp::ReaderInterface> {
