@@ -18,13 +18,16 @@ use crate::error::ClientError;
 pub struct CompressionUsageParams {
     /// Start of usage window (epoch milliseconds, inclusive).
     pub time_range_begin_millisecs: i64,
+
     /// End of usage window (epoch milliseconds, exclusive).
     pub time_range_end_millisecs: i64,
+
     /// Job statuses to include as a comma-separated list (e.g. `job_status=succeeded,failed`).
     /// Recognized values (case-insensitive): `PENDING`, `RUNNING`, `SUCCEEDED`, `FAILED`. Defaults
     /// to `SUCCEEDED,FAILED` (all terminal states).
     #[serde(default)]
     pub job_status: Option<String>,
+
     /// Maximum number of jobs to return. Must be > 0; defaults to 1000.
     #[serde(default = "default_limit")]
     pub limit: i64,
@@ -119,30 +122,38 @@ impl TryFrom<CompressionUsageParams> for ValidatedCompressionUsageParams {
 pub struct CompressionUsage {
     /// Compression job ID.
     pub id: i32,
+
     /// Current status of the job.
     #[sqlx(rename = "status", try_from = "i32")]
     pub job_status: CompressionJobStatus,
+
     /// Time the job was created (epoch milliseconds).
     #[serde(with = "chrono::serde::ts_milliseconds")]
     #[schema(value_type = i64)]
     #[sqlx(rename = "creation_time")]
     pub time_creation_millisecs: DateTime<Utc>,
+
     /// Time the job started executing (epoch milliseconds).
     #[serde(with = "chrono::serde::ts_milliseconds")]
     #[schema(value_type = i64)]
     #[sqlx(rename = "start_time")]
     pub time_begin_millisecs: DateTime<Utc>,
+
     /// Wall-clock duration the job ran, in seconds. Absent if the job did not complete.
     #[sqlx(rename = "duration")]
     pub duration_secs: Option<f64>,
+
     /// Total uncompressed size of input files, in bytes.
     #[sqlx(rename = "uncompressed_size")]
     pub uncompressed_size_bytes: i64,
+
     /// Total compressed archive size, in bytes.
     #[sqlx(rename = "compressed_size")]
     pub compressed_size_bytes: i64,
+
     /// Number of tasks the job was split into.
     pub num_tasks: i32,
+
     /// Sum of all task durations, in seconds. Absent if no tasks reported a duration.
     #[sqlx(rename = "tasks_duration")]
     pub tasks_duration_secs: Option<f64>,
