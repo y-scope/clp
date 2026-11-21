@@ -12,6 +12,5 @@ source "$common_env_path"
 
 docker compose -f "$CLP_HOME/docker-compose.runtime.yaml" \
     run --rm "${CLP_COMPOSE_RUN_EXTRA_FLAGS[@]}" clp-runtime \
-    python3 \
-    -m clp_package_utils.scripts.search \
+    /opt/clp/bin/clp-search \
     "$@"

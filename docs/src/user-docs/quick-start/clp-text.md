@@ -161,8 +161,7 @@ For some sample logs, check out the [open-source datasets][datasets].
 
 ## Searching unstructured text logs
 
-You can search your compressed logs from CLP's [UI](#searching-from-the-ui) or the
-[command line](#searching-from-the-command-line).
+You can search your compressed logs from CLP's [UI](#searching-from-the-ui).
 
 In clp-text, queries are written as wildcard expressions. A wildcard expression is a plain text
 query where:
@@ -259,29 +258,7 @@ The numbered circles in [Figure 3](#figure-3) correspond to the following elemen
    * Each search result includes a link to the original file in which the log event was found.
 
 :::{note}
-By default, the UI will only return 1,000 of the latest search results. To perform searches which
-return more results, use the [command line](#searching-from-the-command-line).
-:::
-
-### Searching from the command line
-
-To search your compressed logs from the command line, run:
-
-```bash
-sbin/search.sh '<query>'
-```
-
-To narrow your search to a specific time range:
-
-* Add `--begin-time <epoch-timestamp-millis>` to filter for log events after a certain time.
-  * `<epoch-timestamp-millis>` is the timestamp as milliseconds since the UNIX epoch.
-* Add `--end-time <epoch-timestamp-millis>` to filter for log events before a certain time.
-
-To perform case-insensitive searches, add the `--ignore-case` flag.
-
-:::{caution}
-To match the convention of other tools, by default, searches are case-**insensitive** in the UI and
-searches are case-**sensitive** on the command line.
+By default, the UI will only return 1,000 of the latest search results.
 :::
 
 ---
