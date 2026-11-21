@@ -1,0 +1,33 @@
+[package]
+name = "clp-package-cli"
+version = { workspace = true }
+edition = { workspace = true }
+
+[lib]
+name = "clp_package_cli"
+path = "src/lib.rs"
+
+[[bin]]
+name = "clp-search"
+path = "src/bin/clp-search.rs"
+
+[dependencies]
+bytes = { workspace = true }
+clap = { workspace = true }
+clp-rust-utils = { workspace = true }
+futures = { workspace = true }
+non-empty-string = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt", "signal"] }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+url = { workspace = true }
+
+[dev-dependencies]
+anyhow = { workspace = true }
+axum = { workspace = true }
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["net"] }

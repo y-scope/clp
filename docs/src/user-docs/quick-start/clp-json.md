@@ -367,6 +367,20 @@ To search your compressed logs from the command line, run:
 sbin/search.sh '<query>'
 ```
 
+`search.sh` submits the query to the [API server][api-server], so the API server must be enabled
+(i.e., `api_server` must not be `null` in `etc/clp-config.yaml`). As results arrive, it writes each
+one to stdout as a JSON object on its own line, e.g.:
+
+```json
+{"archive_id":"018e90e5-8b2a-4a61-a2fc-cac799936caf","timestamp_millisecs":1767225600000,"message":"Example log message"}
+```
+
+To print only the log messages, you can pipe the output to `jq`:
+
+```bash
+sbin/search.sh '<query>' | jq -r .message
+```
+
 To narrow your search to a specific time range:
 
 * Add `--begin-time <epoch-timestamp-millis>` to filter for log events after a certain time.
@@ -382,6 +396,22 @@ To perform case-insensitive searches, add the `--ignore-case` flag.
 :::{caution}
 To match the convention of other tools, by default, searches are case-**insensitive** in the UI and
 searches are case-**sensitive** on the command line.
+:::
+
+`search.sh` exits with:
+
+* `0` if the search succeeded.
+* `1` if the query job didn't succeed (e.g., it failed or was cancelled).
+* `2` if the arguments are invalid.
+* `3` if the API server can't be reached (e.g., CLP isn't running), rejected the query, or failed.
+* `4` if the config can't be read, or disables the API server.
+* `130` if the search was interrupted (e.g., with Ctrl-C), after which the API server cancels the
+  query job.
+
+:::{note}
+`search.sh` no longer supports `--count`, `--count-by-time`, `--file-path`, or `--raw`. To count
+results over time, submit a query with an `output.aggregation` to the API server's `POST /query`
+endpoint (see [Using the API server][api-server]).
 :::
 
 ---
