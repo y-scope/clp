@@ -67,8 +67,6 @@ export CLP_MCP_SERVER_PORT=30800
 # Credentials (generate random or use your own)
 export CLP_DB_PASS=$(openssl rand -hex 16)
 export CLP_DB_ROOT_PASS=$(openssl rand -hex 16)
-export CLP_QUEUE_PASS=$(openssl rand -hex 16)
-export CLP_REDIS_PASS=$(openssl rand -hex 16)
 
 # Create the `kind` cluster
 cat <<EOF | kind create cluster --name clp --config=-
@@ -110,9 +108,7 @@ helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG \
   --set clpConfig.mcp_server.serviceType=NodePort \
   --set clpConfig.mcp_server.port="$CLP_MCP_SERVER_PORT" \
   --set credentials.database.password="$CLP_DB_PASS" \
-  --set credentials.database.root_password="$CLP_DB_ROOT_PASS" \
-  --set credentials.queue.password="$CLP_QUEUE_PASS" \
-  --set credentials.redis.password="$CLP_REDIS_PASS"
+  --set credentials.database.root_password="$CLP_DB_ROOT_PASS"
 ```
 
 Wait for all pods to be ready:

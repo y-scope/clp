@@ -15,7 +15,7 @@ package as well as their dependencies. The CLP package consists of several long-
 (e.g., `database`) and some one-time initialization jobs (e.g., `db-table-creator`). Some of the
 long-running services depend on the successful completion of the one-time jobs (e.g., `webui`
 depends on `results-cache-indices-creator`), while others depend on the health of other long-running
-services (e.g., `compression-scheduler` depends on `queue`).
+services (e.g., `compression-coordinator` depends on `spider-service`).
 
 [Table 1](#table-1) below lists the services their functions, while [Table 2](#table-2) lists the
 one-time initialization jobs and their functions.
@@ -40,15 +40,9 @@ one-time initialization jobs and their functions.
 graph LR
   %% Services
   database["database (MySQL)"]
-  queue["queue (RabbitMQ)"]
-  redis["redis (Redis)"]
   results_cache["results-cache (MongoDB)"]
-  compression_scheduler["compression-scheduler"]
-  query_scheduler["query-scheduler"]
   compression_coordinator["compression-coordinator"]
-  compression_worker["compression-worker"]
-  query_worker["query-worker"]
-  reducer["reducer"]
+  query_coordinator["query-coordinator"]
   api_server["api-server"]
   garbage_collector["garbage-collector"]
   webui["webui"]
@@ -68,47 +62,32 @@ graph LR
   results_cache -->|healthy| results_cache_indices_creator
   linkStyle 0,1 stroke:#ffa500
 
-  %% Link 2-5: Celery dependencies --> Schedulers
-  queue -->|healthy| compression_scheduler
-  redis -->|healthy| compression_scheduler
-  queue -->|healthy| query_scheduler
-  redis -->|healthy| query_scheduler
-  linkStyle 2,3,4,5 stroke:#ff0000
-
-  %% Link 6: Schedulers --> Workers
-  query_scheduler -->|healthy| reducer
-  linkStyle 6 stroke:#800080
-
-  %% Link 7-14: Database initialization job --> Services
+  %% Link 2-8: Database initialization job --> Services
   db_table_creator -->|completed_successfully| api_server
   db_table_creator -->|completed_successfully| compression_coordinator
-  db_table_creator -->|completed_successfully| compression_scheduler
   db_table_creator -->|completed_successfully| garbage_collector
   db_table_creator -->|completed_successfully| log_ingestor
   db_table_creator -->|completed_successfully| mcp_server
-  db_table_creator -->|completed_successfully| query_scheduler
+  db_table_creator -->|completed_successfully| query_coordinator
   db_table_creator -->|completed_successfully| webui
-  linkStyle 7,8,9,10,11,12,13,14 stroke:#0000ff
+  linkStyle 2,3,4,5,6,7,8 stroke:#0000ff
 
-  %% Link 15-19: Results cache initialization job --> Services
+  %% Link 9-13: Results cache initialization job --> Services
   results_cache_indices_creator -->|completed_successfully| api_server
   results_cache_indices_creator -->|completed_successfully| garbage_collector
   results_cache_indices_creator -->|completed_successfully| mcp_server
-  results_cache_indices_creator -->|completed_successfully| reducer
+  results_cache_indices_creator -->|completed_successfully| query_coordinator
   results_cache_indices_creator -->|completed_successfully| webui
-  linkStyle 15,16,17,18,19 stroke:#008000
+  linkStyle 9,10,11,12,13 stroke:#008000
 
-  %% Link 20: Spider service --> Coordinators
+  %% Link 14-15: Spider service --> Coordinators
   spider_service -->|healthy| compression_coordinator
-  linkStyle 20 stroke:#008080
+  spider_service -->|healthy| query_coordinator
+  linkStyle 14,15 stroke:#008080
 
   subgraph Databases
     database
     results_cache
-    subgraph celery_dependencies[Celery Dependencies]
-        queue
-        redis
-    end
   end
 
   subgraph Spider
@@ -120,19 +99,9 @@ graph LR
     results_cache_indices_creator
   end
 
-  subgraph Schedulers
-    compression_scheduler
-    query_scheduler
-  end
-
   subgraph Coordinators
     compression_coordinator
-  end
-
-  subgraph Workers
-    compression_worker
-    query_worker
-    reducer
+    query_coordinator
   end
 
   subgraph Management & UI
@@ -145,9 +114,6 @@ graph LR
   subgraph AI
     mcp_server
   end
-
-  %% Subgraph styles
-  style celery_dependencies fill:#ffffe0
 
 +++
 **Figure 1**: Orchestration architecture of the services in the CLP package.
@@ -162,20 +128,14 @@ graph LR
 | Service                 | Description                                                                             |
 |-------------------------|-----------------------------------------------------------------------------------------|
 | database                | Database for archive metadata, compression jobs, and query jobs                         |
-| queue                   | Task queue for schedulers                                                               |
-| redis                   | Task result storage for workers                                                         |
-| compression_scheduler   | Scheduler for compression jobs                                                          |
-| query_scheduler         | Scheduler for search/aggregation jobs                                                   |
 | results_cache           | Storage for the workers to return search results to the UI                              |
-| compression_worker      | Worker processes for compression jobs using Celery                                      |
-| query_worker            | Worker processes for search/aggregation jobs using Celery                               |
-| reducer                 | Reducers for performing the final stages of aggregation jobs                            |
 | api_server              | API server for submitting queries                                                       |
 | webui                   | Web server for the UI                                                                   |
 | mcp_server              | MCP server for AI agent to access CLP functionalities                                   |
 | garbage_collector       | Process to manage data retention                                                        |
 | spider_service          | Spider distributed scheduling framework, containing sub-services such as Spider workers |
 | compression_coordinator | Coordinator for running CLP compression jobs on Spider                                  |
+| query_coordinator       | Coordinator for running CLP query jobs on Spider                                        |
 | log_ingestor            | Server for orchestrating and running continuous log ingestion jobs                      |
 
 :::
@@ -203,9 +163,9 @@ graph LR
 
 ## Orchestration methods
 
-CLP supports two orchestration methods: Docker Compose for single-host or manual multi-host
-deployments, and Helm for Kubernetes deployments. Both methods share the same configuration
-interface (`clp-config.yaml` and `credentials.yaml`) and support the same deployment types.
+CLP supports two orchestration methods: Docker Compose for single-host deployments, and Helm for
+Kubernetes deployments. Both methods share the same configuration interface (`clp-config.yaml` and
+`credentials.yaml`) and support the same deployment types.
 
 ### Configuration
 
@@ -253,61 +213,22 @@ Services require persistent storage for logs, data, archives, and streams.
 * **Docker Compose**: Uses bind mounts for host directories and named volumes for database data.
   Conditional mounts use variable interpolation to mount empty tmpfs when not needed.
 * **Kubernetes**: Uses dynamically provisioned PersistentVolumeClaims for persistent data (database,
-  results cache) and `emptyDir` volumes for ephemeral state (Redis, staging directories). Service
+  results cache) and `emptyDir` volumes for ephemeral state (staging directories). Service
   logs are emitted to pod stdout/stderr. For shared-data volumes (archives, streams), single-node
   deployments use dynamic provisioning while distributed `fs` deployments require pre-provisioned
   PersistentVolumes backed by shared storage (e.g., NFS/CephFS).
 
 ### Deployment types
 
-CLP supports four deployment configurations, determined by two independent choices: the query engine
-(Celery or Presto), and whether Spider is enabled.
+CLP supports two deployment types, determined by the query engine (`webui.query_engine`): CLP's
+native query engine, or the [Presto integration][presto-integration].
 
-The query engine determines how queries are orchestrated:
-
-* **Full**: Uses Celery for query orchestration.
-* **Base**: Excludes the Celery-based query orchestration in Full, to support the
-  [Presto integration][presto-integration].
-
-Enabling Spider adds the `compression-coordinator` service, which routes compression jobs to be
-driven by Spider instead of Celery. This choice is orthogonal to the query engine: queries are still
-driven by Celery or Presto according to the deployment type.
-
-:::{note}
-The Celery-based `compression-scheduler` will be deprecated in a future release to be fully replaced
-by `compression-coordinator` and Spider. However, it still remains enabled by default since the
-current `compression-coordinator` implementation can only coordinate compression jobs created by
-`log-ingestor`.
-:::
-
-[Table 3](#table-3) below lists the resulting deployment configurations.
-
-(table-3)=
-::::{card}
-
-:::{table}
-:align: left
-
-| Deployment type | Spider   | Query orchestration | Compression orchestration                                  |
-|-----------------|----------|---------------------|------------------------------------------------------------|
-| Full            | Disabled | Celery              | Celery                                                     |
-| Base            | Disabled | Presto              | Celery                                                     |
-| Full            | Enabled  | Celery              | Spider for jobs from `log-ingestor`; Celery for all others |
-| Base            | Enabled  | Presto              | Spider for jobs from `log-ingestor`; Celery for all others |
-
-:::
-
-+++
-**Table 3**: Deployment configurations in the CLP package.
-::::
+In both deployment types, CLP uses Spider to orchestrate all compression and search jobs.
+`compression-coordinator` submits compression jobs to Spider, and `query-coordinator` submits search
+jobs to Spider.
 
 Docker Compose uses `deploy.replicas` with environment variables (e.g., `CLP_MCP_SERVER_ENABLED`)
 to toggle optional services. Helm uses conditional templating to include or exclude resources.
-
-:::{note}
-Spider is only available for Helm deployments in the current CLP package. Docker Compose deployments
-cannot enable Spider.
-:::
 
 ## Troubleshooting
 
@@ -319,13 +240,13 @@ When issues arise, use the appropriate commands for your orchestration method:
 ## User guides
 
 * [Kubernetes deployment][kubernetes-guide]: Deploying CLP with Helm
-* [Multi-host deployment][docker-compose-multi-host]: Manual Docker Compose across multiple hosts
+* [Docker Compose deployment][docker-compose-guide]: Deploying CLP with Docker Compose
 
 [docker-compose]: https://docs.docker.com/compose/
 [docker-compose-debugging]: ../user-docs/guides-docker-compose-deployment.md#monitoring-and-debugging
+[docker-compose-guide]: ../user-docs/guides-docker-compose-deployment.md
 [helm]: https://helm.sh/
 [kubernetes]: https://kubernetes.io/
 [kubernetes-debugging]: ../user-docs/guides-k8s-deployment.md#monitoring-and-debugging
 [kubernetes-guide]: ../user-docs/guides-k8s-deployment.md
-[docker-compose-multi-host]: ../user-docs/guides-docker-compose-deployment.md#multi-host-deployment
 [presto-integration]: ../user-docs/guides-using-presto.md

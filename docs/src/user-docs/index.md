@@ -26,7 +26,7 @@ searching them.
 ## Deployment
 
 Dive deeper into deploying CLP with Docker Compose or Kubernetes. In particular, multi-host
-deployments enable horizontal scaling and high availability for production workloads.
+Kubernetes deployments enable horizontal scaling and high availability for production workloads.
 
 ::::{grid} 1 1 2 2
 :gutter: 2
@@ -35,7 +35,7 @@ deployments enable horizontal scaling and high availability for production workl
 :link: guides-docker-compose-deployment
 Docker Compose deployment
 ^^^
-Deploy CLP using Docker Compose for single or multi-host setups.
+Deploy CLP on a single host using Docker Compose.
 :::
 
 :::{grid-item-card}
@@ -134,9 +134,9 @@ Configure how CLP schedules jobs and uses compute resources.
 
 :::{grid-item-card}
 :link: guides-using-spider-scheduler
-Using Spider scheduler
+Configuring Spider
 ^^^
-Use Spider to schedule and execute supported CLP jobs across distributed workers.
+Configure Spider's worker pools and tune its scheduler.
 :::
 
 ::::

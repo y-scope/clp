@@ -25,8 +25,8 @@ logs_input:
 
 :::{note}
 Unlike archive and stream storage, the S3 bucket and key prefix for input logs are not specified in
-the configuration file. Instead, they are specified at compression time via object URLs passed to
-[sbin/compress-from-s3.sh](using-clp-with-aws-s3.md#compressing-logs-from-aws-s3).
+the configuration file. Instead, they are specified when you create an ingestion job with
+[`log-ingestor`](using-clp-with-aws-s3.md#compressing-logs-from-aws-s3).
 :::
 
 ## Configuration for archive storage
@@ -115,8 +115,6 @@ the use case.
 Settings for each type are described below:
 
 * [credentials](#credentials)
-* [profile](#profile)
-* [env_vars](#env_vars)
 * [default](#default)
 
 ### credentials
@@ -134,67 +132,6 @@ aws_authentication:
 
 `<aws-access-key-id>` and `<aws-secret-access-key>` should be replaced with
 [long-term credentials](index.md#long-term-iam-user-credentials) for an IAM user.
-
-### profile
-
-Settings for this type are shown below. Replace fields in angle brackets (`<>`) with the appropriate
-values:
-
-```yaml
-aws_authentication:
-  type: "profile"
-  profile: "<profile-name>"
-```
-
-`<profile-name>` should be the name of an existing [AWS CLI profile](index.md#named-profiles).
-
-In addition, the *top-level* config `aws_config_directory` must be set to the directory containing
-the profile configurations:
-
-::::{tab-set}
-:::{tab-item} Docker Compose
-:sync: docker
-
-Typically `~/.aws`:
-
-```yaml
-aws_config_directory: "<aws-config-dir>"
-```
-
-```{note}
-If profiles are not used for AWS authentication, `aws_config_directory` should be commented or set
-to `null`.
-```
-
-:::
-
-:::{tab-item} Kubernetes (Helm)
-:sync: kind
-
-Provide your AWS config file contents via `--set-file`:
-
-```bash
-helm install <release> clp/clp \
-  --set-file clpConfig.aws_config.credentials=$HOME/.aws/credentials \
-  --set-file clpConfig.aws_config.config=$HOME/.aws/config
-```
-
-See [Installing the Helm chart][k8s-install-helm-chart] for details.
-
-:::
-::::
-
-### env_vars
-
-Settings for this type are shown below.
-
-```yaml
-aws_authentication:
-  type: "env_vars"
-```
-
-The environment variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` should be used to specify
-a set of [long-term IAM user credentials](index.md#long-term-iam-user-credentials).
 
 ### default
 
@@ -218,7 +155,50 @@ Credentials are resolved in priority order. Common sources include:
 * AWS config files (`~/.aws/credentials`, `~/.aws/config`)
 * [IRSA](eks-irsa-setup.md) web identity tokens (on Amazon EKS)
 * Container credentials (on Amazon ECS)
-* EC2 instance metadata / [IAM roles attached](index.md#default-credential-provider-chain) to an instance
+* EC2 instance metadata / [IAM roles attached](index.md#default-credential-provider-chain) to an
+  instance
+
+To make AWS config files available to the default credential provider chain, set the location of
+your AWS config files:
+
+::::{tab-set}
+:::{tab-item} Docker Compose
+:sync: docker
+
+Set the *top-level* config `aws_config_directory` to the directory containing the AWS config files
+(typically `~/.aws`):
+
+```yaml
+aws_config_directory: "<aws-config-dir>"
+```
+
+```{note}
+If no use case uses the `default` type, `aws_config_directory` should be commented or set to
+`null`.
+```
+
+:::
+
+:::{tab-item} Kubernetes (Helm)
+:sync: kind
+
+Provide your AWS config file contents via `--set-file`:
+
+```bash
+helm install <release> clp/clp \
+  --set-file clpConfig.aws_config.credentials=$HOME/.aws/credentials \
+  --set-file clpConfig.aws_config.config=$HOME/.aws/config
+```
+
+See [Installing the Helm chart][k8s-install-helm-chart] for details.
+
+:::
+::::
+
+:::{note}
+CLP makes the AWS config files available only to the API server and the garbage collector. Other
+components, such as the Spider workers that compress and search logs, can't read them.
+:::
 
 [aws-region-codes]: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RegionsAndAvailabilityZones.html#Concepts.RegionsAndAvailabilityZones.Availability
 [boto3-credentials]: https://docs.aws.amazon.com/boto3/latest/guide/credentials.html#configuring-credentials

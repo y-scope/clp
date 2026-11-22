@@ -207,8 +207,8 @@ still be in use by active jobs. To do so, CLP employs the following mechanisms:
   deleted by the garbage collector.
 
 :::{warning}
-A hanging search job will prevent CLP from deleting expired archives. Restarting the query scheduler
-will mark such jobs as killed and allow garbage collection to resume.
+A hanging search job will prevent CLP from deleting expired archives. Cancelling such a job (e.g.,
+via the API server's `DELETE /query/{query_job_id}` endpoint) allows garbage collection to resume.
 :::
 
 ### Fault tolerance

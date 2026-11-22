@@ -36,9 +36,8 @@ release.
 :::
 
 :::{note}
-CLP only supports authenticating with S3-compatible object storage using credentials. Other AWS
-authentication methods (named profiles, environment variables, EC2 instance roles) are not supported
-for S3-compatible storage.
+CLP only supports authenticating with S3-compatible object storage using credentials. The `default`
+authentication method is not supported for S3-compatible storage.
 :::
 
 ## Configuration
@@ -82,8 +81,9 @@ logs_input:
   storage service.
 
 :::{note}
-CLP will automatically determine the appropriate endpoint URL from the object URLs you provide
-during compression.
+The endpoint URL for input logs is not specified in the configuration file. Instead, it's specified
+when you create an ingestion job, as described
+[below](#compressing-logs-from-s3-compatible-storage).
 :::
 
 ### Configuring CLP for archive storage
@@ -122,41 +122,19 @@ archive_output:
 
 ## Compressing logs from S3-compatible storage
 
-To compress logs from S3-compatible storage, use the `sbin/compress-from-s3.sh` script with
-"path-style" object URLs:
+To compress logs from S3-compatible storage, create an [S3 scanner][s3-scanner] ingestion job with
+[`log-ingestor`][log-ingestor-guide]. In the job's configuration, set `endpoint_url` to the endpoint
+URL of your S3-compatible storage service (e.g., `http://10.0.0.1:9000` for a local MinIO instance).
 
-```text
-http://<host>:<port>/<bucket-name>/<object-key>
-```
-
-or for key prefix mode:
-
-```text
-http://<host>:<port>/<bucket-name>/<key-prefix>
-```
-
-```{code-block} bash
-:caption: Example: Compressing specific objects
-
-sbin/compress-from-s3.sh \
-  --timestamp-key @timestamp \
-  --dataset default \
-  s3-object \
-  http://10.0.0.1:9000/bucket/logs/app.log
-```
-
-```{code-block} bash
-:caption: Example: Compressing all objects under a prefix
-
-sbin/compress-from-s3.sh \
-  --timestamp-key @timestamp \
-  --dataset default \
-  s3-key-prefix \
-  http://10.0.0.1:9000/bucket/logs/
-```
-
-:::{tip}
-You can also specify input URLs in a text file using the `--inputs-from` flag. See the
-[AWS S3 usage guide](aws-s3/using-clp-with-aws-s3.md#s3-object-compression-mode) for more details on
-this and other options.
+:::{note}
+[SQS listener][sqs-listener] ingestion jobs don't support custom endpoint URLs, so you can't use
+them with S3-compatible storage.
 :::
+
+:::{note}
+CLP doesn't support one-time compression of objects from S3-compatible storage.
+:::
+
+[log-ingestor-guide]: ../guides-using-log-ingestor.md
+[s3-scanner]: ../guides-using-log-ingestor.md#s3-scanner
+[sqs-listener]: ../guides-using-log-ingestor.md#sqs-listener

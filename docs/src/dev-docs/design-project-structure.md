@@ -15,9 +15,11 @@ CLP is currently split across a few different components in the [components] dir
 * [compression-coordinator] contains code to coordinate CLP compression jobs running on Spider.
 * [core] contains code to compress uncompressed logs, decompress compressed logs, and search
   compressed logs.
-* [job-orchestration] contains code to schedule compression and search jobs on the cluster.
+* [job-orchestration] contains the garbage collector, and the job configurations and constants that
+  other Python components use.
 * [log-ingestor] contains code to serve requests for CLP ingestion job orchestration.
 * [package-template] contains the base directory structure and files of the CLP package.
+* [query-coordinator] contains code to coordinate CLP query jobs running on Spider.
 * [webui] contains the web interface for the CLP package.
 
 [api-server]: https://github.com/y-scope/clp/tree/DOCS_VAR_CLP_GIT_REF/components/api-server
@@ -34,4 +36,5 @@ CLP is currently split across a few different components in the [components] dir
 [job-orchestration]: https://github.com/y-scope/clp/tree/DOCS_VAR_CLP_GIT_REF/components/job-orchestration
 [log-ingestor]: https://github.com/y-scope/clp/tree/DOCS_VAR_CLP_GIT_REF/components/log-ingestor
 [package-template]: https://github.com/y-scope/clp/tree/DOCS_VAR_CLP_GIT_REF/components/package-template
+[query-coordinator]: https://github.com/y-scope/clp/tree/DOCS_VAR_CLP_GIT_REF/components/query-coordinator
 [webui]: https://github.com/y-scope/clp/tree/DOCS_VAR_CLP_GIT_REF/components/webui

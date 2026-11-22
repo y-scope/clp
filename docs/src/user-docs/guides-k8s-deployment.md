@@ -150,36 +150,28 @@ Generate credentials and install CLP:
 # Credentials (change these for production)
 export CLP_DB_PASS="pass"
 export CLP_DB_ROOT_PASS="root-pass"
-export CLP_QUEUE_PASS="pass"
-export CLP_REDIS_PASS="pass"
-
-# Worker replicas (increase for multi-node clusters)
-export CLP_COMPRESSION_WORKER_REPLICAS=1
-export CLP_QUERY_WORKER_REPLICAS=1
-export CLP_REDUCER_REPLICAS=1
+export CLP_SPIDER_COMPRESSION_PASS="compression-pass"
+export CLP_SPIDER_QUERY_PASS="query-pass"
 
 helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG \
   --set credentials.database.password="$CLP_DB_PASS" \
   --set credentials.database.root_password="$CLP_DB_ROOT_PASS" \
-  --set credentials.queue.password="$CLP_QUEUE_PASS" \
-  --set credentials.redis.password="$CLP_REDIS_PASS" \
-  --set scheduling.compressionWorker.replicas="$CLP_COMPRESSION_WORKER_REPLICAS" \
-  --set scheduling.queryWorker.replicas="$CLP_QUERY_WORKER_REPLICAS" \
-  --set scheduling.reducer.replicas="$CLP_REDUCER_REPLICAS"
+  --set credentials.spiderResourceGroups.compression="$CLP_SPIDER_COMPRESSION_PASS" \
+  --set credentials.spiderResourceGroups.query="$CLP_SPIDER_QUERY_PASS"
 ```
 
 ### Multi-node deployment
 
 For multi-node clusters with shared storage mounted on all nodes (e.g., NFS/CephFS via
-`/etc/fstab`), enable distributed storage mode and configure multiple worker replicas:
+`/etc/fstab`), enable distributed deployment mode:
 
 ```bash
 helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG \
-  --set distributedDeployment=true \
-  --set scheduling.compressionWorker.replicas=3 \
-  --set scheduling.queryWorker.replicas=3 \
-  --set scheduling.reducer.replicas=3
+  --set distributedDeployment=true
 ```
+
+To run more Spider workers, increase the number of workers in each Spider worker pool, as described
+in [Worker pools][spider-worker-pools].
 
 ### Installation with custom values
 
@@ -203,27 +195,12 @@ image:
   mysql:
     repository: "mysql"
     tag: "8.0.46"
-  queue:
-    repository: "rabbitmq"
-    tag: "4.2.6"
-  redis:
-    repository: "redis"
-    tag: "7.4.8"
   resultsCache:
     repository: "mongo"
     tag: "9.0.4"
   kubectl:
     repository: "bitnami/kubectl"
     digest: "sha256:98736aabcecb8d3cbcdcd7b132d14b1d67ed99bac2f06d471f06235933103df3"  # v1.36.0
-
-# Adjust worker concurrency
-scheduling:
-  compressionWorker:
-    slotsPerPod: 16
-  queryWorker:
-    slotsPerPod: 16
-  reducer:
-    slotsPerPod: 16
 
 # Configure CLP settings
 clpConfig:
@@ -249,10 +226,6 @@ clpConfig:
   results_cache:
     retention_period: 120  # (in minutes) 2 hours
 
-  # Adjust query scheduler concurrency
-  query_scheduler:
-    scheduler_concurrency: 4
-
 # Override credentials (use secrets in production!)
 credentials:
   database:
@@ -260,11 +233,9 @@ credentials:
     password: "your-db-password"
     root_username: "root"
     root_password: "your-db-root-password"
-  queue:
-    username: "clp-user"
-    password: "your-queue-password"
-  redis:
-    password: "your-redis-password"
+  spiderResourceGroups:
+    compression: "your-compression-resource-group-password"
+    query: "your-query-resource-group-password"
 ```
 
 Install with custom values:
@@ -287,10 +258,10 @@ helm template clp . -f custom-values.yaml
 To use Presto as the query engine, see the [Using Presto][presto-guide] guide for setup
 instructions, including the Helm values file and installation steps.
 
-### Using Spider as the scheduler
+### Configuring Spider
 
-To use [Spider] as the scheduler for compression and search jobs, see the [Using Spider scheduler][spider-guide] guide
-for setup instructions, including the Helm values file and installation steps.
+CLP uses [Spider] to run compression and search jobs. To change the number of Spider workers or to
+tune the Spider scheduler, see the [Configuring Spider][spider-guide] guide.
 
 ### Component scheduling
 
@@ -299,29 +270,25 @@ You can control where any CLP component is scheduled using standard Kubernetes s
 the same scheduling config under the top-level `scheduling` key.
 
 :::{note}
-When using Presto as the query engine, use `scheduling.prestoWorker` instead of
-`scheduling.queryWorker` and `scheduling.reducer` to configure Presto worker scheduling. Presto
-coordinator scheduling can be configured via `scheduling.prestoCoordinator`.
+The Spider subchart deploys the Spider pods (database, storage, scheduler, and workers). These pods
+don't support the `scheduling` and `resources` settings.
+
+When using Presto as the query engine, configure Presto worker scheduling via
+`scheduling.prestoWorker`, and Presto coordinator scheduling via `scheduling.prestoCoordinator`.
 :::
 
 #### Dedicated node pools
 
-To run compression workers, query workers, and reducers in separate node pools:
+To run Presto workers and bundled data services in separate node pools:
 
 1. Label your nodes:
 
    ```bash
-   # Label compression nodes
-   kubectl label nodes node1 node2 yscope.io/nodeType=compression
+   # Label Presto nodes (if using Presto as the query engine)
+   kubectl label nodes node1 node2 yscope.io/nodeType=presto
 
-   # Label query nodes
-   kubectl label nodes node3 node4 yscope.io/nodeType=query
-
-   # Optional: Label Presto nodes (if using Presto as the query engine)
-   kubectl label nodes node5 node6 yscope.io/nodeType=presto
-
-   # Optional: Label DB nodes (to isolate bundled data services)
-   kubectl label nodes node7 yscope.io/nodeType=db
+   # Label DB nodes (to isolate bundled data services)
+   kubectl label nodes node3 yscope.io/nodeType=db
    ```
 
 2. Configure scheduling:
@@ -332,35 +299,14 @@ To run compression workers, query workers, and reducers in separate node pools:
    distributedDeployment: true
 
    scheduling:
-     compressionWorker:
-       replicas: 2
-       nodeSelector:
-         yscope.io/nodeType: "compression"
-
-     queryWorker:
-       replicas: 2
-       nodeSelector:
-         yscope.io/nodeType: "query"
-
-     reducer:
-       replicas: 2
-       nodeSelector:
-         yscope.io/nodeType: "query"
-
-     # Optional: if using Presto as the query engine
+     # If using Presto as the query engine
      prestoWorker:
        replicas: 2
        nodeSelector:
          yscope.io/nodeType: "presto"
 
-     # Optional: to isolate bundled data services
+     # To isolate bundled data services
      database:
-       nodeSelector:
-         yscope.io/nodeType: "db"
-     queue:
-       nodeSelector:
-         yscope.io/nodeType: "db"
-     redis:
        nodeSelector:
          yscope.io/nodeType: "db"
      resultsCache:
@@ -374,58 +320,6 @@ To run compression workers, query workers, and reducers in separate node pools:
    helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG -f dedicated-scheduling.yaml
    ```
 
-#### Shared node pool
-
-To run all worker types in the same node pool:
-
-1. Label your nodes:
-
-   ```bash
-   kubectl label nodes node1 node2 node3 node4 yscope.io/nodeType=compute
-   ```
-
-2. Configure scheduling:
-
-   ```{code-block} yaml
-   :caption: shared-scheduling.yaml
-
-   distributedDeployment: true
-
-   scheduling:
-     compressionWorker:
-       replicas: 2
-       nodeSelector:
-         yscope.io/nodeType: "compute"
-       topologySpreadConstraints:
-         - maxSkew: 1
-           topologyKey: "kubernetes.io/hostname"
-           whenUnsatisfiable: "DoNotSchedule"
-           labelSelector:
-             matchLabels:
-               app.kubernetes.io/component: compression-worker
-
-     queryWorker:
-       replicas: 2
-       nodeSelector:
-         yscope.io/nodeType: "compute"
-
-     reducer:
-       replicas: 2
-       nodeSelector:
-         yscope.io/nodeType: "compute"
-
-     prestoWorker:
-       replicas: 2
-       nodeSelector:
-         yscope.io/nodeType: "compute"
-   ```
-
-3. Install:
-
-   ```bash
-   helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG -f shared-scheduling.yaml
-   ```
-
 ---
 
 ### Component resources
@@ -437,7 +331,7 @@ Values use standard Kubernetes resource quantities:
 :caption: resources.yaml
 
 resources:
-  compressionWorker:
+  queryCoordinator:
     requests:
       cpu: "1"
       memory: "1Gi"
@@ -511,18 +405,22 @@ The output should show all pods are in the `Running` state:
 ```text
 NAME                                        READY   STATUS    RESTARTS   AGE
 clp-api-server-...                          1/1     Running   0          2m
-clp-compression-scheduler-...               1/1     Running   0          2m
-clp-compression-worker-...                  1/1     Running   0          2m
+clp-compression-coordinator-...             1/1     Running   0          2m
 clp-database-0                              1/1     Running   0          2m
 clp-garbage-collector-...                   1/1     Running   0          2m
-clp-query-scheduler-...                     1/1     Running   0          2m
-clp-query-worker-...                        1/1     Running   0          2m
-clp-queue-0                                 1/1     Running   0          2m
-clp-reducer-...                             1/1     Running   0          2m
-clp-redis-0                                 1/1     Running   0          2m
+clp-query-coordinator-...                   1/1     Running   0          2m
 clp-results-cache-0                         1/1     Running   0          2m
+clp-spider-database-0                       1/1     Running   0          2m
+clp-spider-scheduler-...                    1/1     Running   0          2m
+clp-spider-storage-...                      1/1     Running   0          2m
+clp-spider-worker-compression-...           1/1     Running   0          2m
+clp-spider-worker-general-...               1/1     Running   0          2m
+clp-spider-worker-query-...                 1/1     Running   0          2m
 clp-webui-...                               1/1     Running   0          2m
 ```
+
+During startup, some Spider pods may restart while the Spider database is being initialized. A
+small number of restarts during this period is expected.
 
 ### Check initialization jobs
 
@@ -685,13 +583,13 @@ To tear down a `kubeadm` cluster:
 
 ## Related guides
 
-* [Docker Compose deployment][docker-compose-deployment]: Docker Compose orchestration for single or
-  multi-host setups
+* [Docker Compose deployment][docker-compose-deployment]: Docker Compose orchestration for
+  single-host setups
 * [External database setup][external-db-guide]: Using external MariaDB and MongoDB
 * [Using object storage][s3-storage]: Configuring S3 storage
 * [Configuring retention periods][retention-guide]: Setting up data retention policies
 * [Using Presto][presto-guide]: Distributed SQL queries on compressed logs
-* [Using Spider scheduler][spider-guide]: Spider-orchestrated compression
+* [Configuring Spider][spider-guide]: Configuring Spider's worker pools and scheduler
 
 [admin-tools]: reference-sbin-scripts/admin-tools.md
 [aks]: https://azure.microsoft.com/en-us/products/kubernetes-service
@@ -716,8 +614,8 @@ To tear down a `kubeadm` cluster:
 [RKE2]: https://docs.rke2.io/
 [s3-storage]: guides-using-object-storage/index
 [SeaweedFS]: https://github.com/seaweedfs/seaweedfs
-[seaweedfs-setup]: guides-docker-compose-deployment.md#setting-up-seaweedfs
 [Spider]: https://github.com/y-scope/spider
 [spider-guide]: guides-using-spider-scheduler.md
+[spider-worker-pools]: guides-using-spider-scheduler.md#worker-pools
 [webui-clp-json]: quick-start/clp-json.md#searching-from-the-ui
 [webui-clp-text]: quick-start/clp-text.md#searching-from-the-ui
