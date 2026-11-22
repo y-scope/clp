@@ -577,11 +577,10 @@ How to compress and search unstructured text logs.
 
 :::{note}
 By default (`allowHostAccessForSbinScripts: true`), the database and results cache are exposed on
-NodePorts, allowing you to use `sbin/compress.sh` from the CLP package. `sbin/search.sh` instead
-submits queries to the API server, so the API server must be reachable from the package's host,
-e.g., exposed as a NodePort (see [Service exposure](#service-exposure)). Download a
-[release][clp-releases] matching the chart's `appVersion`, then update the following configurations
-in `etc/clp-config.yaml`:
+NodePorts, allowing you to use `sbin/compress.sh` from the CLP package. `sbin/search.sh` also needs
+the API server to be reachable from the package's host, e.g., exposed as a NodePort (see
+[Service exposure](#service-exposure)). Download a [release][clp-releases] matching the chart's
+`appVersion`, then update the following configurations in `etc/clp-config.yaml`:
 
 ```yaml
 database:
