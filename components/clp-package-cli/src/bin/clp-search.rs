@@ -210,7 +210,7 @@ fn set_up_logging(is_verbose: bool) {
         .init();
 }
 
-// yscope-rust-linter: allow(errors-doc): `search` is forwarded through a `tokio::select!` arm
+// yscope-rust-linter: allow(errors-doc): the errors are forwarded inside `block_on`'s `async` block
 /// Runs `streaming_query_config`'s search through the API server that the package config at
 /// `host_config_path`, or the default package config, configures, until the search ends or SIGINT
 /// or SIGTERM interrupts it.
