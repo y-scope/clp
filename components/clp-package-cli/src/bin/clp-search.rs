@@ -425,9 +425,13 @@ async fn search(
                 query_job_id = Some(job.query_job_id);
             }
             Some("end") => {
-                let StreamingQueryEndEvent { status, .. } = serde_json::from_str(data)
+                let StreamingQueryEndEvent {
+                    status,
+                    num_results_emitted,
+                } = serde_json::from_str(data)
                     .context("invalid `end` event")
                     .map_err(Failure::ApiServer)?;
+                tracing::debug!(status = ? status, num_results_emitted, "The query job ended.");
                 if status == QueryJobStatus::Succeeded {
                     return Ok(());
                 }
