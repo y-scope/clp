@@ -120,6 +120,9 @@ database:
 
 results_cache:
   port: 30017
+
+api_server:
+  port: 30301
 ```
 
 :::
