@@ -89,7 +89,6 @@ struct Args {
 ///
 /// * This type is partially defined: unused fields are omitted and discarded through
 ///   deserialization.
-/// * The default values must be kept in sync with the Python definition.
 #[derive(Default, Deserialize)]
 #[serde(default)]
 struct PackageConfig {
@@ -102,7 +101,7 @@ struct PackageConfig {
 ///
 /// * This type is partially defined: unused fields are omitted and discarded through
 ///   deserialization.
-/// * The default values are taken from [`ApiServer`], the mirror of the Python definition.
+/// * The default values are taken from [`ApiServer::default`].
 #[derive(Deserialize)]
 #[serde(default)]
 struct ApiServerAddress {
