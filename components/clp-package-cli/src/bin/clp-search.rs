@@ -268,7 +268,7 @@ fn run(
         };
         tracing::warn!(
             signal = signal_name,
-            "The search was interrupted. The API server cancels the query job."
+            "The search was interrupted. The API server requests the query job's cancellation."
         );
         Ok(ExitCode::from(INTERRUPTED_EXIT_CODE))
     })
@@ -360,7 +360,8 @@ fn read_stream_query_url(config_path: &Path) -> anyhow::Result<Url> {
 ///
 /// # Cancel safety
 ///
-/// Dropping the future closes the connection, after which the API server cancels the query job.
+/// Dropping the future closes the connection, after which the API server requests the query job's
+/// cancellation.
 async fn search(
     http_client: &reqwest::Client,
     stream_query_url: Url,
