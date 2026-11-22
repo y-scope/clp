@@ -147,6 +147,17 @@ impl Failure {
         tracing::error!(error = % format_args!("{error:#}"), "The search failed.");
         ExitCode::from(exit_code)
     }
+
+    /// # Returns
+    ///
+    /// The failure, with `context` added to its error.
+    fn context(self, context: String) -> Self {
+        match self {
+            Self::QueryJob(error) => Self::QueryJob(error.context(context)),
+            Self::ApiServer(error) => Self::ApiServer(error.context(context)),
+            Self::Local(error) => Self::Local(error.context(context)),
+        }
+    }
 }
 
 /// # Returns
@@ -333,29 +344,16 @@ fn read_stream_query_url(config_path: &Path) -> anyhow::Result<Url> {
 /// `stream_query_url`, and writes the data of each result to stdout as it is, on its own line,
 /// until the query job ends.
 ///
-/// The response body is read line by line. An `event: <name>` line names the event of the next
-/// `data: <data>` line, and a `data:` line without a name is a result. Comments and blank lines are
-/// skipped, and any other line is an error. Once stdout is closed, writing stops and the function
-/// succeeds.
-///
 /// # Errors
 ///
 /// Returns an error if:
 ///
-/// * [`Failure::QueryJob`] if the `end` event's status is terminal but isn't `Succeeded`.
-/// * [`Failure::ApiServer`] if:
-///   * The API server responds with an unsuccessful status.
-///   * The data of a `job`, `end` or `error` event doesn't deserialize.
-///   * The `end` event's status isn't terminal.
-///   * The API server sends an `error` event, or an event with an unknown name.
-///   * The API server sends a line that isn't an `event:` or `data:` line, a comment, or a blank
-///     line.
-///   * The response body ends before an `end` or `error` event.
-/// * [`Failure::Local`] if a result can't be written to stdout.
+/// * [`Failure::ApiServer`] if the API server responds with an unsuccessful status.
 /// * Forwards [`reqwest::RequestBuilder::send`]'s return values as [`Failure::ApiServer`] on
 ///   failure.
 /// * Forwards [`reqwest::Response::text`]'s return values as [`Failure::ApiServer`] on failure.
-/// * Forwards [`tokio::io::Lines::next_line`]'s return values as [`Failure::ApiServer`] on failure.
+/// * Forwards [`write_results`]'s return values on failure, with the query job's ID once it's
+///   known.
 ///
 /// # Cancel safety
 ///
@@ -365,8 +363,6 @@ async fn search(
     stream_query_url: Url,
     streaming_query_config: &StreamingQueryConfig,
 ) -> Result<(), Failure> {
-    use futures::TryStreamExt;
-
     let response = http_client
         .post(stream_query_url)
         .header(reqwest::header::ACCEPT, "text/event-stream")
@@ -386,12 +382,49 @@ async fn search(
             "the API server responded with status {status}: {body}"
         )));
     }
+    let mut query_job_id = None;
+    write_results(response, &mut query_job_id)
+        .await
+        .map_err(|failure| match query_job_id {
+            Some(id) => failure.context(format!("query job {id}")),
+            None => failure,
+        })
+}
+
+/// Reads the events of a streaming query from `response`, a successful response of the streaming
+/// query route, and writes the data of each result to stdout as it is, on its own line, until the
+/// query job ends. The `job` event's query job ID is stored in `query_job_id`.
+///
+/// The response body is read line by line. An `event: <name>` line names the event of the next
+/// `data: <data>` line, and a `data:` line without a name is a result. Comments and blank lines are
+/// skipped, and any other line is an error. Once stdout is closed, writing stops and the function
+/// succeeds.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * [`Failure::QueryJob`] if the `end` event's status is terminal but isn't `Succeeded`.
+/// * [`Failure::ApiServer`] if:
+///   * The data of a `job`, `end` or `error` event doesn't deserialize.
+///   * The `end` event's status isn't terminal.
+///   * The API server sends an `error` event, or an event with an unknown name.
+///   * The API server sends a line that isn't an `event:` or `data:` line, a comment, or a blank
+///     line.
+///   * The response body ends before an `end` or `error` event.
+/// * [`Failure::Local`] if a result can't be written to stdout.
+/// * Forwards [`tokio::io::Lines::next_line`]'s return values as [`Failure::ApiServer`] on failure.
+async fn write_results(
+    response: reqwest::Response,
+    query_job_id: &mut Option<u64>,
+) -> Result<(), Failure> {
+    use futures::TryStreamExt;
+
     let mut lines =
         tokio_util::io::StreamReader::new(response.bytes_stream().map_err(std::io::Error::other))
             .lines();
     let mut stdout = std::io::stdout();
     let mut event_name = None;
-    let mut query_job_id = None;
     while let Some(line) = lines
         .next_line()
         .await
@@ -422,7 +455,7 @@ async fn search(
                     .context("invalid `job` event")
                     .map_err(Failure::ApiServer)?;
                 tracing::debug!(query_job_id = job.query_job_id, "Submitted the query job.");
-                query_job_id = Some(job.query_job_id);
+                *query_job_id = Some(job.query_job_id);
             }
             Some("end") => {
                 let StreamingQueryEndEvent {
@@ -435,11 +468,7 @@ async fn search(
                 if status == QueryJobStatus::Succeeded {
                     return Ok(());
                 }
-                let query_job = query_job_id.map_or_else(
-                    || "the query job".to_owned(),
-                    |id| format!("query job {id}"),
-                );
-                let error = anyhow::anyhow!("{query_job} ended with status `{status:?}`");
+                let error = anyhow::anyhow!("ended with status `{status:?}`");
                 return Err(if status.is_terminal() {
                     Failure::QueryJob(error)
                 } else {
