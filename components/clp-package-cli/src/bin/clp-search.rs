@@ -334,8 +334,8 @@ fn read_stream_query_url(config_path: &Path) -> anyhow::Result<Url> {
 /// until the query job ends.
 ///
 /// The response body is read line by line. An `event: <name>` line names the event of the next
-/// `data: <data>` line, and a `data:` line without a name is a result. Other lines, such as
-/// comments and blank lines, are skipped. Once stdout is closed, writing stops and the function
+/// `data: <data>` line, and a `data:` line without a name is a result. Comments and blank lines are
+/// skipped, and any other line is an error. Once stdout is closed, writing stops and the function
 /// succeeds.
 ///
 /// # Errors
@@ -348,6 +348,8 @@ fn read_stream_query_url(config_path: &Path) -> anyhow::Result<Url> {
 ///   * The data of a `job`, `end` or `error` event doesn't deserialize.
 ///   * The `end` event's status isn't terminal.
 ///   * The API server sends an `error` event, or an event with an unknown name.
+///   * The API server sends a line that isn't an `event:` or `data:` line, a comment, or a blank
+///     line.
 ///   * The response body ends before an `end` or `error` event.
 /// * [`Failure::Local`] if a result can't be written to stdout.
 /// * Forwards [`reqwest::RequestBuilder::send`]'s return values as [`Failure::ApiServer`] on
@@ -396,12 +398,17 @@ async fn search(
         .context("failed to read the API server's response")
         .map_err(Failure::ApiServer)?
     {
+        if line.is_empty() || line.starts_with(':') {
+            continue;
+        }
         if let Some(name) = line.strip_prefix("event: ") {
             event_name = Some(name.to_owned());
             continue;
         }
         let Some(data) = line.strip_prefix("data: ") else {
-            continue;
+            return Err(Failure::ApiServer(anyhow::anyhow!(
+                "the API server sent an unexpected line {line:?}"
+            )));
         };
         match event_name.take().as_deref() {
             None => match writeln!(stdout, "{data}").and_then(|()| stdout.flush()) {
