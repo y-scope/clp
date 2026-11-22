@@ -16,7 +16,6 @@ use clp_rust_utils::api_server::streaming_query::StreamingQueryEndEvent;
 use clp_rust_utils::api_server::streaming_query::StreamingQueryErrorEvent;
 use clp_rust_utils::api_server::streaming_query::StreamingQueryJobEvent;
 use clp_rust_utils::clp_config::package::DEFAULT_CONFIG_FILE_PATH;
-use clp_rust_utils::clp_config::package::config::ApiServer;
 use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::dataset::NonEmptyDatasetNames;
 use clp_rust_utils::job_config::QueryJobStatus;
@@ -93,7 +92,30 @@ struct Args {
 #[derive(Default, Deserialize)]
 #[serde(default)]
 struct PackageConfig {
-    api_server: ApiServer,
+    api_server: ApiServerAddress,
+}
+
+/// The address part of `clp_py_utils.clp_config.ApiServer`.
+///
+/// # NOTE
+///
+/// * This type is partially defined: unused fields are omitted and discarded through
+///   deserialization.
+/// * The default values must be kept in sync with the Python definition.
+#[derive(Deserialize)]
+#[serde(default)]
+struct ApiServerAddress {
+    host: String,
+    port: u16,
+}
+
+impl Default for ApiServerAddress {
+    fn default() -> Self {
+        Self {
+            host: "localhost".to_owned(),
+            port: 3001,
+        }
+    }
 }
 
 /// A failure of a search, which determines the exit code of `clp-search`.
@@ -302,7 +324,7 @@ fn resolve_config_path(host_config_path: Option<&Path>) -> anyhow::Result<PathBu
 fn read_stream_query_url(config_path: &Path) -> anyhow::Result<Url> {
     let config: Option<PackageConfig> = clp_rust_utils::serde::yaml::from_path(config_path)
         .with_context(|| format!("failed to read {}", config_path.display()))?;
-    let ApiServer { host, port, .. } = config.unwrap_or_default().api_server;
+    let ApiServerAddress { host, port } = config.unwrap_or_default().api_server;
     let url = format!("http://{host}:{port}/query/stream");
     Url::parse(&url).with_context(|| format!("invalid API server URL {url}"))
 }
