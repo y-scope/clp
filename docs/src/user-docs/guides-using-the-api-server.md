@@ -115,12 +115,6 @@ data: {"status":"Succeeded","num_results_emitted":1}
 
 For more details, see the [streaming search API reference][streaming-search-api].
 
-:::{tip}
-`sbin/search.sh` is a client of `POST /query/stream`: it prints the data of each result event as a
-line of JSON (see [Searching from the command line][clp-json-cli-search]).
-:::
-
-[clp-json-cli-search]: quick-start/clp-json.md#searching-from-the-command-line
 [OpenAPI]: https://swagger.io/specification/
 [server-sent-events]: https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events
 [streaming-search-api]: https://petstore.swagger.io/?url=https://docs.yscope.com/clp/DOCS_VAR_CLP_GIT_REF/_static/generated/api-server-openapi.json#/default/stream_query
