@@ -113,6 +113,7 @@ class JobType(KebabCaseStrEnum):
     COMPRESSION = auto()
     FILE_EXTRACTION = auto()
     IR_EXTRACTION = auto()
+    SEARCH = auto()
 
 
 class DockerMount:

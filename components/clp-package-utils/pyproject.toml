@@ -8,7 +8,9 @@ requires-python = ">=3.10"
 dependencies = [
     "click>=8.3.1",
     "msgpack>=1.1.2",
+    "psutil>=7.2.1",
     "pydantic>=2.12.5",
+    "pymongo>=4.16.0",
     "PyYAML>=6.0.3",
     "ruamel.yaml>=0.19.1",
 ]
