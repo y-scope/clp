@@ -1504,10 +1504,9 @@ export interface operations {
                 /** @description End of usage window (epoch milliseconds, exclusive). */
                 time_range_end_millisecs: number;
                 /**
-                 * @description Job statuses to include as a comma-separated list (e.g.
-                 *     `job_status=succeeded,failed`). Recognized values (case-insensitive):
-                 *     `PENDING`, `RUNNING`, `SUCCEEDED`, `FAILED`.
-                 *     Defaults to `SUCCEEDED,FAILED` (all terminal states).
+                 * @description Job statuses to include as a comma-separated list (e.g. `job_status=succeeded,failed`).
+                 *     Recognized values (case-insensitive): `PENDING`, `RUNNING`, `SUCCEEDED`, `FAILED`. Defaults
+                 *     to `SUCCEEDED,FAILED` (all terminal states).
                  */
                 job_status?: string;
                 /** @description Maximum number of jobs to return. Must be > 0; defaults to 1000. */
