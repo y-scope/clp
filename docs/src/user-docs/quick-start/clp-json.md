@@ -400,12 +400,6 @@ searches are case-**sensitive** on the command line.
 * `130` if the search was interrupted (e.g., with Ctrl-C), after which the API server requests the
   query job's cancellation.
 
-:::{note}
-`search.sh` no longer supports `--count`, `--count-by-time`, `--file-path`, or `--raw`. To count
-results over time, submit a query with an `output.aggregation` to the API server's `POST /query`
-endpoint, then read the counts from `GET /query_results/{query_job_id}/timeline`.
-:::
-
 ---
 
 ## Stopping CLP
