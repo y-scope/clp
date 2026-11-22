@@ -16,6 +16,7 @@ use clp_rust_utils::api_server::streaming_query::StreamingQueryEndEvent;
 use clp_rust_utils::api_server::streaming_query::StreamingQueryErrorEvent;
 use clp_rust_utils::api_server::streaming_query::StreamingQueryJobEvent;
 use clp_rust_utils::clp_config::package::DEFAULT_CONFIG_FILE_PATH;
+use clp_rust_utils::clp_config::package::config::ApiServer;
 use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::dataset::NonEmptyDatasetNames;
 use clp_rust_utils::job_config::QueryJobStatus;
@@ -101,7 +102,7 @@ struct PackageConfig {
 ///
 /// * This type is partially defined: unused fields are omitted and discarded through
 ///   deserialization.
-/// * The default values must be kept in sync with the Python definition.
+/// * The default values are taken from [`ApiServer`], the mirror of the Python definition.
 #[derive(Deserialize)]
 #[serde(default)]
 struct ApiServerAddress {
@@ -111,16 +112,14 @@ struct ApiServerAddress {
 
 impl Default for ApiServerAddress {
     fn default() -> Self {
-        Self {
-            host: "localhost".to_owned(),
-            port: 3001,
-        }
+        let ApiServer { host, port, .. } = ApiServer::default();
+        Self { host, port }
     }
 }
 
 /// A failure of a search, which determines the exit code of `clp-search`.
 enum Failure {
-    /// The query job ended with a terminal status other than `Succeeded`.
+    /// The query job ended with a terminal status other than [`QueryJobStatus::Succeeded`].
     QueryJob(anyhow::Error),
 
     /// The API server can't be reached, rejected the query, failed, or broke the stream of the
@@ -165,6 +164,10 @@ impl Failure {
 /// The exit code of the search: 0 if it succeeds or stdout is closed, [`Failure::report`]'s if it
 /// fails, and [`INTERRUPTED_EXIT_CODE`] if a signal interrupts it. Invalid arguments exit with code
 /// 2.
+///
+/// # Panics
+///
+/// Panics if `--dataset` gives no dataset names, which can't happen since it has a default value.
 fn main() -> ExitCode {
     use clap::CommandFactory;
     use clap::error::ErrorKind;
@@ -189,8 +192,8 @@ fn main() -> ExitCode {
     run(args.config.as_deref(), &streaming_query_config).unwrap_or_else(Failure::report)
 }
 
-/// Logs to stderr, at the debug level for this binary if `is_verbose`, and at the info level
-/// otherwise.
+/// Sets up logging to stderr, at the debug level for this binary if `is_verbose`, and at the info
+/// level otherwise.
 fn set_up_logging(is_verbose: bool) {
     use std::io::IsTerminal;
 
@@ -404,7 +407,8 @@ async fn search(
 ///
 /// Returns an error if:
 ///
-/// * [`Failure::QueryJob`] if the `end` event's status is terminal but isn't `Succeeded`.
+/// * [`Failure::QueryJob`] if the `end` event's status is terminal but isn't
+///   [`QueryJobStatus::Succeeded`].
 /// * [`Failure::ApiServer`] if:
 ///   * The data of a `job`, `end` or `error` event doesn't deserialize.
 ///   * The `end` event's status isn't terminal.
