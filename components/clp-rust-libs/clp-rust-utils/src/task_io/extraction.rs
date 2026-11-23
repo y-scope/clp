@@ -10,7 +10,8 @@ use crate::job_config::QueryJobId;
 use crate::types::ArchiveId;
 
 /// Input for extracting one archive into ordered JSON chunks.
-#[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct ExtractTaskInput {
     pub job_id: QueryJobId,
     pub dataset: DatasetName,
