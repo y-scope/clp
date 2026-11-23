@@ -80,8 +80,7 @@ struct Args {
     verbose: bool,
 }
 
-/// The part of the package config, `clp_py_utils.clp_config.ClpConfig`, that configures the API
-/// server.
+/// The part of the package config that configures the API server.
 ///
 /// # NOTE
 ///
@@ -93,7 +92,7 @@ struct PackageConfig {
     api_server: ApiServerAddress,
 }
 
-/// The address part of `clp_py_utils.clp_config.ApiServer`.
+/// The address part of [`ApiServer`].
 ///
 /// # NOTE
 ///
