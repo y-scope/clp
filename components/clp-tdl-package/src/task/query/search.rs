@@ -552,7 +552,6 @@ mod tests {
     use super::ResultsFile;
     use super::ResultsFileDestination;
     use super::build_clp_s_commands;
-    use super::build_clp_s_network_output_args;
     use super::build_clp_s_query_command;
     use super::build_clp_s_results_cache_output_args;
     use super::search;
@@ -764,20 +763,42 @@ mod tests {
     }
 
     #[test]
-    fn build_clp_s_network_output_args_names_the_listener_and_the_task() {
+    fn build_clp_s_commands_network_output_includes_the_listener_and_task_index() {
+        let commands = build_clp_s_commands(
+            || {
+                build_clp_s_query_command(
+                    Path::new("clp-s"),
+                    &directory_descriptor(),
+                    &unbounded_query(),
+                )
+            },
+            &QueryOutput::Network(network_output()),
+            &results_cache(),
+            None,
+            42,
+            "ds1",
+            5,
+        );
+        assert_eq!(commands.len(), 1);
         assert_eq!(
-            build_clp_s_network_output_args(&network_output(), 5),
-            vec![
-                OsString::from("network"),
-                OsString::from("--host"),
-                OsString::from("10.0.0.7"),
-                OsString::from("--port"),
-                OsString::from("40123"),
-                OsString::from("--session-token"),
-                OsString::from(SESSION_TOKEN),
-                OsString::from("--task-index"),
-                OsString::from("5"),
+            commands[0].get_args().collect::<Vec<_>>(),
+            [
+                "s",
+                "/archives/ds1",
+                "--archive-id",
+                ARCHIVE_ID,
+                "level: \"ERROR\"",
+                "network",
+                "--host",
+                "10.0.0.7",
+                "--port",
+                "40123",
+                "--session-token",
+                SESSION_TOKEN,
+                "--task-index",
+                "5",
             ]
+            .map(OsStr::new)
         );
     }
 
