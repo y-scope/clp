@@ -1,7 +1,6 @@
 //! `clp-search`: searches the compressed logs through the API server's `POST /query/stream` route,
 //! and writes each result to stdout as a JSON object on its own line.
 
-use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -25,7 +24,6 @@ use clp_rust_utils::job_config::TimeRange;
 use non_empty_string::NonEmptyString;
 use reqwest::Url;
 use serde::Deserialize;
-use tokio::io::AsyncBufReadExt;
 
 /// The longest time that connecting to the API server may take.
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
@@ -421,7 +419,10 @@ async fn write_results(
     response: reqwest::Response,
     query_job_id: &mut Option<u64>,
 ) -> Result<(), Failure> {
+    use std::io::Write;
+
     use futures::TryStreamExt;
+    use tokio::io::AsyncBufReadExt;
 
     let mut lines =
         tokio_util::io::StreamReader::new(response.bytes_stream().map_err(std::io::Error::other))
