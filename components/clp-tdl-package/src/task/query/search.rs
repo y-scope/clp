@@ -9,9 +9,7 @@ use std::process::Command;
 use std::process::Stdio;
 
 use anyhow::Context;
-use clp_rust_utils::aws::AWS_DEFAULT_REGION;
 use clp_rust_utils::clp_config::S3Config;
-use clp_rust_utils::clp_config::package::config::ArchiveOutputStorage;
 use clp_rust_utils::clp_config::package::config::ResultsCache;
 use clp_rust_utils::clp_config::package::config::SpiderTaskExecutorConfig;
 use clp_rust_utils::clp_config::package::config::StorageEngine;
@@ -22,18 +20,17 @@ use clp_rust_utils::job_config::NetworkOutput;
 use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::job_config::QueryOutput;
 use clp_rust_utils::job_config::SearchQuery;
-use clp_rust_utils::s3::generate_s3_url;
 use clp_rust_utils::timeline;
 use clp_rust_utils::types::ArchiveId;
-use non_empty_string::NonEmptyString;
 use spider_core::task::TaskIndex;
 use spider_core::types::id::TaskId;
 
 use crate::common::clp_home;
 use crate::common::runtime;
+use crate::task::query::archive_input::ArchiveDescriptor;
+use crate::task::query::archive_input::resolve_archive_input;
 use crate::task::utils::build_s3_client;
 use crate::task::utils::clp_binary_path;
-use crate::task::utils::s3_credential_env;
 use crate::task::utils::upload_file_to_s3;
 
 /// Searches one archive with clp-s and publishes normal and optional timeline results.
@@ -146,18 +143,6 @@ pub(super) fn search(
         "clp-s query task completed successfully.",
     );
     Ok(())
-}
-
-/// The archive to search, in the form clp-s addresses it.
-enum ArchiveDescriptor {
-    /// A local dataset archives directory plus the `--archive-id` selecting one archive in it.
-    Directory {
-        path: PathBuf,
-        archive_id: ArchiveId,
-    },
-
-    /// The URL of an S3-hosted archive, read with `--auth s3`.
-    ObjectUrl(String),
 }
 
 /// The file that clp-s's `file` output handler writes one archive's query results to, staged under
@@ -376,61 +361,6 @@ fn build_clp_s_arg_lists(
     }
 }
 
-/// Resolves how clp-s addresses the archive, and the credential env vars it needs to read it.
-///
-/// # Returns
-///
-/// A tuple on success, containing:
-///
-/// * The archive descriptor.
-/// * The credential env vars clp-s should run with, which are empty for filesystem-backed archive
-///   output.
-///
-/// # Errors
-///
-/// Returns an error if:
-///
-/// * Forwards [`generate_s3_url`]'s return values on failure.
-/// * Forwards [`s3_credential_env`]'s return values on failure.
-fn resolve_archive_input(
-    runtime: &tokio::runtime::Handle,
-    clp_home: &Path,
-    config: &SpiderTaskExecutorConfig,
-    dataset: &DatasetName,
-    archive_id: ArchiveId,
-) -> anyhow::Result<(ArchiveDescriptor, Vec<(&'static str, String)>)> {
-    let s3_config = match &config.archive_output.storage {
-        ArchiveOutputStorage::Fs { .. } => {
-            return Ok((
-                ArchiveDescriptor::Directory {
-                    path: config
-                        .abs_archive_output_staging(clp_home)
-                        .join(dataset.as_str()),
-                    archive_id,
-                },
-                Vec::new(),
-            ));
-        }
-        ArchiveOutputStorage::S3 { s3_config, .. } => s3_config,
-    };
-
-    let object_key = config
-        .archive_output
-        .dataset_archive_object_key(dataset, &archive_id);
-    let url = generate_s3_url(
-        s3_config.endpoint_url.as_ref().map(NonEmptyString::as_str),
-        s3_config.region_code.as_ref().map(NonEmptyString::as_str),
-        &s3_config.bucket,
-        &object_key,
-    )?;
-    let region = s3_config
-        .region_code
-        .as_ref()
-        .map_or(AWS_DEFAULT_REGION, NonEmptyString::as_str);
-    let credential_env = s3_credential_env(runtime, region, &s3_config.aws_authentication)?;
-    Ok((ArchiveDescriptor::ObjectUrl(url), credential_env))
-}
-
 /// Builds the clp-s command-line arguments of the `results-cache` output handler.
 ///
 /// # Returns
@@ -503,18 +433,7 @@ fn build_clp_s_query_args(
     query: &SearchQuery,
 ) -> Vec<OsString> {
     let mut args = vec![OsString::from("s")];
-    match archive_descriptor {
-        ArchiveDescriptor::Directory { path, archive_id } => {
-            args.push(path.as_os_str().to_os_string());
-            args.push(OsString::from("--archive-id"));
-            args.push(OsString::from(archive_id.to_string()));
-        }
-        ArchiveDescriptor::ObjectUrl(url) => {
-            args.push(OsString::from(url));
-            args.push(OsString::from("--auth"));
-            args.push(OsString::from("s3"));
-        }
-    }
+    args.extend(archive_descriptor.clp_s_args());
 
     args.push(OsString::from(query.query_string.as_str()));
     if let Some(begin_timestamp_millisecs) = query.time_range.begin_timestamp_millisecs() {
@@ -608,11 +527,7 @@ mod tests {
     use std::path::Path;
     use std::path::PathBuf;
 
-    use clp_rust_utils::clp_config::AwsAuthentication;
-    use clp_rust_utils::clp_config::AwsCredentials;
     use clp_rust_utils::clp_config::S3Config;
-    use clp_rust_utils::clp_config::package::config::ArchiveOutput;
-    use clp_rust_utils::clp_config::package::config::ArchiveOutputStorage;
     use clp_rust_utils::clp_config::package::config::Package;
     use clp_rust_utils::clp_config::package::config::ResultsCache;
     use clp_rust_utils::clp_config::package::config::SpiderTaskExecutorConfig;
@@ -637,15 +552,15 @@ mod tests {
     use spider_core::types::id::TaskId;
     use spider_tdl::TaskContext;
 
-    use super::ArchiveDescriptor;
     use super::ResultsFile;
     use super::ResultsFileDestination;
     use super::build_clp_s_arg_lists;
     use super::build_clp_s_network_output_args;
     use super::build_clp_s_query_args;
     use super::build_clp_s_results_cache_output_args;
-    use super::resolve_archive_input;
     use super::search;
+    use crate::task::query::archive_input::ArchiveDescriptor;
+    use crate::task::query::archive_input::base_s3_config;
 
     const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
     const SESSION_TOKEN: &str = "6f1d3b52-8a4e-4c1b-9f6e-2d7a5c0b9e13";
@@ -679,57 +594,11 @@ mod tests {
 
     /// # Returns
     ///
-    /// An [`S3Config`] for the bucket `bucket` with the key prefix `LIB1/` and no endpoint URL,
-    /// which authenticates with static AWS credentials.
-    fn base_s3_config() -> S3Config {
-        S3Config {
-            bucket: NonEmptyString::from_static_str("bucket"),
-            region_code: None,
-            key_prefix: NonEmptyString::from_static_str("LIB1/"),
-            endpoint_url: None,
-            aws_authentication: AwsAuthentication::Credentials {
-                credentials: AwsCredentials {
-                    access_key_id: "the-access-key".to_string(),
-                    secret_access_key: "the-secret-key".to_string(),
-                    session_token: None,
-                },
-            },
-        }
-    }
-
-    /// # Returns
-    ///
     /// An [`ArchiveDescriptor`] addressing [`ARCHIVE_ID`] under `/archives/ds1`.
     fn directory_descriptor() -> ArchiveDescriptor {
         ArchiveDescriptor::Directory {
             path: PathBuf::from("/archives/ds1"),
             archive_id: ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
-        }
-    }
-
-    /// # Returns
-    ///
-    /// A [`SpiderTaskExecutorConfig`] whose archive output is S3-backed with the given staging
-    /// directory and endpoint URL.
-    fn s3_backed_config(
-        staging_directory: &str,
-        endpoint_url: Option<&'static str>,
-    ) -> SpiderTaskExecutorConfig {
-        SpiderTaskExecutorConfig {
-            package: Package {
-                storage_engine: StorageEngine::ClpS,
-            },
-            archive_output: ArchiveOutput {
-                storage: ArchiveOutputStorage::S3 {
-                    staging_directory: staging_directory.to_owned(),
-                    s3_config: S3Config {
-                        endpoint_url: endpoint_url.map(NonEmptyString::from_static_str),
-                        ..base_s3_config()
-                    },
-                },
-                ..ArchiveOutput::default()
-            },
-            ..SpiderTaskExecutorConfig::default()
         }
     }
 
@@ -914,123 +783,6 @@ mod tests {
                 OsString::from("5"),
             ]
         );
-    }
-
-    #[test]
-    fn resolve_archive_input_fs_joins_dataset_and_returns_no_credentials() -> anyhow::Result<()> {
-        let runtime = tokio::runtime::Runtime::new().expect("failed to create Tokio runtime");
-        let config = SpiderTaskExecutorConfig {
-            package: Package {
-                storage_engine: StorageEngine::ClpS,
-            },
-            archive_output: ArchiveOutput {
-                storage: ArchiveOutputStorage::Fs {
-                    directory: "var/data/archives".to_owned(),
-                },
-                ..ArchiveOutput::default()
-            },
-            ..SpiderTaskExecutorConfig::default()
-        };
-
-        let (descriptor, credential_env) = resolve_archive_input(
-            runtime.handle(),
-            Path::new("/clp"),
-            &config,
-            &"ds1".parse::<DatasetName>()?,
-            ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
-        )?;
-
-        let ArchiveDescriptor::Directory { path, archive_id } = descriptor else {
-            panic!("expected a directory descriptor");
-        };
-        assert_eq!(path, PathBuf::from("/clp/var/data/archives/ds1"));
-        assert_eq!(
-            archive_id,
-            ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID")
-        );
-        assert_eq!(credential_env, &[]);
-
-        Ok(())
-    }
-
-    #[test]
-    fn resolve_archive_input_s3_builds_object_url_and_credentials() -> anyhow::Result<()> {
-        let runtime = tokio::runtime::Runtime::new().expect("failed to create Tokio runtime");
-        let config = s3_backed_config("var/data/staged-archives", None);
-
-        let (descriptor, credential_env) = resolve_archive_input(
-            runtime.handle(),
-            Path::new("/clp"),
-            &config,
-            &"ds1".parse::<DatasetName>()?,
-            ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
-        )?;
-
-        let ArchiveDescriptor::ObjectUrl(url) = descriptor else {
-            panic!("expected an object-URL descriptor");
-        };
-        assert_eq!(
-            url,
-            format!("https://bucket.s3.amazonaws.com/LIB1/ds1/{ARCHIVE_ID}")
-        );
-        assert_eq!(
-            credential_env,
-            vec![
-                ("AWS_ACCESS_KEY_ID", "the-access-key".to_string()),
-                ("AWS_SECRET_ACCESS_KEY", "the-secret-key".to_string()),
-            ]
-        );
-
-        Ok(())
-    }
-
-    #[test]
-    fn resolve_archive_input_s3_ignores_staging_directory() -> anyhow::Result<()> {
-        const STAGING_DIRECTORY: &str = "/wrong-staging-directory";
-
-        let runtime = tokio::runtime::Runtime::new().expect("failed to create Tokio runtime");
-        let config = s3_backed_config(STAGING_DIRECTORY, None);
-
-        let (descriptor, _) = resolve_archive_input(
-            runtime.handle(),
-            Path::new("/clp"),
-            &config,
-            &"ds1".parse::<DatasetName>()?,
-            ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
-        )?;
-        let args = build_clp_s_query_args(&descriptor, &unbounded_query());
-
-        assert!(
-            !args
-                .iter()
-                .any(|arg| arg.to_string_lossy().contains(STAGING_DIRECTORY))
-        );
-
-        Ok(())
-    }
-
-    #[test]
-    fn resolve_archive_input_s3_custom_endpoint_uses_path_style_url() -> anyhow::Result<()> {
-        let runtime = tokio::runtime::Runtime::new().expect("failed to create Tokio runtime");
-        let config = s3_backed_config("var/data/staged-archives", Some("http://minio:9000"));
-
-        let (descriptor, _) = resolve_archive_input(
-            runtime.handle(),
-            Path::new("/clp"),
-            &config,
-            &"ds1".parse::<DatasetName>()?,
-            ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
-        )?;
-
-        let ArchiveDescriptor::ObjectUrl(url) = descriptor else {
-            panic!("expected an object-URL descriptor");
-        };
-        assert_eq!(
-            url,
-            format!("http://minio:9000/bucket/LIB1/ds1/{ARCHIVE_ID}")
-        );
-
-        Ok(())
     }
 
     #[test]
