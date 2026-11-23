@@ -33,10 +33,94 @@ pub fn set_up_logging(target: &str, is_verbose: bool) {
         .init();
 }
 
-/// Runs `future` to completion on a current-thread runtime, unless SIGINT or SIGTERM interrupts it.
+/// Runs `future` to completion on a current-thread runtime.
 ///
 /// The runtime is shut down without waiting for its blocking tasks, e.g., a write to stdout that an
 /// idle pager blocks.
+///
+/// # Type Parameters
+///
+/// * `FutureType` - The future to run.
+///
+/// # Returns
+///
+/// `future`'s output on success.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * Forwards [`tokio::runtime::Builder::build`]'s return values on failure.
+pub fn run_on_runtime<FutureType: Future>(
+    future: FutureType,
+) -> anyhow::Result<FutureType::Output> {
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .context("failed to create the runtime")?;
+    let output = runtime.block_on(future);
+    runtime.shutdown_background();
+    Ok(output)
+}
+
+/// SIGINT and SIGTERM, which interrupt a command.
+///
+/// As a container's PID 1, the process has no default action for these signals, so it listens for
+/// them itself.
+pub struct Signals {
+    interrupt: tokio::signal::unix::Signal,
+    terminate: tokio::signal::unix::Signal,
+}
+
+impl Signals {
+    /// Starts listening for SIGINT and SIGTERM.
+    ///
+    /// # Returns
+    ///
+    /// The signals on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`tokio::signal::unix::signal`]'s return values on failure.
+    ///
+    /// # Panics
+    ///
+    /// Panics if called outside a Tokio runtime with I/O enabled.
+    pub fn listen() -> anyhow::Result<Self> {
+        use tokio::signal::unix::SignalKind;
+        use tokio::signal::unix::signal;
+
+        Ok(Self {
+            interrupt: signal(SignalKind::interrupt()).context("failed to listen for SIGINT")?,
+            terminate: signal(SignalKind::terminate()).context("failed to listen for SIGTERM")?,
+        })
+    }
+
+    /// Runs `future` to completion, unless SIGINT or SIGTERM interrupts it first, in which case
+    /// `future` is dropped.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `FutureType` - The future to run.
+    ///
+    /// # Returns
+    ///
+    /// `future`'s output, or `None` if a signal interrupts it.
+    pub async fn until_signal<FutureType: Future>(
+        &mut self,
+        future: FutureType,
+    ) -> Option<FutureType::Output> {
+        tokio::select! {
+            output = future => Some(output),
+            _ = self.interrupt.recv() => None,
+            _ = self.terminate.recv() => None,
+        }
+    }
+}
+
+/// Runs `future` to completion on a current-thread runtime, unless SIGINT or SIGTERM interrupts it.
 ///
 /// # Type Parameters
 ///
@@ -50,32 +134,12 @@ pub fn set_up_logging(target: &str, is_verbose: bool) {
 ///
 /// Returns an error if:
 ///
-/// * Forwards [`tokio::runtime::Builder::build`]'s return values on failure.
-/// * Forwards [`tokio::signal::unix::signal`]'s return values on failure.
+/// * Forwards [`run_on_runtime`]'s return values on failure.
+/// * Forwards [`Signals::listen`]'s return values on failure.
 pub fn run_until_signal<FutureType: Future>(
     future: FutureType,
 ) -> anyhow::Result<Option<FutureType::Output>> {
-    use tokio::signal::unix::SignalKind;
-    use tokio::signal::unix::signal;
-
-    let runtime = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .context("failed to create the runtime")?;
-    let output = runtime.block_on(async {
-        // As the container's PID 1, the process has no default action for these signals.
-        let mut interrupt =
-            signal(SignalKind::interrupt()).context("failed to listen for SIGINT")?;
-        let mut terminate =
-            signal(SignalKind::terminate()).context("failed to listen for SIGTERM")?;
-        tokio::select! {
-            output = future => Ok(Some(output)),
-            _ = interrupt.recv() => Ok(None),
-            _ = terminate.recv() => Ok(None),
-        }
-    });
-    runtime.shutdown_background();
-    output
+    run_on_runtime(async { Ok(Signals::listen()?.until_signal(future).await) })?
 }
 
 /// Resolves the path at which the container reads the package config.
