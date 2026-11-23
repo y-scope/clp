@@ -153,20 +153,20 @@ mod tests {
     use std::num::NonZeroU64;
 
     use super::SEARCH_TIMEOUT_RATES;
-    use super::retention_lower_bound_millisecs;
+    use super::retention_cutoff_millisecs;
     use super::task_execution_policy;
 
     #[test]
     fn retention_cutoff_is_relative_to_job_creation() {
         assert_eq!(
-            retention_lower_bound_millisecs(
+            retention_cutoff_millisecs(
                 1500,
                 NonZeroU64::new(1000).expect("1000 is a positive retention period")
             ),
             500
         );
         assert_eq!(
-            retention_lower_bound_millisecs(i64::MIN, NonZeroU64::MIN),
+            retention_cutoff_millisecs(i64::MIN, NonZeroU64::MIN),
             i64::MIN
         );
     }

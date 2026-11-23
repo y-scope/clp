@@ -19,7 +19,7 @@ use crate::job_handle::ArchiveSelectionOptions;
 use crate::job_handle::archive::NonEmptyDatasetNameSet;
 use crate::job_handle::archive::SEARCH_TIMEOUT_RATES;
 use crate::job_handle::archive::ensure_datasets_exist;
-use crate::job_handle::archive::retention_lower_bound_millisecs;
+use crate::job_handle::archive::retention_cutoff_millisecs;
 use crate::job_handle::archive::task_execution_policy;
 
 /// Selects the archives a query job should search, and derives each one's task execution policy.
@@ -82,12 +82,10 @@ impl<'context_lifetime> ArchiveSelector<'context_lifetime> {
         let datasets = self.deduplicate_and_validate_requested_datasets(&query.datasets)?;
         ensure_datasets_exist(self.db_pool, self.db_config, &datasets).await?;
 
-        let retention_cutoff_millisecs =
-            self.options
-                .archive_retention_period_millisecs
-                .map(|period| {
-                    retention_lower_bound_millisecs(job_creation_timestamp_millisecs, period)
-                });
+        let retention_cutoff_millisecs = self
+            .options
+            .archive_retention_period_millisecs
+            .map(|period| retention_cutoff_millisecs(job_creation_timestamp_millisecs, period));
         let mut selected_archives = Vec::new();
         for dataset in datasets.iter() {
             selected_archives.extend(
