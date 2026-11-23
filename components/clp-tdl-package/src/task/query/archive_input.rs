@@ -27,15 +27,16 @@ pub(super) enum ArchiveDescriptor {
 }
 
 impl ArchiveDescriptor {
-    /// Builds the archive input and selection or authentication arguments for `clp-s`.
+    /// Converts the descriptor into the archive input and selection or authentication arguments for
+    /// `clp-s`.
     ///
     /// # Returns
     ///
     /// The ordered arguments that follow the subcommand.
-    pub(super) fn clp_s_args(&self) -> [OsString; 3] {
+    pub(super) fn into_clp_s_args(self) -> [OsString; 3] {
         match self {
             Self::Directory { path, archive_id } => [
-                path.as_os_str().to_os_string(),
+                path.into_os_string(),
                 OsString::from("--archive-id"),
                 OsString::from(archive_id.to_string()),
             ],
@@ -259,7 +260,7 @@ mod tests {
             &"ds1".parse::<DatasetName>()?,
             ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
         )?;
-        let args = descriptor.clp_s_args();
+        let args = descriptor.into_clp_s_args();
 
         assert!(
             !args

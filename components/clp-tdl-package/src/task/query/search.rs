@@ -108,7 +108,7 @@ pub(super) fn search(
         QueryOutput::ResultsCache(_) | QueryOutput::Network(_) => None,
     };
     let arg_lists = build_clp_s_arg_lists(
-        build_clp_s_query_args(&archive_descriptor, query),
+        build_clp_s_query_args(archive_descriptor, query),
         output,
         &config.results_cache,
         results_file
@@ -429,11 +429,11 @@ fn build_clp_s_file_output_args(results_file_path: &Path) -> Vec<OsString> {
 ///
 /// The ordered clp-s arguments, which the output handler's arguments follow.
 fn build_clp_s_query_args(
-    archive_descriptor: &ArchiveDescriptor,
+    archive_descriptor: ArchiveDescriptor,
     query: &SearchQuery,
 ) -> Vec<OsString> {
     let mut args = vec![OsString::from("s")];
-    args.extend(archive_descriptor.clp_s_args());
+    args.extend(archive_descriptor.into_clp_s_args());
 
     args.push(OsString::from(query.query_string.as_str()));
     if let Some(begin_timestamp_millisecs) = query.time_range.begin_timestamp_millisecs() {
@@ -693,7 +693,7 @@ mod tests {
         };
 
         assert_eq!(
-            build_clp_s_query_args(&directory_descriptor(), &query),
+            build_clp_s_query_args(directory_descriptor(), &query),
             vec![
                 OsString::from("s"),
                 OsString::from("/archives/ds1"),
@@ -715,7 +715,7 @@ mod tests {
 
         assert_eq!(
             build_clp_s_query_args(
-                &ArchiveDescriptor::ObjectUrl(url.clone()),
+                ArchiveDescriptor::ObjectUrl(url.clone()),
                 &unbounded_query()
             ),
             vec![
@@ -791,7 +791,7 @@ mod tests {
 
         assert_eq!(
             build_clp_s_arg_lists(
-                build_clp_s_query_args(&directory_descriptor(), &unbounded_query()),
+                build_clp_s_query_args(directory_descriptor(), &unbounded_query()),
                 &QueryOutput::File {},
                 &results_cache(),
                 Some(&results_file_path),
@@ -1051,7 +1051,7 @@ mod tests {
                 }),
             });
             let arg_lists = build_clp_s_arg_lists(
-                build_clp_s_query_args(&directory_descriptor(), &query),
+                build_clp_s_query_args(directory_descriptor(), &query),
                 &output,
                 &results_cache(),
                 None,
@@ -1124,7 +1124,7 @@ mod tests {
         });
         let arg_lists = build_clp_s_arg_lists(
             build_clp_s_query_args(
-                &ArchiveDescriptor::ObjectUrl("https://bucket.s3.amazonaws.com/archive".to_owned()),
+                ArchiveDescriptor::ObjectUrl("https://bucket.s3.amazonaws.com/archive".to_owned()),
                 &unbounded_query(),
             ),
             &output,

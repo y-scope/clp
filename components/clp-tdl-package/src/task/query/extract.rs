@@ -68,7 +68,7 @@ pub(super) fn run_clp_s_extract(
         resolve_archive_input(runtime, clp_home, config, &input.dataset, input.archive_id)?;
     let clp_s_bin = clp_binary_path(clp_home, "clp-s");
     let args = build_clp_s_extract_args(
-        &archive_descriptor,
+        archive_descriptor,
         output_directory,
         input.target_chunk_size,
     );
@@ -173,12 +173,12 @@ struct ChunkStatsLine {
 ///
 /// The extraction arguments, including chunk statistics output.
 fn build_clp_s_extract_args(
-    archive_descriptor: &ArchiveDescriptor,
+    archive_descriptor: ArchiveDescriptor,
     output_directory: &Path,
     target_chunk_size: Option<NonZeroU64>,
 ) -> Vec<OsString> {
     let mut args = vec![OsString::from("x")];
-    args.extend(archive_descriptor.clp_s_args());
+    args.extend(archive_descriptor.into_clp_s_args());
     args.extend([
         output_directory.as_os_str().to_os_string(),
         OsString::from("--ordered"),
@@ -327,7 +327,7 @@ mod tests {
                 .expect("the fixture has a valid archive ID"),
         };
         assert_eq!(
-            build_clp_s_extract_args(&descriptor, Path::new("/staging"), None),
+            build_clp_s_extract_args(descriptor, Path::new("/staging"), None),
             [
                 "x",
                 "/archives/ds1",
@@ -346,7 +346,7 @@ mod tests {
         const URL: &str = "https://bucket.s3.amazonaws.com/archives/ds1/archive";
         let descriptor = ArchiveDescriptor::ObjectUrl(URL.to_owned());
         assert_eq!(
-            build_clp_s_extract_args(&descriptor, Path::new("/staging"), NonZeroU64::new(1024)),
+            build_clp_s_extract_args(descriptor, Path::new("/staging"), NonZeroU64::new(1024)),
             [
                 "x",
                 URL,
