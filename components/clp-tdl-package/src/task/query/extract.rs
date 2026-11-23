@@ -541,7 +541,10 @@ exit 23"
         let error = run_stand_in(clp_home.path(), ArchiveOutput::default(), &script)
             .expect_err("a failed clp-s exit should be reported even with no stats");
 
-        assert!(format!("{error:#}").ends_with("clp-s exited with exit status: 23"));
+        assert_eq!(
+            error.root_cause().to_string(),
+            "clp-s exited with exit status: 23"
+        );
         let stderr_tail = error.to_string();
         let suffix = "last error\n";
         assert_eq!(
