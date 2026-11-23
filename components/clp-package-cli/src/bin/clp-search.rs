@@ -1,13 +1,13 @@
 //! `clp-search`: searches the compressed logs through the API server's `POST /query/stream` route,
 //! and writes each result to stdout as a JSON object on its own line.
 
+use std::num::NonZeroUsize;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::ExitCode;
 use std::time::Duration;
 
 use anyhow::Context;
-use bytes::Buf;
 use bytes::BytesMut;
 use clap::Parser;
 use clap::builder::NonEmptyStringValueParser;
@@ -16,7 +16,6 @@ use clp_package_cli::INTERRUPTED_EXIT_CODE;
 use clp_package_cli::Signals;
 use clp_package_cli::resolve_config_path;
 use clp_package_cli::run_on_runtime;
-use clp_package_cli::set_up_logging;
 use clp_rust_utils::api_server::SSE_KEEP_ALIVE_INTERVAL;
 use clp_rust_utils::api_server::streaming_query::StreamingQueryConfig;
 use clp_rust_utils::api_server::streaming_query::StreamingQueryEndEvent;
@@ -24,10 +23,7 @@ use clp_rust_utils::api_server::streaming_query::StreamingQueryErrorEvent;
 use clp_rust_utils::api_server::streaming_query::StreamingQueryJobEvent;
 use clp_rust_utils::clp_config::package::config::ApiServer;
 use clp_rust_utils::dataset::DatasetName;
-use clp_rust_utils::dataset::NonEmptyDatasetNames;
 use clp_rust_utils::job_config::QueryJobStatus;
-use clp_rust_utils::job_config::SearchQuery;
-use clp_rust_utils::job_config::TimeRange;
 use non_empty_string::NonEmptyString;
 use reqwest::Url;
 use serde::Deserialize;
@@ -40,7 +36,7 @@ const CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
 const READ_TIMEOUT: Duration = SSE_KEEP_ALIVE_INTERVAL.saturating_mul(4);
 
 /// The most batches of results that can wait to be written to stdout.
-const MAX_NUM_PENDING_BATCHES: usize = 16;
+const MAX_NUM_PENDING_BATCHES: NonZeroUsize = NonZeroUsize::new(16).expect("16 is nonzero");
 
 /// Command-line arguments for `clp-search`.
 #[derive(Parser)]
@@ -93,8 +89,7 @@ struct Args {
 #[derive(Deserialize)]
 #[serde(default)]
 struct PackageConfig {
-    /// The API server's address, or `None` if a null or empty `api_server` disables the API
-    /// server.
+    /// The API server's address, or `None` if a null or empty `api_server` disables it.
     api_server: Option<ApiServerAddress>,
 }
 
@@ -249,6 +244,8 @@ impl EventReader {
     /// * Forwards [`reqwest::Response::chunk`]'s return values as [`Failure::ApiServer`] on
     ///   failure.
     async fn next_event(&mut self) -> Result<Option<Event>, Failure> {
+        use bytes::Buf;
+
         if let Some(event) = self.pending.take() {
             return event.map(Some);
         }
@@ -395,6 +392,10 @@ impl LineParser {
 fn main() -> ExitCode {
     use clap::CommandFactory;
     use clap::error::ErrorKind;
+    use clp_package_cli::set_up_logging;
+    use clp_rust_utils::dataset::NonEmptyDatasetNames;
+    use clp_rust_utils::job_config::SearchQuery;
+    use clp_rust_utils::job_config::TimeRange;
 
     let args = Args::parse();
     let time_range = TimeRange::new(args.begin_time, args.end_time).unwrap_or_else(|error| {
@@ -413,7 +414,7 @@ fn main() -> ExitCode {
     };
 
     set_up_logging(env!("CARGO_CRATE_NAME"), args.verbose);
-    match run(args.config.as_deref(), &streaming_query_config) {
+    match run(args.config, &streaming_query_config) {
         Ok(Outcome::Succeeded) => ExitCode::SUCCESS,
         Ok(Outcome::Interrupted { query_job_id }) => {
             tracing::warn!(
@@ -444,7 +445,7 @@ fn main() -> ExitCode {
 /// * Forwards [`run_on_runtime`]'s return values as [`Failure::Local`] on failure.
 /// * Forwards [`search`]'s return values on failure.
 fn run(
-    host_config_path: Option<&Path>,
+    host_config_path: Option<PathBuf>,
     streaming_query_config: &StreamingQueryConfig,
 ) -> Result<Outcome, (Failure, Option<u64>)> {
     let config_path = resolve_config_path(host_config_path).map_err(local_failure)?;
@@ -567,7 +568,7 @@ async fn search(
 ///
 /// * [`Failure::ApiServer`] if:
 ///   * The API server responds with an unsuccessful status.
-///   * The response's first event isn't the `job` event.
+///   * The response's first event is an `error` event, or another event than `job`.
 ///   * The response body ends before any event.
 /// * Forwards [`reqwest::RequestBuilder::send`]'s return values as [`Failure::ApiServer`] on
 ///   failure.
@@ -608,6 +609,9 @@ async fn submit(
             query_job_id,
             events,
         }),
+        Some(Event::Error(StreamingQueryErrorEvent { message })) => Err(Failure::ApiServer(
+            anyhow::anyhow!("the API server failed during the search: {message}"),
+        )),
         Some(_) => Err(Failure::ApiServer(anyhow::anyhow!(
             "the API server's first event isn't the `job` event"
         ))),
@@ -635,9 +639,11 @@ async fn submit(
 /// # Cancel safety
 ///
 /// Dropping the future closes the connection, after which the API server requests the query job's
-/// cancellation.
+/// cancellation. It also detaches the writer of the results, which keeps writing the batches that
+/// wait, or stays blocked on a stdout that isn't read, until the runtime is shut down without
+/// waiting for it (see [`run_on_runtime`]).
 async fn stream_results(events: EventReader) -> Result<(), Failure> {
-    let (batch_sender, batch_receiver) = tokio::sync::mpsc::channel(MAX_NUM_PENDING_BATCHES);
+    let (batch_sender, batch_receiver) = tokio::sync::mpsc::channel(MAX_NUM_PENDING_BATCHES.get());
     let writer = tokio::task::spawn_blocking(move || write_batches(batch_receiver));
     let read_result = read_results(events, &batch_sender).await;
     drop(batch_sender);

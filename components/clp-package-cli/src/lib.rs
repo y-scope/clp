@@ -6,62 +6,8 @@ use std::path::PathBuf;
 use anyhow::Context;
 use clp_rust_utils::clp_config::package::DEFAULT_CONFIG_FILE_PATH;
 
-/// The directory at which the container mounts the host's root directory.
-pub const CONTAINER_HOST_ROOT: &str = "/mnt/host";
-
 /// The exit code of a command that a signal interrupted.
 pub const INTERRUPTED_EXIT_CODE: u8 = 130;
-
-/// The most symlinks that [`resolve_host_path`] follows in a path, the same as Linux's limit.
-const MAX_NUM_SYMLINKS_FOLLOWED: usize = 40;
-
-/// Sets up logging to stderr, at the debug level for `target`'s events if `is_verbose`, and at the
-/// info level otherwise.
-pub fn set_up_logging(target: &str, is_verbose: bool) {
-    use std::io::IsTerminal;
-
-    let filter = if is_verbose {
-        format!("info,{target}=debug")
-    } else {
-        "info".to_owned()
-    };
-    tracing_subscriber::fmt()
-        .with_env_filter(tracing_subscriber::EnvFilter::new(filter))
-        .with_writer(std::io::stderr)
-        .with_ansi(std::io::stderr().is_terminal())
-        .with_target(false)
-        .init();
-}
-
-/// Runs `future` to completion on a current-thread runtime.
-///
-/// The runtime is shut down without waiting for its blocking tasks, e.g., a write to stdout that an
-/// idle pager blocks.
-///
-/// # Type Parameters
-///
-/// * `FutureType` - The future to run.
-///
-/// # Returns
-///
-/// `future`'s output on success.
-///
-/// # Errors
-///
-/// Returns an error if:
-///
-/// * Forwards [`tokio::runtime::Builder::build`]'s return values on failure.
-pub fn run_on_runtime<FutureType: Future>(
-    future: FutureType,
-) -> anyhow::Result<FutureType::Output> {
-    let runtime = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .context("failed to create the runtime")?;
-    let output = runtime.block_on(future);
-    runtime.shutdown_background();
-    Ok(output)
-}
 
 /// SIGINT and SIGTERM, which interrupt a command.
 ///
@@ -120,6 +66,54 @@ impl Signals {
     }
 }
 
+/// Sets up logging to stderr, at the debug level for `target`'s events if `is_verbose`, and at the
+/// info level otherwise.
+pub fn set_up_logging(target: &str, is_verbose: bool) {
+    use std::io::IsTerminal;
+
+    let filter = if is_verbose {
+        format!("info,{target}=debug")
+    } else {
+        "info".to_owned()
+    };
+    tracing_subscriber::fmt()
+        .with_env_filter(tracing_subscriber::EnvFilter::new(filter))
+        .with_writer(std::io::stderr)
+        .with_ansi(std::io::stderr().is_terminal())
+        .with_target(false)
+        .init();
+}
+
+/// Runs `future` to completion on a current-thread runtime.
+///
+/// The runtime is shut down without waiting for its blocking tasks, e.g., a write to stdout that an
+/// idle pager blocks.
+///
+/// # Type Parameters
+///
+/// * `FutureType` - The future to run.
+///
+/// # Returns
+///
+/// `future`'s output on success.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * Forwards [`tokio::runtime::Builder::build`]'s return values on failure.
+pub fn run_on_runtime<FutureType: Future>(
+    future: FutureType,
+) -> anyhow::Result<FutureType::Output> {
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .context("failed to create the runtime")?;
+    let output = runtime.block_on(future);
+    runtime.shutdown_background();
+    Ok(output)
+}
+
 /// Resolves the path at which the container reads the package config.
 ///
 /// The package config's path on the host is `host_config_path`, or by default,
@@ -139,11 +133,11 @@ impl Signals {
 ///   * An environment variable that the resolution needs isn't set.
 ///   * The path on the host is still relative once it's joined onto `CLP_PWD_HOST`.
 /// * Forwards [`resolve_host_path`]'s return values on failure.
-pub fn resolve_config_path(host_config_path: Option<&Path>) -> anyhow::Result<PathBuf> {
+pub fn resolve_config_path(host_config_path: Option<PathBuf>) -> anyhow::Result<PathBuf> {
     use std::env::var_os;
 
     let host_config_path = if let Some(host_config_path) = host_config_path {
-        host_config_path.to_path_buf()
+        host_config_path
     } else {
         let clp_home = var_os("CLP_HOME").context("`CLP_HOME` isn't set")?;
         Path::new(&clp_home).join(DEFAULT_CONFIG_FILE_PATH)
@@ -169,8 +163,14 @@ pub fn resolve_config_path(host_config_path: Option<&Path>) -> anyhow::Result<Pa
     resolve_host_path(&host_config_path)
 }
 
-/// Resolves `host_path`, an absolute path on the host, into the path at which the container
-/// reaches it under [`CONTAINER_HOST_ROOT`].
+/// The directory at which the container mounts the host's root directory.
+const CONTAINER_HOST_ROOT: &str = "/mnt/host";
+
+/// The most symlinks that [`resolve_host_path`] follows in a path, the same as Linux's limit.
+const MAX_NUM_SYMLINKS_FOLLOWED: usize = 40;
+
+/// Resolves `host_path`, an absolute path on the host, into the path at which the container reaches
+/// it under [`CONTAINER_HOST_ROOT`].
 ///
 /// The path is resolved one component at a time, the way the host resolves it: a `..` component
 /// moves up a directory, but never above the host's root directory, and a symlink is replaced with
