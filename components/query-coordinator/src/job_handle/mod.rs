@@ -1,0 +1,33 @@
+//! Handles for driving query jobs to completion.
+
+pub(crate) mod archive;
+mod query;
+
+use std::num::NonZeroU64;
+use std::num::NonZeroUsize;
+use std::time::Duration;
+
+use clp_rust_utils::clp_config::package::config::Database;
+use sqlx::MySqlPool;
+
+pub use self::query::QueryJobHandle;
+
+/// Options for a query job running in Spider.
+pub struct SpiderOption {
+    pub poll_interval: Duration,
+    pub query_task_max_retry: u32,
+}
+
+/// Options for selecting the archives to search.
+pub struct ArchiveSelectionOptions {
+    pub archive_retention_period_millisecs: Option<NonZeroU64>,
+    pub max_datasets_per_query: Option<NonZeroUsize>,
+}
+
+/// Resources shared by query job handles created by the coordinator.
+pub struct QueryJobHandleContext {
+    pub db_pool: MySqlPool,
+    pub db_config: Database,
+    pub archive_selection_options: ArchiveSelectionOptions,
+    pub spider_option: SpiderOption,
+}

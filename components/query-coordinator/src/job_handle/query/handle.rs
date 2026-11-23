@@ -1,52 +1,24 @@
 //! Handle for driving a single query job to completion.
 
-use std::cmp::Reverse;
-use std::collections::HashSet;
-use std::num::NonZeroU64;
-use std::num::NonZeroUsize;
 use std::sync::Arc;
-use std::time::Duration;
 
-use clp_rust_utils::clp_config::package::config::Database;
-use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::job_config::QUERY_JOBS_TABLE_NAME;
 use clp_rust_utils::job_config::QueryJobConfig;
 use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::job_config::QueryJobStatus;
-use clp_rust_utils::types::ArchiveId;
 use const_format::formatcp;
 use spider_core::task::ExecutionPolicy;
-use spider_core::task::TimeoutPolicy;
 use spider_core::types::id::JobId as SpiderJobId;
 use spider_core::types::id::ResourceGroupId;
 use sqlx::MySql;
-use sqlx::MySqlPool;
 use sqlx::Transaction;
 
+use super::archive_selector::ArchiveSelector;
 use crate::Error;
-use crate::query_job_submitter::ArchiveMetadata;
+use crate::job_handle::QueryJobHandleContext;
+use crate::job_handle::archive::ArchiveMetadata;
 use crate::query_job_submitter::QueryJobOutcome;
 use crate::query_job_submitter::QueryJobSubmitter;
-
-/// Options for a query job running in Spider.
-pub struct SpiderOption {
-    pub poll_interval: Duration,
-    pub query_task_max_retry: u32,
-}
-
-/// Options for selecting the archives to search.
-pub struct ArchiveSelectionOptions {
-    pub archive_retention_period_millisecs: Option<NonZeroU64>,
-    pub max_datasets_per_query: Option<NonZeroUsize>,
-}
-
-/// Resources shared by query job handles created by the coordinator.
-pub struct QueryJobHandleContext {
-    pub db_pool: MySqlPool,
-    pub db_config: Database,
-    pub archive_selection_options: ArchiveSelectionOptions,
-    pub spider_option: SpiderOption,
-}
 
 /// Handles the asynchronous submission of a query job and the retrieval of its result.
 ///
@@ -59,7 +31,7 @@ pub struct QueryJobHandle<SubmitterType: QueryJobSubmitter> {
     job_submitter: SubmitterType,
     resource_group_id: ResourceGroupId,
     query_job_config: QueryJobConfig,
-    archive_end_ts_lower_bound_millisecs: Option<i64>,
+    job_creation_timestamp_millisecs: i64,
 }
 
 impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
@@ -69,7 +41,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// A newly created [`QueryJobHandle`] for the given query job.
     #[must_use]
-    pub fn new(
+    pub const fn new(
         context: Arc<QueryJobHandleContext>,
         query_job_id: QueryJobId,
         job_submitter: SubmitterType,
@@ -77,18 +49,13 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
         query_job_config: QueryJobConfig,
         job_creation_timestamp_millisecs: i64,
     ) -> Self {
-        let archive_end_ts_lower_bound_millisecs = context
-            .archive_selection_options
-            .archive_retention_period_millisecs
-            .map(|period| job_creation_timestamp_millisecs.saturating_sub_unsigned(period.get()));
-
         Self {
             context,
             query_job_id,
             job_submitter,
             resource_group_id,
             query_job_config,
-            archive_end_ts_lower_bound_millisecs,
+            job_creation_timestamp_millisecs,
         }
     }
 
@@ -227,12 +194,16 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// * Forwards [`ArchiveSelector::select`]'s return values on failure.
     async fn plan(&self) -> Result<Vec<(ArchiveMetadata, ExecutionPolicy)>, Error> {
-        ArchiveSelector {
-            context: &self.context,
-            query_job_config: &self.query_job_config,
-            archive_end_ts_lower_bound_millisecs: self.archive_end_ts_lower_bound_millisecs,
-        }
-        .select()
+        ArchiveSelector::new(
+            &self.context.db_pool,
+            &self.context.db_config,
+            &self.context.archive_selection_options,
+        )
+        .select(
+            &self.query_job_config.query,
+            self.job_creation_timestamp_millisecs,
+            self.context.spider_option.query_task_max_retry,
+        )
         .await
     }
 
@@ -482,355 +453,6 @@ impl From<&QueryJobOutcome> for QueryJobStatus {
             QueryJobOutcome::Succeeded => Self::Succeeded,
             QueryJobOutcome::Failed { .. } => Self::Failed,
             QueryJobOutcome::Cancelled => Self::Cancelled,
-        }
-    }
-}
-
-/// Selects the archives a query job should search, and derives each one's task execution policy.
-///
-/// # Lifetimes
-///
-/// * `'job_handle_lifetime` - The lifetime of the [`QueryJobHandle`] state borrowed by the
-///   selector.
-struct ArchiveSelector<'job_handle_lifetime> {
-    context: &'job_handle_lifetime QueryJobHandleContext,
-    query_job_config: &'job_handle_lifetime QueryJobConfig,
-    archive_end_ts_lower_bound_millisecs: Option<i64>,
-}
-
-impl ArchiveSelector<'_> {
-    /// Prepares the task inputs for the query job.
-    ///
-    /// This method validates and deduplicates the job's requested datasets, then retrieves from the
-    /// CLP database the metadata of the archives matching the query, ordered by descending archive
-    /// end timestamp, and attaches an execution policy derived from each archive's uncompressed
-    /// size to its task. Archives that end before the job's archive retention lower bound, if any,
-    /// are excluded.
-    ///
-    /// # Returns
-    ///
-    /// A vector of tuples on success, where each tuple contains:
-    ///
-    /// * The [`ArchiveMetadata`] identifying the archive searched by a single query task.
-    /// * The [`ExecutionPolicy`] for that task.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * Forwards [`Self::deduplicate_and_validate_requested_datasets`]'s return values on failure.
-    /// * Forwards [`Self::ensure_all_required_datasets_exist`]'s return values on failure.
-    /// * Forwards [`Self::fetch_archives`]'s return values on failure.
-    async fn select(&self) -> Result<Vec<(ArchiveMetadata, ExecutionPolicy)>, Error> {
-        let datasets = self.deduplicate_and_validate_requested_datasets()?;
-        self.ensure_all_required_datasets_exist(&datasets).await?;
-
-        let mut selected_archives = Vec::new();
-        for dataset in &datasets {
-            selected_archives.extend(self.fetch_archives(dataset).await?);
-        }
-        selected_archives.sort_by_key(|archive| Reverse(archive.end_timestamp));
-
-        Ok(selected_archives
-            .into_iter()
-            .map(|archive| {
-                let execution_policy =
-                    self.compute_query_task_execution_policy(archive.uncompressed_size);
-                (archive, execution_policy)
-            })
-            .collect())
-    }
-
-    /// Validates and deduplicates the datasets requested by a query job.
-    ///
-    /// # Returns
-    ///
-    /// The distinct requested datasets on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * [`Error::InvalidQueryJobConfig`] if the number of distinct datasets exceeds
-    ///   [`ArchiveSelectionOptions::max_datasets_per_query`].
-    fn deduplicate_and_validate_requested_datasets(&self) -> Result<HashSet<DatasetName>, Error> {
-        let datasets: HashSet<DatasetName> = self
-            .query_job_config
-            .query
-            .datasets
-            .as_slice()
-            .iter()
-            .cloned()
-            .collect();
-
-        if let Some(max_datasets_per_query) = self
-            .context
-            .archive_selection_options
-            .max_datasets_per_query
-            && datasets.len() > max_datasets_per_query.get()
-        {
-            return Err(Error::InvalidQueryJobConfig(format!(
-                "the number of requested datasets ({}) exceeds `max_datasets_per_query` \
-                 ({max_datasets_per_query})",
-                datasets.len()
-            )));
-        }
-
-        Ok(datasets)
-    }
-
-    /// Checks that every requested dataset exists in the metadata database.
-    ///
-    /// `datasets` is assumed to be non-empty, since an empty set would make the generated `IN`
-    /// clause invalid SQL. The job config's [`clp_rust_utils::dataset::NonEmptyDatasetNames`]
-    /// guarantees this.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * [`Error::InvalidQueryJobConfig`] if any requested dataset doesn't exist.
-    /// * Forwards [`sqlx::query::QueryScalar::fetch_one`]'s return values on failure.
-    async fn ensure_all_required_datasets_exist(
-        &self,
-        datasets: &HashSet<DatasetName>,
-    ) -> Result<(), Error> {
-        let datasets_table = self.context.db_config.datasets_table_name();
-        let mut query_builder = sqlx::QueryBuilder::<sqlx::MySql>::new(format!(
-            "SELECT COUNT(*) FROM `{datasets_table}` WHERE CAST(`name` AS BINARY) IN ("
-        ));
-        let mut separated_datasets = query_builder.separated(", ");
-        for dataset in datasets {
-            separated_datasets.push_bind(dataset);
-        }
-        query_builder.push(")");
-
-        let num_existing_datasets: i64 = query_builder
-            .build_query_scalar()
-            .fetch_one(&self.context.db_pool)
-            .await?;
-        if usize::try_from(num_existing_datasets).ok() != Some(datasets.len()) {
-            return Err(Error::InvalidQueryJobConfig(
-                "one or more requested datasets don't exist".to_owned(),
-            ));
-        }
-
-        Ok(())
-    }
-
-    /// Selects archives from one dataset that overlap the query's time range and retention window.
-    ///
-    /// # Returns
-    ///
-    /// The selected archives on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * Forwards [`sqlx::query::QueryAs::fetch_all`]'s return values on failure.
-    async fn fetch_archives(&self, dataset: &DatasetName) -> Result<Vec<ArchiveMetadata>, Error> {
-        let archives_table = self.context.db_config.archives_table_name(dataset);
-        let mut query_builder = sqlx::QueryBuilder::<sqlx::MySql>::new(format!(
-            "SELECT `id`, `uncompressed_size`, `end_timestamp` FROM `{archives_table}` WHERE TRUE"
-        ));
-        let time_range = self.query_job_config.query.time_range;
-        if let Some(end_timestamp) = time_range.end_timestamp_millisecs() {
-            query_builder
-                .push(" AND `begin_timestamp` <= ")
-                .push_bind(end_timestamp);
-        }
-        if let Some(begin_timestamp) = time_range.begin_timestamp_millisecs() {
-            query_builder
-                .push(" AND `end_timestamp` >= ")
-                .push_bind(begin_timestamp);
-        }
-        if let Some(lower_bound) = self.archive_end_ts_lower_bound_millisecs {
-            query_builder
-                .push(" AND (`end_timestamp` >= ")
-                .push_bind(lower_bound)
-                .push(" OR `end_timestamp` = 0)");
-        }
-
-        Ok(query_builder
-            .build_query_as::<ArchiveRowProjection>()
-            .fetch_all(&self.context.db_pool)
-            .await?
-            .into_iter()
-            .map(|row| ArchiveMetadata {
-                id: row.id,
-                dataset: dataset.clone(),
-                uncompressed_size: row.uncompressed_size,
-                end_timestamp: row.end_timestamp,
-            })
-            .collect())
-    }
-
-    /// Derives the execution policy of the query task that searches an archive whose uncompressed
-    /// size is `archive_uncompressed_size` bytes.
-    ///
-    /// The soft timeout is an aggressive estimate of the task's execution time, whereas the hard
-    /// timeout is a conservative deadline that assumes the entire archive is extracted.
-    ///
-    /// # Returns
-    ///
-    /// The query task's execution policy.
-    fn compute_query_task_execution_policy(
-        &self,
-        archive_uncompressed_size: u64,
-    ) -> ExecutionPolicy {
-        const BYTES_PER_MIB: u64 = 1024 * 1024;
-        const SOFT_TIMEOUT_MILLISECS_PER_MIB: u64 = 10;
-        const HARD_TIMEOUT_MILLISECS_PER_MIB: u64 = 2 * 1000;
-
-        const MIN_SOFT_TIMEOUT_MILLISECS: u64 = 1000;
-        const MIN_HARD_TIMEOUT_MILLISECS: u64 = 10_000;
-
-        /// The maximum timeout accepted by Spider, in milliseconds (24 hours).
-        const MAX_TIMEOUT_MILLISECS: u64 = 1000 * 60 * 60 * 24;
-
-        let hard_timeout_ms = (archive_uncompressed_size
-            .saturating_mul(HARD_TIMEOUT_MILLISECS_PER_MIB)
-            / BYTES_PER_MIB)
-            .clamp(MIN_HARD_TIMEOUT_MILLISECS, MAX_TIMEOUT_MILLISECS);
-        let soft_timeout_ms = (archive_uncompressed_size
-            .saturating_mul(SOFT_TIMEOUT_MILLISECS_PER_MIB)
-            / BYTES_PER_MIB)
-            .clamp(MIN_SOFT_TIMEOUT_MILLISECS, hard_timeout_ms - 1);
-
-        ExecutionPolicy {
-            max_num_retry: self.context.spider_option.query_task_max_retry,
-            timeout_policy: TimeoutPolicy {
-                soft_timeout_ms,
-                hard_timeout_ms,
-            },
-            ..ExecutionPolicy::default()
-        }
-    }
-}
-
-/// Columns projected from an archives table.
-///
-/// [`ArchiveMetadata`] can't be decoded directly from a row since the dataset is encoded in the
-/// archives table's name rather than stored in a column.
-#[derive(sqlx::FromRow)]
-struct ArchiveRowProjection {
-    id: ArchiveId,
-    #[sqlx(try_from = "i64")]
-    uncompressed_size: u64,
-    end_timestamp: i64,
-}
-
-#[cfg(test)]
-mod tests {
-    use std::collections::HashSet;
-    use std::num::NonZeroUsize;
-    use std::time::Duration;
-
-    use clp_rust_utils::clp_config::package::config::Database;
-    use clp_rust_utils::dataset::DatasetName;
-    use clp_rust_utils::dataset::NonEmptyDatasetNames;
-    use clp_rust_utils::job_config::QueryJobConfig;
-    use clp_rust_utils::job_config::QueryOutput;
-    use clp_rust_utils::job_config::ResultsCacheOutput;
-    use clp_rust_utils::job_config::SearchQuery;
-    use clp_rust_utils::job_config::TimeRange;
-    use clp_rust_utils::types::non_empty_string::ExpectedNonEmpty;
-    use non_empty_string::NonEmptyString;
-    use sqlx::mysql::MySqlPoolOptions;
-
-    use super::ArchiveSelectionOptions;
-    use super::ArchiveSelector;
-    use super::QueryJobHandleContext;
-    use super::SpiderOption;
-    use crate::Error;
-
-    #[tokio::test]
-    async fn duplicate_requested_datasets_count_once_toward_max_datasets_per_query() {
-        let context = context(NonZeroUsize::new(1));
-        let other_dataset: DatasetName = "other"
-            .parse()
-            .expect("name should be a valid dataset name");
-        let select_datasets = |datasets| {
-            let base_query_job_config = base_query_job_config();
-            let query_job_config = QueryJobConfig {
-                query: SearchQuery {
-                    datasets: NonEmptyDatasetNames::try_from(datasets)
-                        .expect("dataset names should be non-empty"),
-                    ..base_query_job_config.query
-                },
-                ..base_query_job_config
-            };
-            ArchiveSelector {
-                context: &context,
-                query_job_config: &query_job_config,
-                archive_end_ts_lower_bound_millisecs: None,
-            }
-            .deduplicate_and_validate_requested_datasets()
-        };
-
-        assert_eq!(
-            select_datasets(vec![DatasetName::default(), DatasetName::default()])
-                .expect("duplicate datasets should count once"),
-            HashSet::from([DatasetName::default()])
-        );
-        let error = select_datasets(vec![DatasetName::default(), other_dataset])
-            .expect_err("two distinct datasets should exceed the limit");
-        assert!(
-            matches!(
-                &error,
-                Error::InvalidQueryJobConfig(message) if message.contains("max_datasets_per_query")
-            ),
-            "unexpected error: {error:?}"
-        );
-    }
-
-    /// # Returns
-    ///
-    /// A query job handle context whose database pool connects lazily, so tests that don't query
-    /// the database need no database.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the database URL is invalid.
-    fn context(max_datasets_per_query: Option<NonZeroUsize>) -> QueryJobHandleContext {
-        QueryJobHandleContext {
-            db_pool: MySqlPoolOptions::new()
-                .connect_lazy("mysql://localhost/clp-db")
-                .expect("the database URL should be valid"),
-            db_config: Database::default(),
-            archive_selection_options: ArchiveSelectionOptions {
-                archive_retention_period_millisecs: None,
-                max_datasets_per_query,
-            },
-            spider_option: SpiderOption {
-                poll_interval: Duration::from_secs(1),
-                query_task_max_retry: 0,
-            },
-        }
-    }
-
-    /// # Returns
-    ///
-    /// A query job config that searches the default dataset and buffers its results in the
-    /// results cache.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the dataset names are empty.
-    fn base_query_job_config() -> QueryJobConfig {
-        QueryJobConfig {
-            query: SearchQuery {
-                datasets: NonEmptyDatasetNames::try_from(vec![DatasetName::default()])
-                    .expect("dataset names should be non-empty"),
-                query_string: NonEmptyString::from_static_str("*"),
-                time_range: TimeRange::default(),
-                ignore_case: false,
-            },
-            output: QueryOutput::ResultsCache(ResultsCacheOutput {
-                max_num_results: None,
-                aggregation: None,
-            }),
         }
     }
 }
