@@ -451,6 +451,19 @@ mod tests {
     }
 
     #[test]
+    fn read_chunk_paths_accepts_a_record_at_the_line_limit() -> anyhow::Result<()> {
+        let mut record = b"{\"path\":\"/staging/a\"}".to_vec();
+        record.resize(MAX_STATS_LINE_SIZE, b' ');
+        record.push(b'\n');
+
+        assert_eq!(
+            read_chunk_paths(record.as_slice())?,
+            [PathBuf::from("/staging/a")]
+        );
+        Ok(())
+    }
+
+    #[test]
     fn read_chunk_paths_enforces_the_aggregate_stdout_limit() -> anyhow::Result<()> {
         let num_records = MAX_STATS_OUTPUT_SIZE.div_ceil(MAX_STATS_LINE_SIZE);
         assert!(num_records < MAX_CHUNKS);
