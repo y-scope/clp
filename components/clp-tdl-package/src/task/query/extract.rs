@@ -117,6 +117,7 @@ const MAX_CHUNKS: usize = 1_000_000;
 const MAX_STDERR_TAIL_SIZE: usize = 64 * 1024;
 
 /// A subprocess that is killed and reaped on drop unless already reaped.
+#[must_use = "dropping the guard before waiting kills and reaps the subprocess"]
 struct ChildGuard {
     child: Option<Child>,
 }
