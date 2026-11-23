@@ -589,6 +589,7 @@ exec sleep 30"#
         script: &str,
     ) -> anyhow::Result<Vec<PathBuf>> {
         const RETURN_TIMEOUT: Duration = Duration::from_secs(10);
+        const RESULT_CHANNEL_CAPACITY: usize = 1;
 
         let bin_directory = clp_home.join("bin");
         let clp_s_path = bin_directory.join("clp-s");
@@ -598,7 +599,7 @@ exec sleep 30"#
         std::fs::set_permissions(clp_s_path, std::fs::Permissions::from_mode(0o755))
             .expect("the stand-in clp-s script should be executable");
         let clp_home = clp_home.to_path_buf();
-        let (sender, receiver) = std::sync::mpsc::channel();
+        let (sender, receiver) = std::sync::mpsc::sync_channel(RESULT_CHANNEL_CAPACITY);
         let worker = std::thread::spawn(move || {
             let runtime = tokio::runtime::Builder::new_current_thread()
                 .build()
