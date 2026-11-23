@@ -1126,6 +1126,7 @@ mod tests {
         let credential_env = [
             ("AWS_ACCESS_KEY_ID", "the-access-key"),
             ("AWS_SECRET_ACCESS_KEY", "the-secret-key"),
+            ("AWS_SESSION_TOKEN", "the-session-token"),
         ];
         let archive_descriptor = ArchiveDescriptor::S3 {
             url: "https://bucket.s3.amazonaws.com/archive".to_owned(),

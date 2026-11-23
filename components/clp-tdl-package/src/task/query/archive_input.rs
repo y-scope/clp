@@ -52,6 +52,7 @@ impl ArchiveDescriptor {
                 command
                     .arg(url)
                     .args(["--auth", "s3"])
+                    .env_remove("AWS_SESSION_TOKEN")
                     .envs(credential_env.iter().map(|(name, value)| (*name, value)));
             }
         }
@@ -254,6 +255,7 @@ mod tests {
                     OsStr::new("AWS_SECRET_ACCESS_KEY"),
                     Some(OsStr::new("the-secret-key"))
                 ),
+                (OsStr::new("AWS_SESSION_TOKEN"), None),
             ])
         );
 
