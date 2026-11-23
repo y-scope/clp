@@ -24,7 +24,7 @@ use crate::job_handle::archive::task_execution_policy;
 
 /// Selects the archives a query job should search, and derives each one's task execution policy.
 ///
-/// # Lifetimes
+/// # Type Parameters
 ///
 /// * `'context_lifetime` - The lifetime of the database resources and selection options.
 pub(super) struct ArchiveSelector<'context_lifetime> {
@@ -111,6 +111,10 @@ impl<'context_lifetime> ArchiveSelector<'context_lifetime> {
     }
 
     /// Validates and deduplicates the datasets requested by a query job.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `'dataset_lifetime` - The lifetime of the requested dataset names.
     ///
     /// # Returns
     ///

@@ -25,7 +25,7 @@ pub(super) struct ArchiveTaskTimeoutRates {
 
 /// A non-empty set of distinct dataset names.
 ///
-/// # Lifetimes
+/// # Type Parameters
 ///
 /// * `'dataset_lifetime` - The lifetime of the borrowed dataset names.
 #[derive(Debug)]
@@ -100,7 +100,7 @@ pub(super) async fn ensure_datasets_exist(
 /// # Returns
 ///
 /// The inclusive lower bound on archive end timestamps in Unix epoch milliseconds.
-pub(super) const fn retention_lower_bound_millisecs(
+pub(super) const fn retention_cutoff_millisecs(
     job_creation_timestamp_millisecs: i64,
     archive_retention_period_millisecs: NonZeroU64,
 ) -> i64 {
@@ -127,6 +127,9 @@ pub(super) fn task_execution_policy(
 
     /// The maximum timeout accepted by Spider, in milliseconds (24 hours).
     const MAX_TIMEOUT_MILLISECS: u64 = 1000 * 60 * 60 * 24;
+
+    const _: () = assert!(MIN_SOFT_TIMEOUT_MILLISECS < MIN_HARD_TIMEOUT_MILLISECS);
+    const _: () = assert!(MIN_HARD_TIMEOUT_MILLISECS <= MAX_TIMEOUT_MILLISECS);
 
     let hard_timeout_ms = (archive_uncompressed_size.saturating_mul(rates.hard_millisecs_per_mib)
         / BYTES_PER_MIB)
