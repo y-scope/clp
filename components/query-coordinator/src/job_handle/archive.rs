@@ -5,6 +5,7 @@ use std::num::NonZeroU64;
 
 use clp_rust_utils::clp_config::package::config::Database;
 use clp_rust_utils::dataset::DatasetName;
+use clp_rust_utils::dataset::NonEmptyDatasetNames;
 use clp_rust_utils::types::ArchiveId;
 use spider_core::task::ExecutionPolicy;
 use spider_core::task::TimeoutPolicy;
@@ -39,9 +40,43 @@ pub(super) struct ArchiveTaskTimeoutRates {
     hard_millisecs_per_mib: u64,
 }
 
-/// Checks that every requested dataset exists in the metadata database.
+/// A non-empty set of distinct dataset names.
 ///
-/// The caller must supply at least one dataset.
+/// # Lifetimes
+///
+/// * `'dataset_lifetime` - The lifetime of the borrowed dataset names.
+#[derive(Debug)]
+pub(super) struct NonEmptyDatasetNameSet<'dataset_lifetime> {
+    names: HashSet<&'dataset_lifetime DatasetName>,
+}
+
+impl<'dataset_lifetime> NonEmptyDatasetNameSet<'dataset_lifetime> {
+    /// # Returns
+    ///
+    /// An iterator over the distinct dataset names.
+    pub(super) fn iter(&self) -> impl Iterator<Item = &'dataset_lifetime DatasetName> + '_ {
+        self.names.iter().copied()
+    }
+
+    /// # Returns
+    ///
+    /// The number of distinct dataset names.
+    pub(super) fn len(&self) -> usize {
+        self.names.len()
+    }
+}
+
+impl<'dataset_lifetime> From<&'dataset_lifetime NonEmptyDatasetNames>
+    for NonEmptyDatasetNameSet<'dataset_lifetime>
+{
+    fn from(names: &'dataset_lifetime NonEmptyDatasetNames) -> Self {
+        Self {
+            names: names.as_slice().iter().collect(),
+        }
+    }
+}
+
+/// Checks that every requested dataset exists in the metadata database.
 ///
 /// # Errors
 ///
@@ -49,22 +84,17 @@ pub(super) struct ArchiveTaskTimeoutRates {
 ///
 /// * [`Error::InvalidQueryJobConfig`] if any requested dataset doesn't exist.
 /// * Forwards [`sqlx::query::QueryScalar::fetch_one`]'s return values on failure.
-///
-/// # Panics
-///
-/// Panics if `datasets` is empty.
 pub(super) async fn ensure_datasets_exist(
     db_pool: &MySqlPool,
     db_config: &Database,
-    datasets: &HashSet<DatasetName>,
+    datasets: &NonEmptyDatasetNameSet<'_>,
 ) -> Result<(), Error> {
-    assert!(!datasets.is_empty(), "at least one dataset is required");
     let datasets_table = db_config.datasets_table_name();
     let mut query_builder = sqlx::QueryBuilder::<sqlx::MySql>::new(format!(
         "SELECT COUNT(*) FROM `{datasets_table}` WHERE CAST(`name` AS BINARY) IN ("
     ));
     let mut separated_datasets = query_builder.separated(", ");
-    for dataset in datasets {
+    for dataset in datasets.iter() {
         separated_datasets.push_bind(dataset);
     }
     query_builder.push(")");

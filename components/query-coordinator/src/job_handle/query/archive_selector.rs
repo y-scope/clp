@@ -1,7 +1,6 @@
 //! Archive selection for search queries.
 
 use std::cmp::Reverse;
-use std::collections::HashSet;
 
 use clp_rust_utils::clp_config::package::config::Database;
 use clp_rust_utils::dataset::DatasetName;
@@ -17,6 +16,7 @@ use sqlx::QueryBuilder;
 use crate::Error;
 use crate::job_handle::ArchiveSelectionOptions;
 use crate::job_handle::archive::ArchiveMetadata;
+use crate::job_handle::archive::NonEmptyDatasetNameSet;
 use crate::job_handle::archive::SEARCH_TIMEOUT_RATES;
 use crate::job_handle::archive::ensure_datasets_exist;
 use crate::job_handle::archive::retention_lower_bound_millisecs;
@@ -89,7 +89,7 @@ impl<'context_lifetime> ArchiveSelector<'context_lifetime> {
                     retention_lower_bound_millisecs(job_creation_timestamp_millisecs, period)
                 });
         let mut selected_archives = Vec::new();
-        for dataset in &datasets {
+        for dataset in datasets.iter() {
             selected_archives.extend(
                 self.fetch_archives(dataset, query.time_range, retention_cutoff_millisecs)
                     .await?,
@@ -122,12 +122,11 @@ impl<'context_lifetime> ArchiveSelector<'context_lifetime> {
     ///
     /// * [`Error::InvalidQueryJobConfig`] if the number of distinct datasets exceeds
     ///   [`ArchiveSelectionOptions::max_datasets_per_query`].
-    fn deduplicate_and_validate_requested_datasets(
+    fn deduplicate_and_validate_requested_datasets<'dataset_lifetime>(
         &self,
-        requested_datasets: &NonEmptyDatasetNames,
-    ) -> Result<HashSet<DatasetName>, Error> {
-        let datasets: HashSet<DatasetName> =
-            requested_datasets.as_slice().iter().cloned().collect();
+        requested_datasets: &'dataset_lifetime NonEmptyDatasetNames,
+    ) -> Result<NonEmptyDatasetNameSet<'dataset_lifetime>, Error> {
+        let datasets = NonEmptyDatasetNameSet::from(requested_datasets);
 
         if let Some(max_datasets_per_query) = self.options.max_datasets_per_query
             && datasets.len() > max_datasets_per_query.get()
@@ -224,7 +223,6 @@ fn build_archive_query(
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
     use std::num::NonZeroUsize;
 
     use clp_rust_utils::clp_config::package::config::Database;
@@ -249,21 +247,25 @@ mod tests {
             max_datasets_per_query: NonZeroUsize::new(1),
         };
         let selector = ArchiveSelector::new(&db_pool, &db_config, &options);
-        let select_datasets = |datasets| {
-            let datasets = NonEmptyDatasetNames::try_from(datasets)
+        let default_dataset = DatasetName::default();
+        let duplicates =
+            NonEmptyDatasetNames::try_from(vec![default_dataset.clone(), default_dataset.clone()])
                 .expect("dataset names should be non-empty");
-            selector.deduplicate_and_validate_requested_datasets(&datasets)
-        };
-
         assert_eq!(
-            select_datasets(vec![DatasetName::default(), DatasetName::default()])
-                .expect("duplicate datasets should count once"),
-            HashSet::from([DatasetName::default()])
+            selector
+                .deduplicate_and_validate_requested_datasets(&duplicates)
+                .expect("duplicate datasets should count once")
+                .iter()
+                .collect::<Vec<_>>(),
+            [&default_dataset]
         );
         let other_dataset: DatasetName = "other"
             .parse()
             .expect("name should be a valid dataset name");
-        let error = select_datasets(vec![DatasetName::default(), other_dataset])
+        let distinct = NonEmptyDatasetNames::try_from(vec![default_dataset, other_dataset])
+            .expect("dataset names should be non-empty");
+        let error = selector
+            .deduplicate_and_validate_requested_datasets(&distinct)
             .expect_err("two distinct datasets should exceed the limit");
         assert!(
             matches!(
