@@ -10,6 +10,7 @@ use anyhow::Context;
 use clap::Parser;
 use clap::builder::NonEmptyStringValueParser;
 use clap::builder::TypedValueParser;
+use clp_rust_utils::api_server::SSE_KEEP_ALIVE_INTERVAL;
 use clp_rust_utils::api_server::streaming_query::StreamingQueryConfig;
 use clp_rust_utils::api_server::streaming_query::StreamingQueryEndEvent;
 use clp_rust_utils::api_server::streaming_query::StreamingQueryErrorEvent;
@@ -28,9 +29,9 @@ use serde::Deserialize;
 /// The longest time that connecting to the API server may take.
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
 
-/// The longest time that a read from the API server may take. It must be longer than the 15 s
-/// interval of the API server's keep-alive comments, so that an idle search isn't failed.
-const READ_TIMEOUT: Duration = Duration::from_secs(60);
+/// The longest time that a read from the API server may take: four times the interval of the API
+/// server's keep-alive comments, so that an idle search isn't failed.
+const READ_TIMEOUT: Duration = SSE_KEEP_ALIVE_INTERVAL.saturating_mul(4);
 
 /// The directory at which the container mounts the host's root directory.
 const CONTAINER_HOST_ROOT: &str = "/mnt/host";

@@ -2,12 +2,12 @@
 //! that streams encoded events.
 
 use std::pin::pin;
-use std::time::Duration;
 
 use async_stream::stream;
 use axum::body::Bytes;
 use axum::response::IntoResponse;
 use axum::response::Response;
+use clp_rust_utils::api_server::SSE_KEEP_ALIVE_INTERVAL;
 use clp_rust_utils::types::ArchiveId;
 use futures::Stream;
 use futures::StreamExt;
@@ -64,7 +64,7 @@ impl ResultEncoder for SseEncoder {
 
 /// A Server-Sent Events response that streams already encoded events as they are, with the headers
 /// of an [`axum::response::Sse`] response, and sends a keep-alive comment whenever it has sent
-/// nothing for [`KEEP_ALIVE_INTERVAL`].
+/// nothing for [`SSE_KEEP_ALIVE_INTERVAL`].
 ///
 /// # Type Parameters
 ///
@@ -134,11 +134,6 @@ pub fn encode_event<DataType: Serialize>(
     Ok(Bytes::from(event))
 }
 
-/// The longest time a response sends nothing before it sends a keep-alive comment, so that proxies
-/// don't close its idle connection. The same as the interval of
-/// [`axum::response::sse::KeepAlive::default`].
-const KEEP_ALIVE_INTERVAL: Duration = Duration::from_secs(15);
-
 /// Adds keep-alive comments to `event_stream`.
 ///
 /// # Type Parameters
@@ -148,7 +143,7 @@ const KEEP_ALIVE_INTERVAL: Duration = Duration::from_secs(15);
 /// # Returns
 ///
 /// A stream that yields the items of `event_stream` as they are, and a keep-alive comment whenever
-/// it has yielded nothing for [`KEEP_ALIVE_INTERVAL`].
+/// it has yielded nothing for [`SSE_KEEP_ALIVE_INTERVAL`].
 fn with_keep_alive_comments<EventStreamType: Stream<Item = Result<Bytes, serde_json::Error>>>(
     event_stream: EventStreamType,
 ) -> impl Stream<Item = Result<Bytes, serde_json::Error>> {
@@ -157,7 +152,7 @@ fn with_keep_alive_comments<EventStreamType: Stream<Item = Result<Bytes, serde_j
     stream! {
         let mut event_stream = pin!(event_stream);
         loop {
-            match tokio::time::timeout(KEEP_ALIVE_INTERVAL, event_stream.next()).await {
+            match tokio::time::timeout(SSE_KEEP_ALIVE_INTERVAL, event_stream.next()).await {
                 Ok(Some(event)) => yield event,
                 Ok(None) => break,
                 Err(_) => yield Ok(Bytes::from_static(KEEP_ALIVE_COMMENT)),
@@ -168,6 +163,8 @@ fn with_keep_alive_comments<EventStreamType: Stream<Item = Result<Bytes, serde_j
 
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+
     use anyhow::Result;
     use axum::response::sse::Event;
     use query_result_listener::test_utils::ARCHIVE_ID;
@@ -303,7 +300,7 @@ mod tests {
 
         for num_intervals in 1..=2 {
             assert_eq!(next_frame_data(&mut body).await?, keep_alive_comment);
-            assert_eq!(start.elapsed(), KEEP_ALIVE_INTERVAL * num_intervals);
+            assert_eq!(start.elapsed(), SSE_KEEP_ALIVE_INTERVAL * num_intervals);
         }
         Ok(())
     }
@@ -327,7 +324,7 @@ mod tests {
 
         assert_eq!(next_frame_data(&mut body).await?, EVENT);
         assert_eq!(next_frame_data(&mut body).await?, keep_alive_comment);
-        assert_eq!(start.elapsed(), EVENT_DELAY + KEEP_ALIVE_INTERVAL);
+        assert_eq!(start.elapsed(), EVENT_DELAY + SSE_KEEP_ALIVE_INTERVAL);
         Ok(())
     }
 
@@ -354,14 +351,14 @@ mod tests {
 
         assert_eq!(next_frame_data(&mut body).await?, EVENT);
         assert!(
-            tokio::time::timeout(KEEP_ALIVE_INTERVAL.saturating_mul(2), body.frame())
+            tokio::time::timeout(SSE_KEEP_ALIVE_INTERVAL.saturating_mul(2), body.frame())
                 .await?
                 .is_none()
         );
         Ok(())
     }
 
-    /// Waits for the next frame of `body`, for longer than [`KEEP_ALIVE_INTERVAL`].
+    /// Waits for the next frame of `body`, for longer than [`SSE_KEEP_ALIVE_INTERVAL`].
     ///
     /// # Returns
     ///
@@ -378,7 +375,7 @@ mod tests {
         use anyhow::Context as _;
         use http_body_util::BodyExt;
 
-        let frame = tokio::time::timeout(KEEP_ALIVE_INTERVAL.saturating_mul(2), body.frame())
+        let frame = tokio::time::timeout(SSE_KEEP_ALIVE_INTERVAL.saturating_mul(2), body.frame())
             .await?
             .context("the body ended")??;
         frame
