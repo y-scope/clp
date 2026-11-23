@@ -5,11 +5,9 @@ mod spider;
 use std::time::Duration;
 
 use async_trait::async_trait;
-use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::job_config::QueryOutput;
 use clp_rust_utils::job_config::SearchQuery;
-use clp_rust_utils::types::ArchiveId;
 use serde::Deserialize;
 use serde::Serialize;
 use spider_core::task::ExecutionPolicy;
@@ -17,22 +15,7 @@ use spider_core::types::id::JobId;
 use spider_core::types::id::ResourceGroupId;
 
 use crate::Error;
-
-/// Metadata for an archive handled by query tasks.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ArchiveMetadata {
-    /// The archive's ID.
-    pub id: ArchiveId,
-
-    /// The archive's dataset.
-    pub dataset: DatasetName,
-
-    /// The archive's uncompressed size in bytes.
-    pub uncompressed_size: u64,
-
-    /// The archive's end timestamp in Unix epoch milliseconds.
-    pub end_timestamp: i64,
-}
+pub use crate::job_handle::ArchiveMetadata;
 
 /// The terminal outcome of a query job.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

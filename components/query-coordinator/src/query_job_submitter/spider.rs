@@ -24,7 +24,7 @@ use spider_core::types::io::TaskGraphInput;
 use spider_core::types::io::TaskGraphInputBuilder;
 
 use crate::Error;
-use crate::query_job_submitter::ArchiveMetadata;
+use crate::job_handle::ArchiveMetadata;
 use crate::query_job_submitter::QueryJobOutcome;
 use crate::query_job_submitter::QueryJobSubmitter;
 
@@ -238,7 +238,7 @@ mod tests {
     use spider_core::task::ExecutionPolicy;
 
     use super::build_query_task_graph;
-    use crate::query_job_submitter::ArchiveMetadata;
+    use crate::job_handle::ArchiveMetadata;
 
     #[test]
     fn commit_task_is_attached_only_for_count_by_time_output() -> anyhow::Result<()> {
