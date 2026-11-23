@@ -298,6 +298,8 @@ fn describe_stderr_tail(reader: ScopedJoinHandle<'_, std::io::Result<Vec<u8>>>) 
 #[cfg(test)]
 mod tests {
     use std::ffi::OsStr;
+    use std::io::BufReader;
+    use std::io::Read;
     use std::num::NonZeroU64;
     use std::os::unix::fs::PermissionsExt;
     use std::path::Path;
@@ -315,7 +317,9 @@ mod tests {
     use clp_rust_utils::task_io::extraction::ExtractTaskInput;
     use clp_rust_utils::types::ArchiveId;
 
+    use super::MAX_CHUNKS;
     use super::MAX_STATS_LINE_SIZE;
+    use super::MAX_STATS_OUTPUT_SIZE;
     use super::MAX_STDERR_TAIL_SIZE;
     use super::build_clp_s_extract_command;
     use super::read_chunk_paths;
@@ -324,6 +328,36 @@ mod tests {
     use crate::task::query::archive_input::base_s3_config;
 
     const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
+
+    /// A stream of repeated records backed by one borrowed record.
+    struct RepeatedRecords<'record> {
+        record: &'record [u8],
+        unread: &'record [u8],
+        remaining_records: usize,
+    }
+
+    impl<'record> RepeatedRecords<'record> {
+        /// # Returns
+        ///
+        /// A stream of `num_records` copies of `record`.
+        fn new(record: &'record [u8], num_records: usize) -> Self {
+            Self {
+                record,
+                unread: &[],
+                remaining_records: num_records,
+            }
+        }
+    }
+
+    impl Read for RepeatedRecords<'_> {
+        fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
+            if self.unread.is_empty() && self.remaining_records > 0 {
+                self.unread = self.record;
+                self.remaining_records -= 1;
+            }
+            self.unread.read(buffer)
+        }
+    }
 
     #[test]
     fn extract_args_use_the_filesystem_archive_id_without_a_chunk_target() {
@@ -410,6 +444,59 @@ mod tests {
                 .expect_err("invalid chunk statistics should be rejected");
             assert_eq!(error.to_string(), expected_error, "stats: {stats:?}");
         }
+    }
+
+    #[test]
+    fn read_chunk_paths_enforces_the_aggregate_stdout_limit() -> anyhow::Result<()> {
+        let num_records = MAX_STATS_OUTPUT_SIZE.div_ceil(MAX_STATS_LINE_SIZE);
+        assert!(num_records < MAX_CHUNKS);
+        let record_size = MAX_STATS_OUTPUT_SIZE / num_records;
+        let num_larger_records = MAX_STATS_OUTPUT_SIZE % num_records;
+        let padded_record = |size| {
+            let mut record = b"{\"path\":\"a\"}".to_vec();
+            assert!(record.len() < size);
+            record.resize(size - 1, b' ');
+            record.push(b'\n');
+            record
+        };
+        let record = padded_record(record_size);
+        let larger_record = padded_record(record_size + 1);
+        let at_limit = || {
+            RepeatedRecords::new(&record, num_records - num_larger_records)
+                .chain(RepeatedRecords::new(&larger_record, num_larger_records))
+        };
+
+        assert_eq!(
+            read_chunk_paths(BufReader::new(at_limit()))?.len(),
+            num_records
+        );
+
+        let over_limit = at_limit().chain(b"{\"path\":\"b\"}\n".as_slice());
+        let error = read_chunk_paths(BufReader::new(over_limit))
+            .expect_err("one more record should exceed the stdout limit");
+        assert_eq!(
+            error.to_string(),
+            format!("clp-s chunk statistics exceed {MAX_STATS_OUTPUT_SIZE} bytes")
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn read_chunk_paths_enforces_the_chunk_count_limit() -> anyhow::Result<()> {
+        let record = b"{\"path\":\"a\"}\n";
+        assert!(MAX_CHUNKS < MAX_STATS_OUTPUT_SIZE / record.len());
+
+        let at_limit = BufReader::new(RepeatedRecords::new(record, MAX_CHUNKS));
+        assert_eq!(read_chunk_paths(at_limit)?.len(), MAX_CHUNKS);
+
+        let over_limit = BufReader::new(RepeatedRecords::new(record, MAX_CHUNKS + 1));
+        let error = read_chunk_paths(over_limit)
+            .expect_err("one more record should exceed the chunk limit");
+        assert_eq!(
+            error.to_string(),
+            format!("clp-s reported more than {MAX_CHUNKS} chunks")
+        );
+        Ok(())
     }
 
     #[test]
