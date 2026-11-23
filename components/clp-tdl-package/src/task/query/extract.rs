@@ -269,7 +269,9 @@ fn read_chunk_paths(mut reader: impl BufRead) -> anyhow::Result<Vec<PathBuf>> {
 ///
 /// # Errors
 ///
-/// Forwards [`Read::read_to_end`]'s return values on failure.
+/// Returns an error if:
+///
+/// * Forwards [`Read::read_to_end`]'s return values on failure.
 fn drain_stderr_tail(mut stderr: impl Read) -> std::io::Result<Vec<u8>> {
     const READ_SIZE: u64 = 8 * 1024;
 
@@ -473,6 +475,7 @@ mod tests {
 
         let over_limit = at_limit().chain(b"{\"path\":\"b\"}\n".as_slice());
         let error = read_chunk_paths(BufReader::new(over_limit))
+            .map(|paths| paths.len())
             .expect_err("one more record should exceed the stdout limit");
         assert_eq!(
             error.to_string(),
@@ -491,6 +494,7 @@ mod tests {
 
         let over_limit = BufReader::new(RepeatedRecords::new(record, MAX_CHUNKS + 1));
         let error = read_chunk_paths(over_limit)
+            .map(|paths| paths.len())
             .expect_err("one more record should exceed the chunk limit");
         assert_eq!(
             error.to_string(),
