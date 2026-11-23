@@ -452,7 +452,7 @@ mod tests {
 
     #[test]
     fn read_chunk_paths_accepts_a_record_at_the_line_limit() -> anyhow::Result<()> {
-        let mut record = b"{\"path\":\"/staging/a\"}".to_vec();
+        let mut record = b" {\"path\":\"/staging/a\"}".to_vec();
         record.resize(MAX_STATS_LINE_SIZE, b' ');
         record.push(b'\n');
 
