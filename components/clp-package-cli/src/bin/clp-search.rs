@@ -460,10 +460,14 @@ async fn read_results(
         .context("failed to read the API server's response")
         .map_err(Failure::api_server)?
     {
-        unhandled.extend_from_slice(&chunk);
-        let Some(last_newline_pos) = unhandled.iter().rposition(|&byte| byte == b'\n') else {
+        // Only `chunk` is searched for the last newline, since the unhandled bytes before it have
+        // none.
+        let Some(newline_pos_in_chunk) = chunk.iter().rposition(|&byte| byte == b'\n') else {
+            unhandled.extend_from_slice(&chunk);
             continue;
         };
+        let last_newline_pos = unhandled.len() + newline_pos_in_chunk;
+        unhandled.extend_from_slice(&chunk);
         let mut outcome = Ok(ControlFlow::Continue(()));
         for line in unhandled[..last_newline_pos].split(|&byte| byte == b'\n') {
             outcome = handle_line(line, &mut event_name, &mut results, query_job_id);
