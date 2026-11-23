@@ -1,6 +1,7 @@
 //! `clp-search`: searches the compressed logs through the API server's `POST /query/stream` route,
 //! and writes each result to stdout as a JSON object on its own line.
 
+use std::ops::ControlFlow;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -395,10 +396,78 @@ async fn search(
 /// query route, and writes the data of each result to stdout as it is, on its own line, until the
 /// query job ends. The `job` event's query job ID is stored in `query_job_id`.
 ///
-/// The response body is read line by line. An `event: <name>` line names the event of the next
-/// `data: <data>` line, and a `data:` line without a name is a result. Comments and blank lines are
-/// skipped, and any other line is an error. Once stdout is closed, writing stops and the function
-/// succeeds.
+/// The response body is read a chunk at a time, and the results that a chunk completes are written
+/// to stdout together, so that they show up as they arrive without a write per result. Once stdout
+/// is closed, writing stops and the function succeeds.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * [`Failure::ApiServer`] if the response body ends before an `end` or `error` event.
+/// * [`Failure::Local`] if the results can't be written to stdout.
+/// * Forwards [`reqwest::Response::chunk`]'s return values as [`Failure::ApiServer`] on failure.
+/// * Forwards [`handle_line`]'s return values on failure.
+async fn write_results(
+    mut response: reqwest::Response,
+    query_job_id: &mut Option<u64>,
+) -> Result<(), Failure> {
+    use std::io::Write;
+
+    let mut event_name = None;
+    // The received bytes that aren't handled yet, i.e., the start of an incomplete line.
+    let mut unhandled = Vec::new();
+    // The results that the received chunk completes.
+    let mut results = Vec::new();
+    while let Some(chunk) = response
+        .chunk()
+        .await
+        .context("failed to read the API server's response")
+        .map_err(Failure::ApiServer)?
+    {
+        unhandled.extend_from_slice(&chunk);
+        let Some(last_newline_pos) = unhandled.iter().rposition(|&byte| byte == b'\n') else {
+            continue;
+        };
+        let mut outcome = Ok(ControlFlow::Continue(()));
+        for line in unhandled[..last_newline_pos].split(|&byte| byte == b'\n') {
+            outcome = handle_line(line, &mut event_name, &mut results, query_job_id);
+            if !matches!(outcome, Ok(ControlFlow::Continue(()))) {
+                break;
+            }
+        }
+        unhandled.drain(..=last_newline_pos);
+
+        if !results.is_empty() {
+            let mut stdout = std::io::stdout().lock();
+            match stdout.write_all(&results).and_then(|()| stdout.flush()) {
+                Err(error) if error.kind() == std::io::ErrorKind::BrokenPipe => return Ok(()),
+                result => result
+                    .context("failed to write the results")
+                    .map_err(Failure::Local)?,
+            }
+            results.clear();
+        }
+        if outcome?.is_break() {
+            return Ok(());
+        }
+    }
+    Err(Failure::ApiServer(anyhow::anyhow!(
+        "the API server's response ended before the query job did"
+    )))
+}
+
+/// Handles `line`, a line of a streaming query's response without its newline.
+///
+/// An `event: <name>` line names the event of the next `data: <data>` line in `event_name`, and a
+/// `data:` line without a name is a result, whose data is appended to `results` as it is, on its
+/// own line. The `job` event's query job ID is stored in `query_job_id`. Comments and blank lines
+/// are skipped, and any other line is an error.
+///
+/// # Returns
+///
+/// [`ControlFlow::Break`] if the `end` event says that the query job succeeded, or
+/// [`ControlFlow::Continue`] if the query job hasn't ended, on success.
 ///
 /// # Errors
 ///
@@ -407,89 +476,69 @@ async fn search(
 /// * [`Failure::QueryJob`] if the `end` event's status isn't [`QueryJobStatus::Succeeded`].
 /// * [`Failure::ApiServer`] if:
 ///   * The data of a `job`, `end` or `error` event doesn't deserialize.
-///   * The API server sends an `error` event, or an event with an unknown name.
-///   * The API server sends a line that isn't an `event:` or `data:` line, a comment, or a blank
-///     line.
-///   * The response body ends before an `end` or `error` event.
-/// * [`Failure::Local`] if a result can't be written to stdout.
-/// * Forwards [`tokio::io::Lines::next_line`]'s return values as [`Failure::ApiServer`] on failure.
-async fn write_results(
-    response: reqwest::Response,
+///   * The line is an `error` event, or an event with an unknown name.
+///   * The line isn't an `event:` or `data:` line, a comment, or a blank line.
+fn handle_line(
+    line: &[u8],
+    event_name: &mut Option<Vec<u8>>,
+    results: &mut Vec<u8>,
     query_job_id: &mut Option<u64>,
-) -> Result<(), Failure> {
-    use std::io::Write;
-
-    use futures::TryStreamExt;
-    use tokio::io::AsyncBufReadExt;
-
-    let mut lines =
-        tokio_util::io::StreamReader::new(response.bytes_stream().map_err(std::io::Error::other))
-            .lines();
-    let mut stdout = std::io::stdout();
-    let mut event_name = None;
-    while let Some(line) = lines
-        .next_line()
-        .await
-        .context("failed to read the API server's response")
-        .map_err(Failure::ApiServer)?
-    {
-        if line.is_empty() || line.starts_with(':') {
-            continue;
+) -> Result<ControlFlow<()>, Failure> {
+    let line = line.strip_suffix(b"\r").unwrap_or(line);
+    if line.is_empty() || line.starts_with(b":") {
+        return Ok(ControlFlow::Continue(()));
+    }
+    if let Some(name) = line.strip_prefix(b"event: ") {
+        *event_name = Some(name.to_vec());
+        return Ok(ControlFlow::Continue(()));
+    }
+    let Some(data) = line.strip_prefix(b"data: ") else {
+        return Err(Failure::ApiServer(anyhow::anyhow!(
+            "the API server sent an unexpected line {:?}",
+            String::from_utf8_lossy(line)
+        )));
+    };
+    match event_name.take().as_deref() {
+        None => {
+            results.extend_from_slice(data);
+            results.push(b'\n');
         }
-        if let Some(name) = line.strip_prefix("event: ") {
-            event_name = Some(name.to_owned());
-            continue;
+        Some(b"job") => {
+            let job: StreamingQueryJobEvent = serde_json::from_slice(data)
+                .context("invalid `job` event")
+                .map_err(Failure::ApiServer)?;
+            tracing::debug!(query_job_id = job.query_job_id, "Submitted the query job.");
+            *query_job_id = Some(job.query_job_id);
         }
-        let Some(data) = line.strip_prefix("data: ") else {
-            return Err(Failure::ApiServer(anyhow::anyhow!(
-                "the API server sent an unexpected line {line:?}"
+        Some(b"end") => {
+            let StreamingQueryEndEvent {
+                status,
+                num_results_emitted,
+            } = serde_json::from_slice(data)
+                .context("invalid `end` event")
+                .map_err(Failure::ApiServer)?;
+            tracing::debug!(status = ? status, num_results_emitted, "The query job ended.");
+            if status == QueryJobStatus::Succeeded {
+                return Ok(ControlFlow::Break(()));
+            }
+            return Err(Failure::QueryJob(anyhow::anyhow!(
+                "ended with status `{status:?}`"
             )));
-        };
-        match event_name.take().as_deref() {
-            None => match writeln!(stdout, "{data}").and_then(|()| stdout.flush()) {
-                Err(error) if error.kind() == std::io::ErrorKind::BrokenPipe => return Ok(()),
-                result => result
-                    .context("failed to write a result")
-                    .map_err(Failure::Local)?,
-            },
-            Some("job") => {
-                let job: StreamingQueryJobEvent = serde_json::from_str(data)
-                    .context("invalid `job` event")
-                    .map_err(Failure::ApiServer)?;
-                tracing::debug!(query_job_id = job.query_job_id, "Submitted the query job.");
-                *query_job_id = Some(job.query_job_id);
-            }
-            Some("end") => {
-                let StreamingQueryEndEvent {
-                    status,
-                    num_results_emitted,
-                } = serde_json::from_str(data)
-                    .context("invalid `end` event")
-                    .map_err(Failure::ApiServer)?;
-                tracing::debug!(status = ? status, num_results_emitted, "The query job ended.");
-                if status == QueryJobStatus::Succeeded {
-                    return Ok(());
-                }
-                return Err(Failure::QueryJob(anyhow::anyhow!(
-                    "ended with status `{status:?}`"
-                )));
-            }
-            Some("error") => {
-                let StreamingQueryErrorEvent { message } = serde_json::from_str(data)
-                    .context("invalid `error` event")
-                    .map_err(Failure::ApiServer)?;
-                return Err(Failure::ApiServer(anyhow::anyhow!(
-                    "the API server failed during the search: {message}"
-                )));
-            }
-            Some(name) => {
-                return Err(Failure::ApiServer(anyhow::anyhow!(
-                    "the API server sent an unknown event `{name}`"
-                )));
-            }
+        }
+        Some(b"error") => {
+            let StreamingQueryErrorEvent { message } = serde_json::from_slice(data)
+                .context("invalid `error` event")
+                .map_err(Failure::ApiServer)?;
+            return Err(Failure::ApiServer(anyhow::anyhow!(
+                "the API server failed during the search: {message}"
+            )));
+        }
+        Some(name) => {
+            return Err(Failure::ApiServer(anyhow::anyhow!(
+                "the API server sent an unknown event `{}`",
+                String::from_utf8_lossy(name)
+            )));
         }
     }
-    Err(Failure::ApiServer(anyhow::anyhow!(
-        "the API server's response ended before the query job did"
-    )))
+    Ok(ControlFlow::Continue(()))
 }
