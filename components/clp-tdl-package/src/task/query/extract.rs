@@ -596,7 +596,13 @@ exec sleep 30"#
     ///
     /// # Returns
     ///
-    /// The real runner's result.
+    /// The chunk paths reported by the stand-in on success, in emission order.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`run_clp_s_extract`]'s return values on failure.
     ///
     /// # Panics
     ///
