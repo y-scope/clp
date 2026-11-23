@@ -125,81 +125,31 @@ impl Default for ApiServerAddress {
     }
 }
 
-/// A failure of a search.
-struct Failure {
-    /// The kind of the failure, which determines the exit code of `clp-search`.
-    kind: FailureKind,
-
-    /// The error that caused the failure.
-    error: anyhow::Error,
-
-    /// The ID of the search's query job, if the failure happens once it's known.
-    query_job_id: Option<u64>,
-}
-
-/// The kind of a search's failure.
-enum FailureKind {
+/// A failure of a search, which determines the exit code of `clp-search`.
+enum Failure {
     /// The query job ended with a status other than [`QueryJobStatus::Succeeded`].
-    QueryJob,
+    QueryJob(anyhow::Error),
 
     /// The API server can't be reached, rejected the query, failed, or broke the stream of the
     /// query's events.
-    ApiServer,
+    ApiServer(anyhow::Error),
 
     /// A local error, e.g., the package config can't be read, or a result can't be written.
-    Local,
+    Local(anyhow::Error),
 }
 
 impl Failure {
-    /// # Returns
-    ///
-    /// A [`FailureKind::QueryJob`] failure caused by `error`.
-    const fn query_job(error: anyhow::Error) -> Self {
-        Self {
-            kind: FailureKind::QueryJob,
-            error,
-            query_job_id: None,
-        }
-    }
-
-    /// # Returns
-    ///
-    /// A [`FailureKind::ApiServer`] failure caused by `error`.
-    const fn api_server(error: anyhow::Error) -> Self {
-        Self {
-            kind: FailureKind::ApiServer,
-            error,
-            query_job_id: None,
-        }
-    }
-
-    /// # Returns
-    ///
-    /// A [`FailureKind::Local`] failure caused by `error`.
-    const fn local(error: anyhow::Error) -> Self {
-        Self {
-            kind: FailureKind::Local,
-            error,
-            query_job_id: None,
-        }
-    }
-
-    /// Logs the failure, with the ID of the search's query job once it's known.
+    /// Logs the failure, with the ID of the search's query job, `query_job_id`, once it's known.
     ///
     /// # Returns
     ///
-    /// The exit code of a search that fails this way: 1 for [`FailureKind::QueryJob`], 3 for
-    /// [`FailureKind::ApiServer`], and 4 for [`FailureKind::Local`].
-    fn report(self) -> ExitCode {
-        let Self {
-            kind,
-            error,
-            query_job_id,
-        } = self;
-        let exit_code = match kind {
-            FailureKind::QueryJob => 1,
-            FailureKind::ApiServer => 3,
-            FailureKind::Local => 4,
+    /// The exit code of a search that fails this way: 1 for [`Failure::QueryJob`], 3 for
+    /// [`Failure::ApiServer`], and 4 for [`Failure::Local`].
+    fn report(self, query_job_id: Option<u64>) -> ExitCode {
+        let (exit_code, error) = match self {
+            Self::QueryJob(error) => (1, error),
+            Self::ApiServer(error) => (3, error),
+            Self::Local(error) => (4, error),
         };
         tracing::error!(
             query_job_id,
@@ -240,12 +190,19 @@ fn main() -> ExitCode {
     };
 
     set_up_logging(env!("CARGO_CRATE_NAME"), args.verbose);
-    run(args.config.as_deref(), &streaming_query_config).unwrap_or_else(Failure::report)
+    let mut query_job_id = None;
+    run(
+        args.config.as_deref(),
+        &streaming_query_config,
+        &mut query_job_id,
+    )
+    .unwrap_or_else(|failure| failure.report(query_job_id))
 }
 
 /// Runs `streaming_query_config`'s search through the API server that the package config at
 /// `host_config_path`, or the default package config, configures, until the search ends or SIGINT
-/// or SIGTERM interrupts it.
+/// or SIGTERM interrupts it. The ID of the search's query job is stored in `query_job_id` once it's
+/// known.
 ///
 /// # Returns
 ///
@@ -256,33 +213,35 @@ fn main() -> ExitCode {
 ///
 /// Returns an error if:
 ///
-/// * Forwards [`resolve_config_path`]'s return values as [`FailureKind::Local`] on failure.
-/// * Forwards [`read_stream_query_url`]'s return values as [`FailureKind::Local`] on failure.
-/// * Forwards [`reqwest::ClientBuilder::build`]'s return values as [`FailureKind::Local`] on
-///   failure.
-/// * Forwards [`run_until_signal`]'s return values as [`FailureKind::Local`] on failure.
+/// * Forwards [`resolve_config_path`]'s return values as [`Failure::Local`] on failure.
+/// * Forwards [`read_stream_query_url`]'s return values as [`Failure::Local`] on failure.
+/// * Forwards [`reqwest::ClientBuilder::build`]'s return values as [`Failure::Local`] on failure.
+/// * Forwards [`run_until_signal`]'s return values as [`Failure::Local`] on failure.
 /// * Forwards [`search`]'s return values on failure.
 fn run(
     host_config_path: Option<&Path>,
     streaming_query_config: &StreamingQueryConfig,
+    query_job_id: &mut Option<u64>,
 ) -> Result<ExitCode, Failure> {
-    let config_path = resolve_config_path(host_config_path).map_err(Failure::local)?;
-    let stream_query_url = read_stream_query_url(&config_path).map_err(Failure::local)?;
+    let config_path = resolve_config_path(host_config_path).map_err(Failure::Local)?;
+    let stream_query_url = read_stream_query_url(&config_path).map_err(Failure::Local)?;
     let http_client = reqwest::Client::builder()
         .no_proxy()
         .connect_timeout(CONNECT_TIMEOUT)
         .read_timeout(READ_TIMEOUT)
         .build()
         .context("failed to build the HTTP client")
-        .map_err(Failure::local)?;
+        .map_err(Failure::Local)?;
     let Some(result) = run_until_signal(search(
         &http_client,
         stream_query_url,
         streaming_query_config,
+        query_job_id,
     ))
-    .map_err(Failure::local)?
+    .map_err(Failure::Local)?
     else {
         tracing::warn!(
+            query_job_id = *query_job_id,
             "The search was interrupted. The API server requests the query job's cancellation."
         );
         return Ok(ExitCode::from(INTERRUPTED_EXIT_CODE));
@@ -322,18 +281,17 @@ fn read_stream_query_url(config_path: &Path) -> anyhow::Result<Url> {
 
 /// Submits `streaming_query_config`'s query through `http_client` to the streaming query route at
 /// `stream_query_url`, and writes the data of each result to stdout as it is, on its own line,
-/// until the query job ends.
+/// until the query job ends. The query job's ID is stored in `query_job_id` once it's known.
 ///
 /// # Errors
 ///
 /// Returns an error if:
 ///
-/// * [`FailureKind::ApiServer`] if the API server responds with an unsuccessful status.
-/// * Forwards [`reqwest::RequestBuilder::send`]'s return values as [`FailureKind::ApiServer`] on
+/// * [`Failure::ApiServer`] if the API server responds with an unsuccessful status.
+/// * Forwards [`reqwest::RequestBuilder::send`]'s return values as [`Failure::ApiServer`] on
 ///   failure.
-/// * Forwards [`reqwest::Response::text`]'s return values as [`FailureKind::ApiServer`] on failure.
-/// * Forwards [`write_results`]'s return values on failure, with the query job's ID once it's
-///   known.
+/// * Forwards [`reqwest::Response::text`]'s return values as [`Failure::ApiServer`] on failure.
+/// * Forwards [`write_results`]'s return values on failure.
 ///
 /// # Cancel safety
 ///
@@ -343,6 +301,7 @@ async fn search(
     http_client: &reqwest::Client,
     stream_query_url: Url,
     streaming_query_config: &StreamingQueryConfig,
+    query_job_id: &mut Option<u64>,
 ) -> Result<(), Failure> {
     let response = http_client
         .post(stream_query_url)
@@ -351,25 +310,19 @@ async fn search(
         .send()
         .await
         .context("failed to send the query to the API server")
-        .map_err(Failure::api_server)?;
+        .map_err(Failure::ApiServer)?;
     let status = response.status();
     if !status.is_success() {
         let body = response
             .text()
             .await
             .context("failed to read the API server's response")
-            .map_err(Failure::api_server)?;
-        return Err(Failure::api_server(anyhow::anyhow!(
+            .map_err(Failure::ApiServer)?;
+        return Err(Failure::ApiServer(anyhow::anyhow!(
             "the API server responded with status {status}: {body}"
         )));
     }
-    let mut query_job_id = None;
-    write_results(response, &mut query_job_id)
-        .await
-        .map_err(|failure| Failure {
-            query_job_id,
-            ..failure
-        })
+    write_results(response, query_job_id).await
 }
 
 /// Reads the events of a streaming query from `response`, a successful response of the streaming
@@ -385,8 +338,8 @@ async fn search(
 /// Returns an error if:
 ///
 /// * Forwards [`read_results`]'s return values on failure.
-/// * Forwards [`write_batches`]'s return values as [`FailureKind::Local`] on failure.
-/// * Forwards [`tokio::task::JoinHandle`]'s return values as [`FailureKind::Local`] on failure.
+/// * Forwards [`write_batches`]'s return values as [`Failure::Local`] on failure.
+/// * Forwards [`tokio::task::JoinHandle`]'s return values as [`Failure::Local`] on failure.
 async fn write_results(
     response: reqwest::Response,
     query_job_id: &mut Option<u64>,
@@ -398,13 +351,13 @@ async fn write_results(
     match writer
         .await
         .context("the writer of the results panicked")
-        .map_err(Failure::local)?
+        .map_err(Failure::Local)?
     {
         Err(error) if error.kind() == std::io::ErrorKind::BrokenPipe => Ok(()),
         write_result => {
             write_result
                 .context("failed to write the results")
-                .map_err(Failure::local)?;
+                .map_err(Failure::Local)?;
             read_result
         }
     }
@@ -440,9 +393,8 @@ fn write_batches(mut batch_receiver: tokio::sync::mpsc::Receiver<Vec<u8>>) -> st
 ///
 /// Returns an error if:
 ///
-/// * [`FailureKind::ApiServer`] if the response body ends before an `end` or `error` event.
-/// * Forwards [`reqwest::Response::chunk`]'s return values as [`FailureKind::ApiServer`] on
-///   failure.
+/// * [`Failure::ApiServer`] if the response body ends before an `end` or `error` event.
+/// * Forwards [`reqwest::Response::chunk`]'s return values as [`Failure::ApiServer`] on failure.
 /// * Forwards [`handle_line`]'s return values on failure.
 async fn read_results(
     mut response: reqwest::Response,
@@ -458,7 +410,7 @@ async fn read_results(
         .chunk()
         .await
         .context("failed to read the API server's response")
-        .map_err(Failure::api_server)?
+        .map_err(Failure::ApiServer)?
     {
         // Only `chunk` is searched for the last newline, since the unhandled bytes before it have
         // none.
@@ -490,7 +442,7 @@ async fn read_results(
             return Ok(());
         }
     }
-    Err(Failure::api_server(anyhow::anyhow!(
+    Err(Failure::ApiServer(anyhow::anyhow!(
         "the API server's response ended before the query job did"
     )))
 }
@@ -511,8 +463,8 @@ async fn read_results(
 ///
 /// Returns an error if:
 ///
-/// * [`FailureKind::QueryJob`] if the `end` event's status isn't [`QueryJobStatus::Succeeded`].
-/// * [`FailureKind::ApiServer`] if:
+/// * [`Failure::QueryJob`] if the `end` event's status isn't [`QueryJobStatus::Succeeded`].
+/// * [`Failure::ApiServer`] if:
 ///   * The data of a `job`, `end` or `error` event doesn't deserialize.
 ///   * The line is an `error` event, or an event with an unknown name.
 ///   * The line isn't an `event:` or `data:` line, a comment, or a blank line.
@@ -531,7 +483,7 @@ fn handle_line(
         return Ok(ControlFlow::Continue(()));
     }
     let Some(data) = line.strip_prefix(b"data: ") else {
-        return Err(Failure::api_server(anyhow::anyhow!(
+        return Err(Failure::ApiServer(anyhow::anyhow!(
             "the API server sent an unexpected line {:?}",
             String::from_utf8_lossy(line)
         )));
@@ -544,7 +496,7 @@ fn handle_line(
         Some(b"job") => {
             let job: StreamingQueryJobEvent = serde_json::from_slice(data)
                 .context("invalid `job` event")
-                .map_err(Failure::api_server)?;
+                .map_err(Failure::ApiServer)?;
             tracing::debug!(query_job_id = job.query_job_id, "Submitted the query job.");
             *query_job_id = Some(job.query_job_id);
         }
@@ -554,25 +506,25 @@ fn handle_line(
                 num_results_emitted,
             } = serde_json::from_slice(data)
                 .context("invalid `end` event")
-                .map_err(Failure::api_server)?;
+                .map_err(Failure::ApiServer)?;
             tracing::debug!(status = ? status, num_results_emitted, "The query job ended.");
             if status == QueryJobStatus::Succeeded {
                 return Ok(ControlFlow::Break(()));
             }
-            return Err(Failure::query_job(anyhow::anyhow!(
+            return Err(Failure::QueryJob(anyhow::anyhow!(
                 "the query job ended with status `{status:?}`"
             )));
         }
         Some(b"error") => {
             let StreamingQueryErrorEvent { message } = serde_json::from_slice(data)
                 .context("invalid `error` event")
-                .map_err(Failure::api_server)?;
-            return Err(Failure::api_server(anyhow::anyhow!(
+                .map_err(Failure::ApiServer)?;
+            return Err(Failure::ApiServer(anyhow::anyhow!(
                 "the API server failed during the search: {message}"
             )));
         }
         Some(name) => {
-            return Err(Failure::api_server(anyhow::anyhow!(
+            return Err(Failure::ApiServer(anyhow::anyhow!(
                 "the API server sent an unknown event `{}`",
                 String::from_utf8_lossy(name)
             )));
