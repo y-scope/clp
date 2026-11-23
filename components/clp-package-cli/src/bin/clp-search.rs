@@ -115,7 +115,7 @@ impl Default for ApiServerAddress {
 
 /// A failure of a search, which determines the exit code of `clp-search`.
 enum Failure {
-    /// The query job ended with a terminal status other than [`QueryJobStatus::Succeeded`].
+    /// The query job ended with a status other than [`QueryJobStatus::Succeeded`].
     QueryJob(anyhow::Error),
 
     /// The API server can't be reached, rejected the query, failed, or broke the stream of the
@@ -403,11 +403,9 @@ async fn search(
 ///
 /// Returns an error if:
 ///
-/// * [`Failure::QueryJob`] if the `end` event's status is terminal but isn't
-///   [`QueryJobStatus::Succeeded`].
+/// * [`Failure::QueryJob`] if the `end` event's status isn't [`QueryJobStatus::Succeeded`].
 /// * [`Failure::ApiServer`] if:
 ///   * The data of a `job`, `end` or `error` event doesn't deserialize.
-///   * The `end` event's status isn't terminal.
 ///   * The API server sends an `error` event, or an event with an unknown name.
 ///   * The API server sends a line that isn't an `event:` or `data:` line, a comment, or a blank
 ///     line.
@@ -471,12 +469,9 @@ async fn write_results(
                 if status == QueryJobStatus::Succeeded {
                     return Ok(());
                 }
-                let error = anyhow::anyhow!("ended with status `{status:?}`");
-                return Err(if status.is_terminal() {
-                    Failure::QueryJob(error)
-                } else {
-                    Failure::ApiServer(error)
-                });
+                return Err(Failure::QueryJob(anyhow::anyhow!(
+                    "ended with status `{status:?}`"
+                )));
             }
             Some("error") => {
                 let StreamingQueryErrorEvent { message } = serde_json::from_str(data)
