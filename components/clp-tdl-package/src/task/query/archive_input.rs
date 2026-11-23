@@ -1,8 +1,8 @@
 //! Resolves archives for `clp-s` commands.
 
-use std::ffi::OsString;
 use std::path::Path;
 use std::path::PathBuf;
+use std::process::Command;
 
 use clp_rust_utils::aws::AWS_DEFAULT_REGION;
 use clp_rust_utils::clp_config::package::config::ArchiveOutputStorage;
@@ -22,42 +22,48 @@ pub(super) enum ArchiveDescriptor {
         archive_id: ArchiveId,
     },
 
-    /// The URL of an S3-hosted archive, read with `--auth s3`.
-    ObjectUrl(String),
+    /// The URL and credentials of an S3-hosted archive.
+    S3 {
+        url: String,
+        credential_env: Vec<(&'static str, String)>,
+    },
 }
 
 impl ArchiveDescriptor {
-    /// Converts the descriptor into the archive input and selection or authentication arguments for
-    /// `clp-s`.
+    /// Configures a `clp-s` subcommand to read this archive.
     ///
     /// # Returns
     ///
-    /// The ordered arguments that follow the subcommand.
-    pub(super) fn into_clp_s_args(self) -> [OsString; 3] {
+    /// A command with the subcommand, archive arguments, and any required credential overrides.
+    pub(super) fn clp_s_command(&self, clp_s_bin: &Path, subcommand: &str) -> Command {
+        let mut command = Command::new(clp_s_bin);
+        command.arg(subcommand);
         match self {
-            Self::Directory { path, archive_id } => [
-                path.into_os_string(),
-                OsString::from("--archive-id"),
-                OsString::from(archive_id.to_string()),
-            ],
-            Self::ObjectUrl(url) => [
-                OsString::from(url),
-                OsString::from("--auth"),
-                OsString::from("s3"),
-            ],
+            Self::Directory { path, archive_id } => {
+                command
+                    .arg(path)
+                    .arg("--archive-id")
+                    .arg(archive_id.to_string());
+            }
+            Self::S3 {
+                url,
+                credential_env,
+            } => {
+                command
+                    .arg(url)
+                    .args(["--auth", "s3"])
+                    .envs(credential_env.iter().map(|(name, value)| (*name, value)));
+            }
         }
+        command
     }
 }
 
-/// Resolves how clp-s addresses the archive, and the credential env vars it needs to read it.
+/// Resolves the archive location and any credentials needed to read it.
 ///
 /// # Returns
 ///
-/// A tuple on success, containing:
-///
-/// * The archive descriptor.
-/// * The credential env vars clp-s should run with, which are empty for filesystem-backed archive
-///   output.
+/// The archive descriptor on success.
 ///
 /// # Errors
 ///
@@ -71,18 +77,15 @@ pub(super) fn resolve_archive_input(
     config: &SpiderTaskExecutorConfig,
     dataset: &DatasetName,
     archive_id: ArchiveId,
-) -> anyhow::Result<(ArchiveDescriptor, Vec<(&'static str, String)>)> {
+) -> anyhow::Result<ArchiveDescriptor> {
     let s3_config = match &config.archive_output.storage {
         ArchiveOutputStorage::Fs { .. } => {
-            return Ok((
-                ArchiveDescriptor::Directory {
-                    path: config
-                        .abs_archive_output_staging(clp_home)
-                        .join(dataset.as_str()),
-                    archive_id,
-                },
-                Vec::new(),
-            ));
+            return Ok(ArchiveDescriptor::Directory {
+                path: config
+                    .abs_archive_output_staging(clp_home)
+                    .join(dataset.as_str()),
+                archive_id,
+            });
         }
         ArchiveOutputStorage::S3 { s3_config, .. } => s3_config,
     };
@@ -101,7 +104,10 @@ pub(super) fn resolve_archive_input(
         .as_ref()
         .map_or(AWS_DEFAULT_REGION, NonEmptyString::as_str);
     let credential_env = s3_credential_env(runtime, region, &s3_config.aws_authentication)?;
-    Ok((ArchiveDescriptor::ObjectUrl(url), credential_env))
+    Ok(ArchiveDescriptor::S3 {
+        url,
+        credential_env,
+    })
 }
 
 /// # Returns
@@ -132,8 +138,9 @@ pub(super) fn base_s3_config() -> clp_rust_utils::clp_config::S3Config {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
+    use std::ffi::OsStr;
     use std::path::Path;
-    use std::path::PathBuf;
 
     use clp_rust_utils::clp_config::S3Config;
     use clp_rust_utils::clp_config::package::config::ArchiveOutput;
@@ -146,7 +153,6 @@ mod tests {
     use clp_rust_utils::types::non_empty_string::ExpectedNonEmpty;
     use non_empty_string::NonEmptyString;
 
-    use super::ArchiveDescriptor;
     use super::base_s3_config;
     use super::resolve_archive_input;
 
@@ -194,7 +200,7 @@ mod tests {
             ..SpiderTaskExecutorConfig::default()
         };
 
-        let (descriptor, credential_env) = resolve_archive_input(
+        let descriptor = resolve_archive_input(
             runtime.handle(),
             Path::new("/clp"),
             &config,
@@ -202,15 +208,18 @@ mod tests {
             ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
         )?;
 
-        let ArchiveDescriptor::Directory { path, archive_id } = descriptor else {
-            panic!("expected a directory descriptor");
-        };
-        assert_eq!(path, PathBuf::from("/clp/var/data/archives/ds1"));
+        let command = descriptor.clp_s_command(Path::new("clp-s"), "s");
         assert_eq!(
-            archive_id,
-            ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID")
+            command.get_args().collect::<Vec<_>>(),
+            [
+                "s",
+                "/clp/var/data/archives/ds1",
+                "--archive-id",
+                ARCHIVE_ID
+            ]
+            .map(OsStr::new)
         );
-        assert_eq!(credential_env, &[]);
+        assert_eq!(command.get_envs().collect::<Vec<_>>(), &[]);
 
         Ok(())
     }
@@ -220,7 +229,7 @@ mod tests {
         let runtime = tokio::runtime::Runtime::new().expect("failed to create Tokio runtime");
         let config = s3_backed_config("var/data/staged-archives", None);
 
-        let (descriptor, credential_env) = resolve_archive_input(
+        let descriptor = resolve_archive_input(
             runtime.handle(),
             Path::new("/clp"),
             &config,
@@ -228,19 +237,24 @@ mod tests {
             ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
         )?;
 
-        let ArchiveDescriptor::ObjectUrl(url) = descriptor else {
-            panic!("expected an object-URL descriptor");
-        };
+        let url = format!("https://bucket.s3.amazonaws.com/LIB1/ds1/{ARCHIVE_ID}");
+        let command = descriptor.clp_s_command(Path::new("clp-s"), "s");
         assert_eq!(
-            url,
-            format!("https://bucket.s3.amazonaws.com/LIB1/ds1/{ARCHIVE_ID}")
+            command.get_args().collect::<Vec<_>>(),
+            ["s", &url, "--auth", "s3"].map(OsStr::new)
         );
         assert_eq!(
-            credential_env,
-            vec![
-                ("AWS_ACCESS_KEY_ID", "the-access-key".to_string()),
-                ("AWS_SECRET_ACCESS_KEY", "the-secret-key".to_string()),
-            ]
+            command.get_envs().collect::<BTreeMap<_, _>>(),
+            BTreeMap::from([
+                (
+                    OsStr::new("AWS_ACCESS_KEY_ID"),
+                    Some(OsStr::new("the-access-key"))
+                ),
+                (
+                    OsStr::new("AWS_SECRET_ACCESS_KEY"),
+                    Some(OsStr::new("the-secret-key"))
+                ),
+            ])
         );
 
         Ok(())
@@ -253,18 +267,18 @@ mod tests {
         let runtime = tokio::runtime::Runtime::new().expect("failed to create Tokio runtime");
         let config = s3_backed_config(STAGING_DIRECTORY, None);
 
-        let (descriptor, _) = resolve_archive_input(
+        let descriptor = resolve_archive_input(
             runtime.handle(),
             Path::new("/clp"),
             &config,
             &"ds1".parse::<DatasetName>()?,
             ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
         )?;
-        let args = descriptor.into_clp_s_args();
+        let command = descriptor.clp_s_command(Path::new("clp-s"), "s");
 
         assert!(
-            !args
-                .iter()
+            !command
+                .get_args()
                 .any(|arg| arg.to_string_lossy().contains(STAGING_DIRECTORY))
         );
 
@@ -276,7 +290,7 @@ mod tests {
         let runtime = tokio::runtime::Runtime::new().expect("failed to create Tokio runtime");
         let config = s3_backed_config("var/data/staged-archives", Some("http://minio:9000"));
 
-        let (descriptor, _) = resolve_archive_input(
+        let descriptor = resolve_archive_input(
             runtime.handle(),
             Path::new("/clp"),
             &config,
@@ -284,12 +298,11 @@ mod tests {
             ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
         )?;
 
-        let ArchiveDescriptor::ObjectUrl(url) = descriptor else {
-            panic!("expected an object-URL descriptor");
-        };
+        let url = format!("http://minio:9000/bucket/LIB1/ds1/{ARCHIVE_ID}");
+        let command = descriptor.clp_s_command(Path::new("clp-s"), "s");
         assert_eq!(
-            url,
-            format!("http://minio:9000/bucket/LIB1/ds1/{ARCHIVE_ID}")
+            command.get_args().collect::<Vec<_>>(),
+            ["s", &url, "--auth", "s3"].map(OsStr::new)
         );
 
         Ok(())

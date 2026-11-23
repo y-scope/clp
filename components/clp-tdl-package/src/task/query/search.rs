@@ -79,19 +79,17 @@ pub(super) fn search(
 
     let clp_home = clp_home();
     let runtime = runtime();
-    let (archive_descriptor, credential_env) = resolve_archive_input(
-        &runtime, clp_home, config, dataset, archive_id,
-    )
-    .inspect_err(|e| {
-        tracing::error!(
-            job_id = % ctx.job_id,
-            task_id = % ctx.task_id,
-            task_instance_id = % ctx.task_instance_id,
-            query_job_id = % query_job_id,
-            error = % e,
-            "Failed to resolve the archive input."
-        );
-    })?;
+    let archive_descriptor = resolve_archive_input(&runtime, clp_home, config, dataset, archive_id)
+        .inspect_err(|e| {
+            tracing::error!(
+                job_id = % ctx.job_id,
+                task_id = % ctx.task_id,
+                task_instance_id = % ctx.task_instance_id,
+                query_job_id = % query_job_id,
+                error = % e,
+                "Failed to resolve the archive input."
+            );
+        })?;
     let results_file = match output {
         QueryOutput::File {} => Some(
             ResultsFile::create(clp_home, config, query_job_id, archive_id).inspect_err(|e| {
@@ -107,8 +105,9 @@ pub(super) fn search(
         ),
         QueryOutput::ResultsCache(_) | QueryOutput::Network(_) => None,
     };
-    let arg_lists = build_clp_s_arg_lists(
-        build_clp_s_query_args(archive_descriptor, query),
+    let clp_s_bin = clp_binary_path(clp_home, "clp-s");
+    let commands = build_clp_s_commands(
+        || build_clp_s_query_command(&clp_s_bin, &archive_descriptor, query),
         output,
         &config.results_cache,
         results_file
@@ -118,9 +117,8 @@ pub(super) fn search(
         dataset.as_str(),
         task_index,
     );
-    let clp_s_bin = clp_binary_path(clp_home, "clp-s");
-    for args in arg_lists {
-        run_clp_s_search(&clp_s_bin, args, &credential_env)?;
+    for mut command in commands {
+        run_clp_s_search(&mut command)?;
     }
     if let Some(results_file) = results_file {
         results_file.publish(&runtime).inspect_err(|e| {
@@ -300,63 +298,61 @@ enum ResultsFileDestination<'config> {
     },
 }
 
-/// Builds arguments for normal results and optional timeline aggregation, each starting with
-/// `query_args`.
+/// Builds commands for normal results and optional timeline aggregation from fresh query commands.
 ///
 /// # Returns
 ///
-/// Ordered argument lists, each corresponding to an individual `clp-s` invocation.
+/// The normal results command followed by the timeline aggregation command, if requested.
 ///
 /// # Panics
 ///
 /// Panics if `output` is [`QueryOutput::File`] but `results_file_path` is `None`.
-fn build_clp_s_arg_lists(
-    mut query_args: Vec<OsString>,
+fn build_clp_s_commands(
+    create_query_command: impl Fn() -> Command,
     output: &QueryOutput,
     results_cache: &ResultsCache,
     results_file_path: Option<&Path>,
     query_job_id: QueryJobId,
     dataset: &str,
     task_index: TaskIndex,
-) -> Vec<Vec<OsString>> {
+) -> Vec<Command> {
+    let mut command = create_query_command();
     match output {
         QueryOutput::ResultsCache(output) => {
-            let mut normal_args = query_args.clone();
-            normal_args.extend(build_clp_s_results_cache_output_args(
+            command.args(build_clp_s_results_cache_output_args(
                 results_cache,
                 output.max_num_results,
                 &query_job_id.to_string(),
                 dataset,
             ));
-            let mut arg_lists = vec![normal_args];
+            let mut commands = vec![command];
             if let Some(Aggregation::CountByTime {
                 bucket_size_millisecs,
             }) = output.aggregation
             {
-                let mut timeline_args = query_args;
-                timeline_args.extend([
-                    OsString::from("--count-by-time"),
-                    OsString::from(bucket_size_millisecs.get().to_string()),
-                ]);
-                timeline_args.extend(build_clp_s_results_cache_output_args(
-                    results_cache,
-                    None,
-                    &timeline::collection_name(query_job_id),
-                    dataset,
-                ));
-                arg_lists.push(timeline_args);
+                let mut timeline_command = create_query_command();
+                timeline_command
+                    .arg("--count-by-time")
+                    .arg(bucket_size_millisecs.get().to_string())
+                    .args(build_clp_s_results_cache_output_args(
+                        results_cache,
+                        None,
+                        &timeline::collection_name(query_job_id),
+                        dataset,
+                    ));
+                commands.push(timeline_command);
             }
-            arg_lists
+            commands
         }
         QueryOutput::Network(network_output) => {
-            query_args.extend(build_clp_s_network_output_args(network_output, task_index));
-            vec![query_args]
+            command.args(build_clp_s_network_output_args(network_output, task_index));
+            vec![command]
         }
         QueryOutput::File {} => {
             let results_file_path =
                 results_file_path.expect("file output requires a results file path");
-            query_args.extend(build_clp_s_file_output_args(results_file_path));
-            vec![query_args]
+            command.args(build_clp_s_file_output_args(results_file_path));
+            vec![command]
         }
     }
 }
@@ -422,35 +418,35 @@ fn build_clp_s_file_output_args(results_file_path: &Path) -> Vec<OsString> {
     ]
 }
 
-/// Builds the clp-s command-line arguments that select the archive and the query to run on it,
-/// shared by every output handler.
+/// Builds a clp-s command that selects the archive and the query to run on it.
 ///
 /// # Returns
 ///
-/// The ordered clp-s arguments, which the output handler's arguments follow.
-fn build_clp_s_query_args(
-    archive_descriptor: ArchiveDescriptor,
+/// The query command, ready for the output handler's arguments.
+fn build_clp_s_query_command(
+    clp_s_bin: &Path,
+    archive_descriptor: &ArchiveDescriptor,
     query: &SearchQuery,
-) -> Vec<OsString> {
-    let mut args = vec![OsString::from("s")];
-    args.extend(archive_descriptor.into_clp_s_args());
-
-    args.push(OsString::from(query.query_string.as_str()));
+) -> Command {
+    let mut command = archive_descriptor.clp_s_command(clp_s_bin, "s");
+    command.arg(query.query_string.as_str());
     if let Some(begin_timestamp_millisecs) = query.time_range.begin_timestamp_millisecs() {
-        args.push(OsString::from("--tge"));
-        args.push(OsString::from(begin_timestamp_millisecs.to_string()));
+        command
+            .arg("--tge")
+            .arg(begin_timestamp_millisecs.to_string());
     }
     if let Some(end_timestamp_millisecs) = query.time_range.end_timestamp_millisecs() {
-        args.push(OsString::from("--tle"));
-        args.push(OsString::from(end_timestamp_millisecs.to_string()));
+        command
+            .arg("--tle")
+            .arg(end_timestamp_millisecs.to_string());
     }
     if query.ignore_case {
-        args.push(OsString::from("--ignore-case"));
+        command.arg("--ignore-case");
     }
-    args
+    command
 }
 
-/// Runs clp-s with the given search arguments, blocking until it exits.
+/// Runs the clp-s search command, blocking until it exits.
 ///
 /// # Observability
 ///
@@ -468,22 +464,21 @@ fn build_clp_s_query_args(
 /// # Panics
 ///
 /// Panics if clp-s's piped stderr is unexpectedly absent (should be unreachable).
-fn run_clp_s_search(
-    clp_s_bin: &Path,
-    args: Vec<OsString>,
-    credential_env: &[(&'static str, String)],
-) -> anyhow::Result<()> {
-    let mut child = Command::new(clp_s_bin)
-        .args(args)
-        .envs(credential_env.iter().cloned())
+fn run_clp_s_search(command: &mut Command) -> anyhow::Result<()> {
+    let mut child = command
         .stdout(Stdio::null())
         .stderr(Stdio::piped())
         .spawn()
-        .with_context(|| format!("failed to spawn clp-s at {}", clp_s_bin.display()))
+        .with_context(|| {
+            format!(
+                "failed to spawn clp-s at {}",
+                Path::new(command.get_program()).display()
+            )
+        })
         .inspect_err(|e| {
             tracing::error!(
                 error = % e,
-                clp_s_bin = % clp_s_bin.display(),
+                clp_s_bin = % Path::new(command.get_program()).display(),
                 "Failed to spawn clp-s.",
             );
         })?;
@@ -521,6 +516,8 @@ fn run_clp_s_search(
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
+    use std::ffi::OsStr;
     use std::ffi::OsString;
     use std::num::NonZeroU16;
     use std::num::NonZeroU32;
@@ -554,9 +551,9 @@ mod tests {
 
     use super::ResultsFile;
     use super::ResultsFileDestination;
-    use super::build_clp_s_arg_lists;
+    use super::build_clp_s_commands;
     use super::build_clp_s_network_output_args;
-    use super::build_clp_s_query_args;
+    use super::build_clp_s_query_command;
     use super::build_clp_s_results_cache_output_args;
     use super::search;
     use crate::task::query::archive_input::ArchiveDescriptor;
@@ -684,7 +681,7 @@ mod tests {
     }
 
     #[test]
-    fn build_clp_s_query_args_fs_with_timestamps_and_ignore_case() {
+    fn build_clp_s_query_command_fs_with_timestamps_and_ignore_case() {
         let query = SearchQuery {
             time_range: TimeRange::new(Some(1_310_138_944_000), Some(1_311_208_074_120))
                 .expect("range is ordered"),
@@ -692,39 +689,38 @@ mod tests {
             ..unbounded_query()
         };
 
+        let command =
+            build_clp_s_query_command(Path::new("clp-s"), &directory_descriptor(), &query);
         assert_eq!(
-            build_clp_s_query_args(directory_descriptor(), &query),
-            vec![
-                OsString::from("s"),
-                OsString::from("/archives/ds1"),
-                OsString::from("--archive-id"),
-                OsString::from(ARCHIVE_ID),
-                OsString::from("level: \"ERROR\""),
-                OsString::from("--tge"),
-                OsString::from("1310138944000"),
-                OsString::from("--tle"),
-                OsString::from("1311208074120"),
-                OsString::from("--ignore-case"),
+            command.get_args().collect::<Vec<_>>(),
+            [
+                "s",
+                "/archives/ds1",
+                "--archive-id",
+                ARCHIVE_ID,
+                "level: \"ERROR\"",
+                "--tge",
+                "1310138944000",
+                "--tle",
+                "1311208074120",
+                "--ignore-case",
             ]
+            .map(OsStr::new)
         );
     }
 
     #[test]
-    fn build_clp_s_query_args_s3_uses_object_url_and_no_archive_id() {
+    fn build_clp_s_query_command_s3_uses_object_url_and_no_archive_id() {
         let url = format!("https://bucket.s3.amazonaws.com/LIB1/ds1/{ARCHIVE_ID}");
-
+        let archive_descriptor = ArchiveDescriptor::S3 {
+            url: url.clone(),
+            credential_env: Vec::new(),
+        };
+        let command =
+            build_clp_s_query_command(Path::new("clp-s"), &archive_descriptor, &unbounded_query());
         assert_eq!(
-            build_clp_s_query_args(
-                ArchiveDescriptor::ObjectUrl(url.clone()),
-                &unbounded_query()
-            ),
-            vec![
-                OsString::from("s"),
-                OsString::from(url),
-                OsString::from("--auth"),
-                OsString::from("s3"),
-                OsString::from("level: \"ERROR\""),
-            ]
+            command.get_args().collect::<Vec<_>>(),
+            ["s", &url, "--auth", "s3", "level: \"ERROR\""].map(OsStr::new)
         );
     }
 
@@ -786,20 +782,30 @@ mod tests {
     }
 
     #[test]
-    fn build_clp_s_arg_lists_file_output_writes_to_the_results_file_path() {
+    fn build_clp_s_commands_file_output_writes_to_the_results_file_path() {
         let results_file_path = PathBuf::from("/results");
-
+        let commands = build_clp_s_commands(
+            || {
+                build_clp_s_query_command(
+                    Path::new("clp-s"),
+                    &directory_descriptor(),
+                    &unbounded_query(),
+                )
+            },
+            &QueryOutput::File {},
+            &results_cache(),
+            Some(&results_file_path),
+            42,
+            "ds1",
+            0,
+        );
+        assert_eq!(commands.len(), 1);
         assert_eq!(
-            build_clp_s_arg_lists(
-                build_clp_s_query_args(directory_descriptor(), &unbounded_query()),
-                &QueryOutput::File {},
-                &results_cache(),
-                Some(&results_file_path),
-                42,
-                "ds1",
-                0,
-            ),
-            vec![vec![
+            commands[0]
+                .get_args()
+                .map(OsString::from)
+                .collect::<Vec<_>>(),
+            vec![
                 OsString::from("s"),
                 OsString::from("/archives/ds1"),
                 OsString::from("--archive-id"),
@@ -808,7 +814,7 @@ mod tests {
                 OsString::from("file"),
                 OsString::from("--path"),
                 OsString::from(results_file_path),
-            ]]
+            ]
         );
     }
 
@@ -1043,6 +1049,7 @@ mod tests {
             ignore_case: true,
             ..unbounded_query()
         };
+        let archive_descriptor = directory_descriptor();
         for max_num_results in [None, NonZeroU32::new(7)] {
             let output = QueryOutput::ResultsCache(ResultsCacheOutput {
                 max_num_results,
@@ -1050,8 +1057,8 @@ mod tests {
                     bucket_size_millisecs: PositiveI64::new(60_000).expect("60,000 is positive"),
                 }),
             });
-            let arg_lists = build_clp_s_arg_lists(
-                build_clp_s_query_args(directory_descriptor(), &query),
+            let commands = build_clp_s_commands(
+                || build_clp_s_query_command(Path::new("clp-s"), &archive_descriptor, &query),
                 &output,
                 &results_cache(),
                 None,
@@ -1059,8 +1066,8 @@ mod tests {
                 "ds1",
                 0,
             );
-            assert_eq!(arg_lists.len(), 2);
-            let args = &arg_lists[1];
+            assert_eq!(commands.len(), 2);
+            let timeline_args = commands[1].get_args().collect::<Vec<_>>();
             let mut expected_normal = [
                 "s",
                 "/archives/ds1",
@@ -1078,13 +1085,13 @@ mod tests {
                 "--collection",
                 "42",
             ]
-            .map(OsString::from)
+            .map(OsStr::new)
             .to_vec();
             if max_num_results.is_some() {
-                expected_normal.extend(["--max-num-results", "7"].map(OsString::from));
+                expected_normal.extend(["--max-num-results", "7"].map(OsStr::new));
             }
-            expected_normal.extend(["--dataset", "ds1"].map(OsString::from));
-            assert_eq!(arg_lists[0], expected_normal);
+            expected_normal.extend(["--dataset", "ds1"].map(OsStr::new));
+            assert_eq!(commands[0].get_args().collect::<Vec<_>>(), expected_normal);
             let expected = [
                 "s",
                 "/archives/ds1",
@@ -1107,8 +1114,8 @@ mod tests {
                 "ds1",
             ];
             anyhow::ensure!(
-                *args == expected.map(OsString::from),
-                "unexpected timeline arguments: {args:?}"
+                timeline_args == expected.map(OsStr::new),
+                "unexpected timeline arguments: {timeline_args:?}"
             );
         }
         Ok(())
@@ -1116,17 +1123,26 @@ mod tests {
 
     #[test]
     fn timeline_search_preserves_s3_authentication_and_large_bucket_width() -> anyhow::Result<()> {
+        let credential_env = [
+            ("AWS_ACCESS_KEY_ID", "the-access-key"),
+            ("AWS_SECRET_ACCESS_KEY", "the-secret-key"),
+        ];
+        let archive_descriptor = ArchiveDescriptor::S3 {
+            url: "https://bucket.s3.amazonaws.com/archive".to_owned(),
+            credential_env: credential_env
+                .into_iter()
+                .map(|(name, value)| (name, value.to_owned()))
+                .collect(),
+        };
+        let query = unbounded_query();
         let output = QueryOutput::ResultsCache(ResultsCacheOutput {
             max_num_results: NonZeroU32::new(7),
             aggregation: Some(Aggregation::CountByTime {
                 bucket_size_millisecs: PositiveI64::new(i64::MAX).expect("i64::MAX is positive"),
             }),
         });
-        let arg_lists = build_clp_s_arg_lists(
-            build_clp_s_query_args(
-                ArchiveDescriptor::ObjectUrl("https://bucket.s3.amazonaws.com/archive".to_owned()),
-                &unbounded_query(),
-            ),
+        let commands = build_clp_s_commands(
+            || build_clp_s_query_command(Path::new("clp-s"), &archive_descriptor, &query),
             &output,
             &results_cache(),
             None,
@@ -1134,7 +1150,14 @@ mod tests {
             "ds1",
             0,
         );
-        let args = &arg_lists[1];
+        assert_eq!(commands.len(), 2);
+        let expected_env = BTreeMap::from(
+            credential_env.map(|(name, value)| (OsStr::new(name), Some(OsStr::new(value)))),
+        );
+        for command in &commands {
+            assert_eq!(command.get_envs().collect::<BTreeMap<_, _>>(), expected_env);
+        }
+        let timeline_args = commands[1].get_args().collect::<Vec<_>>();
         let expected = [
             "s",
             "https://bucket.s3.amazonaws.com/archive",
@@ -1152,8 +1175,8 @@ mod tests {
             "ds1",
         ];
         anyhow::ensure!(
-            *args == expected.map(OsString::from),
-            "unexpected timeline arguments: {args:?}"
+            timeline_args == expected.map(OsStr::new),
+            "unexpected timeline arguments: {timeline_args:?}"
         );
         Ok(())
     }

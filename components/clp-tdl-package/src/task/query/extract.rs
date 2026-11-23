@@ -1,6 +1,5 @@
 //! Ordered chunk extraction through the `clp-s` subprocess.
 
-use std::ffi::OsString;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::io::Read;
@@ -64,18 +63,17 @@ pub(super) fn run_clp_s_extract(
         "the clp-s extraction task requires the `clp-s` storage engine"
     );
 
-    let (archive_descriptor, credential_env) =
+    let archive_descriptor =
         resolve_archive_input(runtime, clp_home, config, &input.dataset, input.archive_id)?;
     let clp_s_bin = clp_binary_path(clp_home, "clp-s");
-    let args = build_clp_s_extract_args(
-        archive_descriptor,
+    let mut command = build_clp_s_extract_command(
+        &clp_s_bin,
+        &archive_descriptor,
         output_directory,
         input.target_chunk_size,
     );
     thread::scope(|scope| {
-        let child = Command::new(&clp_s_bin)
-            .args(args)
-            .envs(credential_env)
+        let child = command
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -167,30 +165,26 @@ struct ChunkStatsLine {
     path: PathBuf,
 }
 
-/// Builds the ordered arguments for extracting one archive with `clp-s x`.
+/// Builds a command for extracting one archive with `clp-s x`.
 ///
 /// # Returns
 ///
-/// The extraction arguments, including chunk statistics output.
-fn build_clp_s_extract_args(
-    archive_descriptor: ArchiveDescriptor,
+/// The extraction command, configured to report chunk statistics.
+fn build_clp_s_extract_command(
+    clp_s_bin: &Path,
+    archive_descriptor: &ArchiveDescriptor,
     output_directory: &Path,
     target_chunk_size: Option<NonZeroU64>,
-) -> Vec<OsString> {
-    let mut args = vec![OsString::from("x")];
-    args.extend(archive_descriptor.into_clp_s_args());
-    args.extend([
-        output_directory.as_os_str().to_os_string(),
-        OsString::from("--ordered"),
-    ]);
+) -> Command {
+    let mut command = archive_descriptor.clp_s_command(clp_s_bin, "x");
+    command.arg(output_directory).arg("--ordered");
     if let Some(target_chunk_size) = target_chunk_size {
-        args.extend([
-            OsString::from("--target-ordered-chunk-size"),
-            OsString::from(target_chunk_size.to_string()),
-        ]);
+        command
+            .arg("--target-ordered-chunk-size")
+            .arg(target_chunk_size.to_string());
     }
-    args.push(OsString::from("--print-ordered-chunk-stats"));
-    args
+    command.arg("--print-ordered-chunk-stats");
+    command
 }
 
 /// Reads newline-delimited clp-s chunk statistics from `reader`.
@@ -290,7 +284,7 @@ fn describe_stderr_tail(reader: ScopedJoinHandle<'_, std::io::Result<Vec<u8>>>) 
 
 #[cfg(test)]
 mod tests {
-    use std::ffi::OsString;
+    use std::ffi::OsStr;
     use std::num::NonZeroU64;
     use std::os::unix::fs::PermissionsExt;
     use std::path::Path;
@@ -310,7 +304,7 @@ mod tests {
 
     use super::MAX_STATS_LINE_SIZE;
     use super::MAX_STDERR_TAIL_SIZE;
-    use super::build_clp_s_extract_args;
+    use super::build_clp_s_extract_command;
     use super::read_chunk_paths;
     use super::run_clp_s_extract;
     use crate::task::query::archive_input::ArchiveDescriptor;
@@ -326,8 +320,14 @@ mod tests {
                 .parse()
                 .expect("the fixture has a valid archive ID"),
         };
+        let command = build_clp_s_extract_command(
+            Path::new("clp-s"),
+            &descriptor,
+            Path::new("/staging"),
+            None,
+        );
         assert_eq!(
-            build_clp_s_extract_args(descriptor, Path::new("/staging"), None),
+            command.get_args().collect::<Vec<_>>(),
             [
                 "x",
                 "/archives/ds1",
@@ -337,16 +337,25 @@ mod tests {
                 "--ordered",
                 "--print-ordered-chunk-stats",
             ]
-            .map(OsString::from)
+            .map(OsStr::new)
         );
     }
 
     #[test]
     fn extract_args_use_s3_auth_and_include_the_chunk_target() {
         const URL: &str = "https://bucket.s3.amazonaws.com/archives/ds1/archive";
-        let descriptor = ArchiveDescriptor::ObjectUrl(URL.to_owned());
+        let descriptor = ArchiveDescriptor::S3 {
+            url: URL.to_owned(),
+            credential_env: Vec::new(),
+        };
+        let command = build_clp_s_extract_command(
+            Path::new("clp-s"),
+            &descriptor,
+            Path::new("/staging"),
+            NonZeroU64::new(1024),
+        );
         assert_eq!(
-            build_clp_s_extract_args(descriptor, Path::new("/staging"), NonZeroU64::new(1024)),
+            command.get_args().collect::<Vec<_>>(),
             [
                 "x",
                 URL,
@@ -358,7 +367,7 @@ mod tests {
                 "1024",
                 "--print-ordered-chunk-stats",
             ]
-            .map(OsString::from)
+            .map(OsStr::new)
         );
     }
 
