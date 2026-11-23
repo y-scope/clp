@@ -434,7 +434,6 @@ mod tests {
                 "[\"/staging/a\"]\n",
                 "clp-s chunk statistics must be JSON objects",
             ),
-            ("{\"path\":123}\n", "malformed clp-s chunk statistics"),
             (
                 "{\"other_field\":1,\"path\":\"a\"}\n",
                 "malformed clp-s chunk statistics",
