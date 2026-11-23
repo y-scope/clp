@@ -199,8 +199,11 @@ fn build_clp_s_extract_command(
 ///
 /// Returns an error if:
 ///
-/// * Any line is malformed, unterminated, or greater than [`MAX_STATS_LINE_SIZE`].
-/// * The output exceeds [`MAX_STATS_OUTPUT_SIZE`] bytes or [`MAX_CHUNKS`] records.
+/// * [`anyhow::Error`] if:
+///   * A line is missing its terminating newline.
+///   * A line exceeds [`MAX_STATS_LINE_SIZE`] bytes before its newline.
+///   * The output exceeds [`MAX_STATS_OUTPUT_SIZE`] bytes or [`MAX_CHUNKS`] records.
+///   * A line does not start with `{` after skipping ASCII whitespace.
 /// * Forwards [`BufRead::read_until`]'s return values on failure.
 /// * Forwards [`serde_json::from_slice`]'s return values on failure.
 ///
