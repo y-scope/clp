@@ -85,10 +85,20 @@ struct Args {
 ///
 /// * This type is partially defined: unused fields are omitted and discarded through
 ///   deserialization.
-#[derive(Default, Deserialize)]
+#[derive(Deserialize)]
 #[serde(default)]
 struct PackageConfig {
-    api_server: ApiServerAddress,
+    /// The API server's address, or `None` if a null or empty `api_server` disables the API
+    /// server.
+    api_server: Option<ApiServerAddress>,
+}
+
+impl Default for PackageConfig {
+    fn default() -> Self {
+        Self {
+            api_server: Some(ApiServerAddress::default()),
+        }
+    }
 }
 
 /// The address part of [`ApiServer`].
@@ -247,12 +257,18 @@ fn run(
 ///
 /// Returns an error if:
 ///
+/// * [`anyhow::Error`] if the config disables the API server.
 /// * Forwards [`clp_rust_utils::serde::yaml::from_path`]'s return values on failure.
 /// * Forwards [`Url::parse`]'s return values on failure.
 fn read_stream_query_url(config_path: &Path) -> anyhow::Result<Url> {
     let config: Option<PackageConfig> = clp_rust_utils::serde::yaml::from_path(config_path)
         .with_context(|| format!("failed to read {}", config_path.display()))?;
-    let ApiServerAddress { host, port } = config.unwrap_or_default().api_server;
+    let Some(ApiServerAddress { host, port }) = config.unwrap_or_default().api_server else {
+        anyhow::bail!(
+            "the API server is disabled (`api_server` is null) in {}",
+            config_path.display()
+        );
+    };
     let url = format!("http://{host}:{port}/query/stream");
     Url::parse(&url).with_context(|| format!("invalid API server URL {url}"))
 }
