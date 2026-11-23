@@ -112,8 +112,8 @@ pub(super) fn resolve_archive_input(
 
 /// # Returns
 ///
-/// An [`clp_rust_utils::clp_config::S3Config`] for `bucket` with the key prefix `LIB1/`,
-/// static AWS credentials, and no endpoint URL.
+/// An [`clp_rust_utils::clp_config::S3Config`] for `bucket` with the key prefix `LIB1/`, static AWS
+/// credentials, and no endpoint URL.
 #[cfg(test)]
 pub(super) fn base_s3_config() -> clp_rust_utils::clp_config::S3Config {
     use clp_rust_utils::clp_config::AwsAuthentication;
