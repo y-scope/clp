@@ -211,15 +211,12 @@ struct EventReader {
     /// The number of bytes at the start of `unhandled` that are known to hold no newline.
     num_bytes_scanned: usize,
 
-    /// The name of the event of the next `data:` line, from the `event:` line before it.
-    event_name: Option<Vec<u8>>,
-
-    /// The results of the handled lines that aren't read yet.
-    results: Vec<u8>,
-
     /// The event, or the failure, of a handled line that came after results, to read once the
     /// results are read.
     pending: Option<Result<Event, Failure>>,
+
+    /// The state of handling the lines.
+    parser: LineParser,
 }
 
 impl EventReader {
@@ -233,9 +230,8 @@ impl EventReader {
             response,
             unhandled: BytesMut::new(),
             num_bytes_scanned: 0,
-            event_name: None,
-            results: Vec::new(),
             pending: None,
+            parser: LineParser::default(),
         }
     }
 
@@ -249,7 +245,7 @@ impl EventReader {
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`Self::handle_line`]'s return values on failure.
+    /// * Forwards [`LineParser::handle_line`]'s return values on failure.
     /// * Forwards [`reqwest::Response::chunk`]'s return values as [`Failure::ApiServer`] on
     ///   failure.
     async fn next_event(&mut self) -> Result<Option<Event>, Failure> {
@@ -257,37 +253,37 @@ impl EventReader {
             return event.map(Some);
         }
         loop {
-            // Taken out of `self` while its lines are handled, since `handle_line` borrows `self`.
-            let mut unhandled = std::mem::take(&mut self.unhandled);
             let mut line_start = 0;
+            let mut search_start = self.num_bytes_scanned;
             let mut event = None;
-            while let Some(newline_pos) = unhandled[line_start + self.num_bytes_scanned..]
+            while let Some(newline_pos) = self.unhandled[search_start..]
                 .iter()
                 .position(|&byte| byte == b'\n')
             {
-                let line_end = line_start + self.num_bytes_scanned + newline_pos;
-                self.num_bytes_scanned = 0;
+                let line_end = search_start + newline_pos;
                 event = self
-                    .handle_line(&unhandled[line_start..line_end])
+                    .parser
+                    .handle_line(&self.unhandled[line_start..line_end])
                     .transpose();
                 line_start = line_end + 1;
+                search_start = line_start;
                 if event.is_some() {
                     break;
                 }
             }
-            unhandled.advance(line_start);
-            self.unhandled = unhandled;
+            self.unhandled.advance(line_start);
             if let Some(event) = event {
-                if self.results.is_empty() {
+                self.num_bytes_scanned = 0;
+                let Some(results) = self.parser.take_results() else {
                     return event.map(Some);
-                }
+                };
                 self.pending = Some(event);
-                return Ok(Some(Event::Results(std::mem::take(&mut self.results))));
+                return Ok(Some(Event::Results(results)));
             }
             self.num_bytes_scanned = self.unhandled.len();
             // The received chunk is handled, so its results are read before the next chunk.
-            if !self.results.is_empty() {
-                return Ok(Some(Event::Results(std::mem::take(&mut self.results))));
+            if let Some(results) = self.parser.take_results() {
+                return Ok(Some(Event::Results(results)));
             }
             let Some(chunk) = self
                 .response
@@ -301,9 +297,31 @@ impl EventReader {
             self.unhandled.extend_from_slice(&chunk);
         }
     }
+}
+
+/// The state of handling the lines of a streaming query's response.
+#[derive(Default)]
+struct LineParser {
+    /// The name of the event of the next `data:` line, from the `event:` line before it.
+    event_name: Option<Vec<u8>>,
+
+    /// The results of the handled lines that aren't taken yet.
+    results: Vec<u8>,
+}
+
+impl LineParser {
+    /// # Returns
+    ///
+    /// The results of the handled lines that aren't taken yet, or `None` if there are none.
+    fn take_results(&mut self) -> Option<Vec<u8>> {
+        if self.results.is_empty() {
+            return None;
+        }
+        Some(std::mem::take(&mut self.results))
+    }
 
     /// Handles `line`, a line of the response without its newline. A result's data is added to the
-    /// unread results as it is, followed by a newline.
+    /// results as it is, followed by a newline.
     ///
     /// # Returns
     ///
