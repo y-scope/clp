@@ -139,7 +139,9 @@ impl ChildGuard {
     ///
     /// # Errors
     ///
-    /// Forwards [`Child::wait`]'s return values on failure.
+    /// Returns an error if:
+    ///
+    /// * Forwards [`Child::wait`]'s return values on failure.
     ///
     /// # Panics
     ///
