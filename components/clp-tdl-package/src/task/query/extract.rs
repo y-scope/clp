@@ -33,8 +33,9 @@ use crate::task::utils::clp_binary_path;
 ///
 /// Returns an error if:
 ///
-/// * The configured storage engine is not [`StorageEngine::ClpS`].
-/// * clp-s exits unsuccessfully.
+/// * [`anyhow::Error`] if:
+///   * The configured storage engine is not [`StorageEngine::ClpS`].
+///   * `clp-s` exits unsuccessfully.
 /// * Forwards [`resolve_archive_input`]'s return values on failure.
 /// * Forwards [`Command::spawn`]'s return values on failure.
 /// * Forwards [`thread::Builder::spawn_scoped`]'s return values on failure.
