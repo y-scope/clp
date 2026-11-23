@@ -1,4 +1,4 @@
-//! Archive metadata and policies shared by job planning.
+//! Shared helpers for archive planning.
 
 use std::collections::HashSet;
 use std::num::NonZeroU64;
@@ -6,28 +6,11 @@ use std::num::NonZeroU64;
 use clp_rust_utils::clp_config::package::config::Database;
 use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::dataset::NonEmptyDatasetNames;
-use clp_rust_utils::types::ArchiveId;
 use spider_core::task::ExecutionPolicy;
 use spider_core::task::TimeoutPolicy;
 use sqlx::MySqlPool;
 
 use crate::Error;
-
-/// Metadata for an archive in a dataset.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ArchiveMetadata {
-    /// The archive's ID.
-    pub id: ArchiveId,
-
-    /// The archive's dataset.
-    pub dataset: DatasetName,
-
-    /// The archive's uncompressed size in bytes.
-    pub uncompressed_size: u64,
-
-    /// The archive's end timestamp in Unix epoch milliseconds.
-    pub end_timestamp: i64,
-}
 
 pub(super) const SEARCH_TIMEOUT_RATES: ArchiveTaskTimeoutRates = ArchiveTaskTimeoutRates {
     soft_millisecs_per_mib: 10,

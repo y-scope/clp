@@ -15,8 +15,8 @@ use sqlx::Transaction;
 
 use super::archive_selector::ArchiveSelector;
 use crate::Error;
+use crate::job_handle::ArchiveMetadata;
 use crate::job_handle::QueryJobHandleContext;
-use crate::job_handle::archive::ArchiveMetadata;
 use crate::query_job_submitter::QueryJobOutcome;
 use crate::query_job_submitter::QueryJobSubmitter;
 

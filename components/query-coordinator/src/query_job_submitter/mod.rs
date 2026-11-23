@@ -15,7 +15,7 @@ use spider_core::types::id::JobId;
 use spider_core::types::id::ResourceGroupId;
 
 use crate::Error;
-pub use crate::job_handle::archive::ArchiveMetadata;
+pub use crate::job_handle::ArchiveMetadata;
 
 /// The terminal outcome of a query job.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

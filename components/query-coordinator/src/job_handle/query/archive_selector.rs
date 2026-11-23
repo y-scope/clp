@@ -14,8 +14,8 @@ use sqlx::MySqlPool;
 use sqlx::QueryBuilder;
 
 use crate::Error;
+use crate::job_handle::ArchiveMetadata;
 use crate::job_handle::ArchiveSelectionOptions;
-use crate::job_handle::archive::ArchiveMetadata;
 use crate::job_handle::archive::NonEmptyDatasetNameSet;
 use crate::job_handle::archive::SEARCH_TIMEOUT_RATES;
 use crate::job_handle::archive::ensure_datasets_exist;

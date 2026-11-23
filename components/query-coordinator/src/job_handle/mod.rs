@@ -1,6 +1,6 @@
 //! Handles for driving query jobs to completion.
 
-pub(crate) mod archive;
+mod archive;
 mod query;
 
 use std::num::NonZeroU64;
@@ -8,9 +8,27 @@ use std::num::NonZeroUsize;
 use std::time::Duration;
 
 use clp_rust_utils::clp_config::package::config::Database;
+use clp_rust_utils::dataset::DatasetName;
+use clp_rust_utils::types::ArchiveId;
 use sqlx::MySqlPool;
 
 pub use self::query::QueryJobHandle;
+
+/// Metadata for an archive in a dataset.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ArchiveMetadata {
+    /// The archive's ID.
+    pub id: ArchiveId,
+
+    /// The archive's dataset.
+    pub dataset: DatasetName,
+
+    /// The archive's uncompressed size in bytes.
+    pub uncompressed_size: u64,
+
+    /// The archive's end timestamp in Unix epoch milliseconds.
+    pub end_timestamp: i64,
+}
 
 /// Options for a query job running in Spider.
 pub struct SpiderOption {
