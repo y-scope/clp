@@ -120,28 +120,6 @@ impl Signals {
     }
 }
 
-/// Runs `future` to completion on a current-thread runtime, unless SIGINT or SIGTERM interrupts it.
-///
-/// # Type Parameters
-///
-/// * `FutureType` - The future to run.
-///
-/// # Returns
-///
-/// `future`'s output, or `None` if a signal interrupts it, on success.
-///
-/// # Errors
-///
-/// Returns an error if:
-///
-/// * Forwards [`run_on_runtime`]'s return values on failure.
-/// * Forwards [`Signals::listen`]'s return values on failure.
-pub fn run_until_signal<FutureType: Future>(
-    future: FutureType,
-) -> anyhow::Result<Option<FutureType::Output>> {
-    run_on_runtime(async { Ok(Signals::listen()?.until_signal(future).await) })?
-}
-
 /// Resolves the path at which the container reads the package config.
 ///
 /// The package config's path on the host is `host_config_path`, or by default,

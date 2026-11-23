@@ -9,6 +9,7 @@ path = "src/bin/clp-search.rs"
 
 [dependencies]
 anyhow = { workspace = true }
+bytes = { workspace = true }
 clap = { workspace = true }
 clp-rust-utils = { workspace = true }
 non-empty-string = { workspace = true }

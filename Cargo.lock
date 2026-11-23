@@ -959,6 +959,7 @@ name = "clp-package-cli"
 version = "0.13.1-dev"
 dependencies = [
  "anyhow",
+ "bytes",
  "clap",
  "clp-rust-utils",
  "non-empty-string",
