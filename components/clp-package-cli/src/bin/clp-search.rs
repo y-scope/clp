@@ -37,6 +37,9 @@ const CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
 /// server's keep-alive comments, so that an idle search isn't failed.
 const READ_TIMEOUT: Duration = SSE_KEEP_ALIVE_INTERVAL.saturating_mul(4);
 
+/// The most batches of results that can wait to be written to stdout.
+const MAX_NUM_PENDING_BATCHES: usize = 16;
+
 /// Command-line arguments for `clp-search`.
 #[derive(Parser)]
 #[command(
@@ -373,25 +376,79 @@ async fn search(
 /// query route, and writes the data of each result to stdout as it is, on its own line, until the
 /// query job ends. The `job` event's query job ID is stored in `query_job_id`.
 ///
-/// The response body is read a chunk at a time, and the results that a chunk completes are written
-/// to stdout together, so that they show up as they arrive without a write per result. Once stdout
-/// is closed, writing stops and the function succeeds.
+/// The results are written by [`write_batches`] on a blocking thread, so that a blocked write
+/// (e.g., by an idle pager) doesn't keep the runtime from handling signals. Once stdout is closed,
+/// reading stops and the function succeeds.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * Forwards [`read_results`]'s return values on failure.
+/// * Forwards [`write_batches`]'s return values as [`FailureKind::Local`] on failure.
+/// * Forwards [`tokio::task::JoinHandle`]'s return values as [`FailureKind::Local`] on failure.
+async fn write_results(
+    response: reqwest::Response,
+    query_job_id: &mut Option<u64>,
+) -> Result<(), Failure> {
+    let (batch_sender, batch_receiver) = tokio::sync::mpsc::channel(MAX_NUM_PENDING_BATCHES);
+    let writer = tokio::task::spawn_blocking(move || write_batches(batch_receiver));
+    let read_result = read_results(response, query_job_id, &batch_sender).await;
+    drop(batch_sender);
+    match writer
+        .await
+        .context("the writer of the results panicked")
+        .map_err(Failure::local)?
+    {
+        Err(error) if error.kind() == std::io::ErrorKind::BrokenPipe => Ok(()),
+        write_result => {
+            write_result
+                .context("failed to write the results")
+                .map_err(Failure::local)?;
+            read_result
+        }
+    }
+}
+
+/// Writes each batch of results that `batch_receiver` receives to stdout, until all its senders are
+/// dropped. Batches that wait are written together: stdout is only flushed once no batch waits.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * Forwards [`std::io::Write::write_all`]'s return values on failure.
+/// * Forwards [`std::io::Write::flush`]'s return values on failure.
+fn write_batches(mut batch_receiver: tokio::sync::mpsc::Receiver<Vec<u8>>) -> std::io::Result<()> {
+    use std::io::Write;
+
+    let mut stdout = std::io::BufWriter::new(std::io::stdout().lock());
+    while let Some(batch) = batch_receiver.blocking_recv() {
+        stdout.write_all(&batch)?;
+        if batch_receiver.is_empty() {
+            stdout.flush()?;
+        }
+    }
+    stdout.flush()
+}
+
+/// Reads the events of a streaming query from `response`, and sends the results that each chunk of
+/// the response body completes, as a batch, through `batch_sender`, until the query job ends or the
+/// batches' receiver is dropped. The data of each result is followed by a newline in its batch.
 ///
 /// # Errors
 ///
 /// Returns an error if:
 ///
 /// * [`FailureKind::ApiServer`] if the response body ends before an `end` or `error` event.
-/// * [`FailureKind::Local`] if the results can't be written to stdout.
 /// * Forwards [`reqwest::Response::chunk`]'s return values as [`FailureKind::ApiServer`] on
 ///   failure.
 /// * Forwards [`handle_line`]'s return values on failure.
-async fn write_results(
+async fn read_results(
     mut response: reqwest::Response,
     query_job_id: &mut Option<u64>,
+    batch_sender: &tokio::sync::mpsc::Sender<Vec<u8>>,
 ) -> Result<(), Failure> {
-    use std::io::Write;
-
     let mut event_name = None;
     // The received bytes that aren't handled yet, i.e., the start of an incomplete line.
     let mut unhandled = Vec::new();
@@ -416,15 +473,14 @@ async fn write_results(
         }
         unhandled.drain(..=last_newline_pos);
 
-        if !results.is_empty() {
-            let mut stdout = std::io::stdout().lock();
-            match stdout.write_all(&results).and_then(|()| stdout.flush()) {
-                Err(error) if error.kind() == std::io::ErrorKind::BrokenPipe => return Ok(()),
-                result => result
-                    .context("failed to write the results")
-                    .map_err(Failure::local)?,
-            }
-            results.clear();
+        if !results.is_empty()
+            && batch_sender
+                .send(std::mem::take(&mut results))
+                .await
+                .is_err()
+        {
+            // The writer of the results stopped, e.g., because stdout is closed.
+            return Ok(());
         }
         if outcome?.is_break() {
             return Ok(());

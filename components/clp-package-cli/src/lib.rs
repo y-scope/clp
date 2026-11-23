@@ -35,6 +35,9 @@ pub fn set_up_logging(target: &str, is_verbose: bool) {
 
 /// Runs `future` to completion on a current-thread runtime, unless SIGINT or SIGTERM interrupts it.
 ///
+/// The runtime is shut down without waiting for its blocking tasks, e.g., a write to stdout that an
+/// idle pager blocks.
+///
 /// # Type Parameters
 ///
 /// * `FutureType` - The future to run.
@@ -59,7 +62,7 @@ pub fn run_until_signal<FutureType: Future>(
         .enable_all()
         .build()
         .context("failed to create the runtime")?;
-    runtime.block_on(async {
+    let output = runtime.block_on(async {
         // As the container's PID 1, the process has no default action for these signals.
         let mut interrupt =
             signal(SignalKind::interrupt()).context("failed to listen for SIGINT")?;
@@ -70,7 +73,9 @@ pub fn run_until_signal<FutureType: Future>(
             _ = interrupt.recv() => Ok(None),
             _ = terminate.recv() => Ok(None),
         }
-    })
+    });
+    runtime.shutdown_background();
+    output
 }
 
 /// Resolves the path at which the container reads the package config.
