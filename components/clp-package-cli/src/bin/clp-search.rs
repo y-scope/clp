@@ -11,12 +11,15 @@ use anyhow::Context;
 use clap::Parser;
 use clap::builder::NonEmptyStringValueParser;
 use clap::builder::TypedValueParser;
+use clp_package_cli::INTERRUPTED_EXIT_CODE;
+use clp_package_cli::resolve_config_path;
+use clp_package_cli::run_until_signal;
+use clp_package_cli::set_up_logging;
 use clp_rust_utils::api_server::SSE_KEEP_ALIVE_INTERVAL;
 use clp_rust_utils::api_server::streaming_query::StreamingQueryConfig;
 use clp_rust_utils::api_server::streaming_query::StreamingQueryEndEvent;
 use clp_rust_utils::api_server::streaming_query::StreamingQueryErrorEvent;
 use clp_rust_utils::api_server::streaming_query::StreamingQueryJobEvent;
-use clp_rust_utils::clp_config::package::DEFAULT_CONFIG_FILE_PATH;
 use clp_rust_utils::clp_config::package::config::ApiServer;
 use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::dataset::NonEmptyDatasetNames;
@@ -33,12 +36,6 @@ const CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
 /// The longest time that a read from the API server may take: four times the interval of the API
 /// server's keep-alive comments, so that an idle search isn't failed.
 const READ_TIMEOUT: Duration = SSE_KEEP_ALIVE_INTERVAL.saturating_mul(4);
-
-/// The directory at which the container mounts the host's root directory.
-const CONTAINER_HOST_ROOT: &str = "/mnt/host";
-
-/// The exit code of a search that a signal interrupted.
-const INTERRUPTED_EXIT_CODE: u8 = 130;
 
 /// Command-line arguments for `clp-search`.
 #[derive(Parser)]
@@ -186,26 +183,8 @@ fn main() -> ExitCode {
         },
     };
 
-    set_up_logging(args.verbose);
+    set_up_logging(env!("CARGO_CRATE_NAME"), args.verbose);
     run(args.config.as_deref(), &streaming_query_config).unwrap_or_else(Failure::report)
-}
-
-/// Sets up logging to stderr, at the debug level for this binary if `is_verbose`, and at the info
-/// level otherwise.
-fn set_up_logging(is_verbose: bool) {
-    use std::io::IsTerminal;
-
-    let filter = if is_verbose {
-        "info,clp_search=debug"
-    } else {
-        "info"
-    };
-    tracing_subscriber::fmt()
-        .with_env_filter(tracing_subscriber::EnvFilter::new(filter))
-        .with_writer(std::io::stderr)
-        .with_ansi(std::io::stderr().is_terminal())
-        .with_target(false)
-        .init();
 }
 
 /// Runs `streaming_query_config`'s search through the API server that the package config at
@@ -224,16 +203,12 @@ fn set_up_logging(is_verbose: bool) {
 /// * Forwards [`resolve_config_path`]'s return values as [`Failure::Local`] on failure.
 /// * Forwards [`read_stream_query_url`]'s return values as [`Failure::Local`] on failure.
 /// * Forwards [`reqwest::ClientBuilder::build`]'s return values as [`Failure::Local`] on failure.
-/// * Forwards [`tokio::runtime::Builder::build`]'s return values as [`Failure::Local`] on failure.
-/// * Forwards [`tokio::signal::unix::signal`]'s return values as [`Failure::Local`] on failure.
+/// * Forwards [`run_until_signal`]'s return values as [`Failure::Local`] on failure.
 /// * Forwards [`search`]'s return values on failure.
 fn run(
     host_config_path: Option<&Path>,
     streaming_query_config: &StreamingQueryConfig,
 ) -> Result<ExitCode, Failure> {
-    use tokio::signal::unix::SignalKind;
-    use tokio::signal::unix::signal;
-
     let config_path = resolve_config_path(host_config_path).map_err(Failure::Local)?;
     let stream_query_url = read_stream_query_url(&config_path).map_err(Failure::Local)?;
     let http_client = reqwest::Client::builder()
@@ -243,77 +218,19 @@ fn run(
         .build()
         .context("failed to build the HTTP client")
         .map_err(Failure::Local)?;
-    let runtime = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .context("failed to create the runtime")
-        .map_err(Failure::Local)?;
-    runtime.block_on(async {
-        // As the container's PID 1, the process has no default action for these signals.
-        let mut interrupt = signal(SignalKind::interrupt())
-            .context("failed to listen for SIGINT")
-            .map_err(Failure::Local)?;
-        let mut terminate = signal(SignalKind::terminate())
-            .context("failed to listen for SIGTERM")
-            .map_err(Failure::Local)?;
-        let signal_name = tokio::select! {
-            result = search(&http_client, stream_query_url, streaming_query_config) => {
-                return result.map(|()| ExitCode::SUCCESS);
-            }
-            _ = interrupt.recv() => "SIGINT",
-            _ = terminate.recv() => "SIGTERM",
-        };
+    let Some(result) = run_until_signal(search(
+        &http_client,
+        stream_query_url,
+        streaming_query_config,
+    ))
+    .map_err(Failure::Local)?
+    else {
         tracing::warn!(
-            signal = signal_name,
             "The search was interrupted. The API server requests the query job's cancellation."
         );
-        Ok(ExitCode::from(INTERRUPTED_EXIT_CODE))
-    })
-}
-
-/// Resolves the path at which the container reads the package config.
-///
-/// Without `host_config_path`, the path is [`DEFAULT_CONFIG_FILE_PATH`] joined onto `CLP_HOME`.
-/// Otherwise, `host_config_path` is a path on the host: a leading `~` component is replaced with
-/// `HOME`, a relative path is joined onto `CLP_PWD_HOST`, and the resulting absolute path is joined
-/// under [`CONTAINER_HOST_ROOT`], where the container mounts the host's root directory. Symlinks
-/// and `..` components are left as they are.
-///
-/// # Returns
-///
-/// The path of the package config in the container on success.
-///
-/// # Errors
-///
-/// Returns an error if:
-///
-/// * [`anyhow::Error`] if:
-///   * An environment variable that the resolution needs isn't set.
-///   * The path on the host is still relative once it's joined onto `CLP_PWD_HOST`.
-fn resolve_config_path(host_config_path: Option<&Path>) -> anyhow::Result<PathBuf> {
-    use std::env::var_os;
-
-    let Some(host_config_path) = host_config_path else {
-        let clp_home = var_os("CLP_HOME").context("`CLP_HOME` isn't set")?;
-        return Ok(Path::new(&clp_home).join(DEFAULT_CONFIG_FILE_PATH));
+        return Ok(ExitCode::from(INTERRUPTED_EXIT_CODE));
     };
-    let host_config_path = match host_config_path.strip_prefix("~") {
-        Ok(path_in_home) => {
-            let home = var_os("HOME").context("`HOME` isn't set")?;
-            Path::new(&home).join(path_in_home)
-        }
-        Err(_) => host_config_path.to_path_buf(),
-    };
-    let host_config_path = if host_config_path.is_relative() {
-        let pwd_host = var_os("CLP_PWD_HOST").context("`CLP_PWD_HOST` isn't set")?;
-        Path::new(&pwd_host).join(host_config_path)
-    } else {
-        host_config_path
-    };
-    let host_config_path_from_root = host_config_path
-        .strip_prefix("/")
-        .with_context(|| format!("the host path {} is relative", host_config_path.display()))?;
-    Ok(Path::new(CONTAINER_HOST_ROOT).join(host_config_path_from_root))
+    result.map(|()| ExitCode::SUCCESS)
 }
 
 /// Reads the URL of the API server's streaming query route from the package config at
