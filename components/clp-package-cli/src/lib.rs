@@ -96,6 +96,7 @@ pub fn run_until_signal<FutureType: Future>(
 /// * [`anyhow::Error`] if:
 ///   * An environment variable that the resolution needs isn't set.
 ///   * The path on the host is still relative once it's joined onto `CLP_PWD_HOST`.
+/// * Forwards [`resolve_host_path`]'s return values on failure.
 pub fn resolve_config_path(host_config_path: Option<&Path>) -> anyhow::Result<PathBuf> {
     use std::env::var_os;
 
@@ -123,7 +124,7 @@ pub fn resolve_config_path(host_config_path: Option<&Path>) -> anyhow::Result<Pa
         "the host path {} is relative",
         host_config_path.display()
     );
-    Ok(resolve_host_path(&host_config_path))
+    resolve_host_path(&host_config_path)
 }
 
 /// Resolves `host_path`, an absolute path on the host, into the path at which the container
@@ -131,34 +132,49 @@ pub fn resolve_config_path(host_config_path: Option<&Path>) -> anyhow::Result<Pa
 ///
 /// The path is resolved one component at a time, the way the host resolves it: a `..` component
 /// moves up a directory, but never above the host's root directory, and a symlink is replaced with
-/// its target, which starts again from the host's root directory if it's absolute. Once
-/// [`MAX_NUM_SYMLINKS_FOLLOWED`] symlinks are followed (e.g., in a symlink loop), the remaining
-/// symlinks are left as they are.
+/// its target, which starts again from the host's root directory if it's absolute. Once a component
+/// can't be resolved (e.g., it doesn't exist, or a `..` follows a file), the remaining components
+/// are kept as they are, so that opening the path fails the way it would on the host.
 ///
 /// # Returns
 ///
-/// The path in the container.
-fn resolve_host_path(host_path: &Path) -> PathBuf {
+/// The path in the container on success.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * [`anyhow::Error`] if the path has more than [`MAX_NUM_SYMLINKS_FOLLOWED`] symlinks to follow
+///   (e.g., in a symlink loop).
+fn resolve_host_path(host_path: &Path) -> anyhow::Result<PathBuf> {
     let container_host_root = Path::new(CONTAINER_HOST_ROOT);
     let mut path = container_host_root.to_path_buf();
     // The components that are left to resolve, with the next one last.
     let mut components = reversed_components(host_path);
     let mut num_symlinks_followed = 0;
     while let Some(component) = components.pop() {
-        if component == ".." {
+        if component == ".." && path.is_dir() {
             if path != container_host_root {
                 path.pop();
             }
             continue;
         }
         path.push(component);
-        if num_symlinks_followed == MAX_NUM_SYMLINKS_FOLLOWED {
-            continue;
-        }
-        let Ok(target) = std::fs::read_link(&path) else {
-            continue;
+        let target = match std::fs::read_link(&path) {
+            Ok(target) => target,
+            Err(error) if error.kind() == std::io::ErrorKind::InvalidInput => continue,
+            // E.g., the component doesn't exist, or it's a `..` after a file.
+            Err(_) => {
+                path.extend(components.iter().rev());
+                break;
+            }
         };
         num_symlinks_followed += 1;
+        anyhow::ensure!(
+            num_symlinks_followed <= MAX_NUM_SYMLINKS_FOLLOWED,
+            "too many levels of symbolic links in the host path {}",
+            host_path.display()
+        );
         if target.is_absolute() {
             container_host_root.clone_into(&mut path);
         } else {
@@ -166,7 +182,7 @@ fn resolve_host_path(host_path: &Path) -> PathBuf {
         }
         components.extend(reversed_components(&target));
     }
-    path
+    Ok(path)
 }
 
 /// # Returns
