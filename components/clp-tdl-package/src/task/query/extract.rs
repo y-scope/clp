@@ -113,8 +113,16 @@ pub(super) fn run_clp_s_extract(
 
 const MAX_STATS_LINE_SIZE: usize = 64 * 1024;
 const MAX_STATS_OUTPUT_SIZE: usize = 128 * 1024 * 1024;
+const MAX_STATS_READ_SIZE: usize = MAX_STATS_LINE_SIZE + 1;
 const MAX_CHUNKS: usize = 1_000_000;
 const MAX_STDERR_TAIL_SIZE: usize = 64 * 1024;
+
+const _: () = assert!(
+    MAX_STATS_OUTPUT_SIZE
+        .checked_add(MAX_STATS_READ_SIZE)
+        .is_some(),
+    "the maximum output size plus one stats line and its newline must fit in a usize"
+);
 
 /// A subprocess that is killed and reaped on drop unless already reaped.
 #[must_use = "dropping the guard before waiting kills and reaps the subprocess"]
@@ -211,7 +219,7 @@ fn build_clp_s_extract_command(
 ///
 /// Panics if the constant line size plus its newline does not fit in a `u64`.
 fn read_chunk_paths(mut reader: impl BufRead) -> anyhow::Result<Vec<PathBuf>> {
-    let read_limit = u64::try_from(MAX_STATS_LINE_SIZE + 1)
+    let read_limit = u64::try_from(MAX_STATS_READ_SIZE)
         .expect("the maximum line size plus a newline should fit in a u64");
     let mut paths = Vec::new();
     let mut line = Vec::new();
