@@ -91,7 +91,7 @@ impl<'context_lifetime> ArchiveSelector<'context_lifetime> {
         let mut selected_archives = Vec::new();
         for dataset in datasets.iter() {
             selected_archives.extend(
-                self.fetch_archives(dataset, query.time_range, retention_cutoff_millisecs)
+                self.fetch_archives(dataset, &query.time_range, retention_cutoff_millisecs)
                     .await?,
             );
         }
@@ -155,7 +155,7 @@ impl<'context_lifetime> ArchiveSelector<'context_lifetime> {
     async fn fetch_archives(
         &self,
         dataset: &DatasetName,
-        time_range: TimeRange,
+        time_range: &TimeRange,
         retention_cutoff_millisecs: Option<i64>,
     ) -> Result<Vec<ArchiveMetadata>, Error> {
         let archives_table = self.db_config.archives_table_name(dataset);
@@ -195,7 +195,7 @@ struct ArchiveRowProjection {
 /// The query with the overlap and retention filters applied.
 fn build_archive_query(
     archives_table: &str,
-    time_range: TimeRange,
+    time_range: &TimeRange,
     retention_cutoff_millisecs: Option<i64>,
 ) -> QueryBuilder<'static, MySql> {
     let mut query_builder = QueryBuilder::<MySql>::new(format!(
@@ -281,7 +281,7 @@ mod tests {
     #[test]
     fn archive_query_uses_inclusive_retention_cutoff_and_only_exempts_zero_from_retention() {
         let time_range = TimeRange::new(Some(100), Some(300)).expect("time range should be valid");
-        let query = build_archive_query("archives", time_range, Some(200));
+        let query = build_archive_query("archives", &time_range, Some(200));
         assert_eq!(
             query.sql(),
             "SELECT `id`, `uncompressed_size`, `end_timestamp` FROM `archives` WHERE TRUE AND \
