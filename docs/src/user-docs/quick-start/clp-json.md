@@ -370,7 +370,18 @@ To search your compressed logs from the command line, run:
 sbin/search.sh '<query>'
 ```
 
-`search.sh` writes each result to stdout as a JSON object on its own line.
+The command writes one JSON object per result to stdout, each on its own line.
+
+:::{note}
+The command sends your query to the API server. The server must be running and reachable at the
+host and port specified by `api_server.host` and `api_server.port` in `etc/clp-config.yaml`.
+:::
+
+:::{tip}
+The command starts a new container for each search. For latency-sensitive searches, avoid container
+startup overhead by sending your query directly to the API server's
+[streaming search endpoint][api-server-streaming-search].
+:::
 
 To narrow your search to a specific time range:
 
@@ -388,15 +399,6 @@ To perform case-insensitive searches, add the `--ignore-case` flag.
 To match the convention of other tools, by default, searches are case-**insensitive** in the UI and
 searches are case-**sensitive** on the command line.
 :::
-
-`search.sh` exits with:
-
-* `0` if the search succeeded.
-* `1` if the query job didn't succeed (e.g., it failed or was cancelled).
-* `2` if the arguments are invalid.
-* `3` if the API server can't be reached (e.g., CLP isn't running), rejected the query, or failed.
-* `4` on a local error (e.g., the config can't be read).
-* `130` if the search was interrupted (e.g., with Ctrl-C).
 
 ---
 
@@ -433,6 +435,7 @@ kind delete cluster --name clp
 ::::
 
 [api-server]: ../guides-using-the-api-server.md
+[api-server-streaming-search]: ../guides-using-the-api-server.md#example-streaming-search-results-in-a-single-request
 [clp-json-format]: ./index.md#clp-json
 [datasets]: ../resources-datasets.md
 [json-search-syntax]: ../reference-json-search-syntax.md
