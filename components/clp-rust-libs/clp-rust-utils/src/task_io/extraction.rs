@@ -3,46 +3,24 @@
 use std::num::NonZeroU64;
 
 use serde::Deserialize;
-use serde::Deserializer;
 use serde::Serialize;
+use serde_with::DisplayFromStr;
+use serde_with::serde_as;
 
 use crate::dataset::DatasetName;
 use crate::job_config::QueryJobId;
 use crate::types::ArchiveId;
 
 /// Input for extracting one archive into ordered JSON chunks.
+#[serde_as]
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct ExtractTaskInput {
     pub job_id: QueryJobId,
-    #[serde(deserialize_with = "deserialize_required_dataset")]
+    #[serde_as(deserialize_as = "DisplayFromStr")]
     pub dataset: DatasetName,
     pub archive_id: ArchiveId,
     pub target_chunk_size: Option<NonZeroU64>,
-}
-
-/// Deserializes a dataset name from a required string.
-///
-/// # Type Parameters
-///
-/// * `'de` - The lifetime of the input data.
-/// * `DeserializerType` - The type of the deserializer to read the dataset name from.
-///
-/// # Returns
-///
-/// The validated dataset name on success.
-///
-/// # Errors
-///
-/// Returns an error if:
-///
-/// * [`Deserializer::Error`] created by [`serde::de::Error::custom`] if the name is not valid.
-/// * Forwards [`String::deserialize`]'s return values on failure.
-fn deserialize_required_dataset<'de, DeserializerType: Deserializer<'de>>(
-    deserializer: DeserializerType,
-) -> Result<DatasetName, DeserializerType::Error> {
-    let name = String::deserialize(deserializer)?;
-    DatasetName::try_from(name).map_err(serde::de::Error::custom)
 }
 
 #[cfg(test)]
