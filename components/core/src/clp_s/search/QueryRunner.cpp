@@ -205,15 +205,6 @@ auto rewrite_nexists_array_op(ast::FilterOperation& op) -> bool {
     }
     throw ReaderUtils::OperationFailed(ErrorCodeUnsupported, __FILENAME__, __LINE__);
 }
-
-/**
- * @return A shared empty variable-match set for a pure-wildcard filter whose literal can never
- * equal a `VarString` value. The returned set must not be modified.
- */
-[[nodiscard]] auto get_empty_var_match_set() -> std::unordered_set<int64_t>* {
-    static std::unordered_set<int64_t> empty_var_match_set{};
-    return &empty_var_match_set;
-}
 }  // namespace
 
 void QueryRunner::global_init() {
@@ -500,7 +491,7 @@ auto QueryRunner::evaluate_wildcard_filter(FilterExpr* expr, int32_t schema) -> 
     auto const matches_metadata{
             subtree_type.has_value() && constants::cMetadataSubtreeType == subtree_type.value()
     };
-    auto const& storage{m_wildcard_string_storage[column]};
+    auto const& storage{m_wildcard_string_storage.at(column)};
     if (storage.clp) {
         if (can_never_equal_stored_string(*literal, NodeType::ClpString)) {
             any_defined = true;
@@ -1173,12 +1164,12 @@ auto QueryRunner::get_or_build_clp_query(std::string const& query_string) -> clp
 
 auto QueryRunner::get_or_build_var_matches(std::string const& query_string)
         -> std::unordered_set<int64_t>* {
-    auto const existing{m_string_var_match_map.find(query_string)};
-    if (m_string_var_match_map.end() != existing) {
-        return &existing->second;
+    auto const [it, inserted]{m_string_var_match_map.try_emplace(query_string)};
+    auto& matching_vars{it->second};
+    if (false == inserted) {
+        return &matching_vars;
     }
 
-    auto& matching_vars{m_string_var_match_map[query_string]};
     auto const var_dict{m_archive_reader->get_variable_dictionary()};
     if (false == ast::has_unescaped_wildcards(query_string)) {
         auto const unescaped_query_string{clp::string_utils::unescape_string(query_string)};
@@ -1227,7 +1218,7 @@ void QueryRunner::populate_searched_wildcard_columns(std::shared_ptr<Expression>
             return;
         }
         m_wildcard_columns.push_back(col);
-        auto& storage{m_wildcard_string_storage[col]};
+        auto& storage{m_wildcard_string_storage.try_emplace(col).first->second};
         literal_type_bitmask_t matching_types{0};
         (*m_schemas)[m_schema].get_view().for_each_node_id([&](mpt_node_id_t node) -> void {
             if (m_metadata_columns.contains(node)) {
@@ -1376,11 +1367,11 @@ EvaluatedValue QueryRunner::constant_propagate(std::shared_ptr<Expression> const
             bool can_match{};
             if (NodeType::ClpString == node_type) {
                 auto* const query{get_or_build_clp_query(query_string)};
-                m_expr_clp_query[expr.get()] = query;
+                m_expr_clp_query.try_emplace(expr.get(), query);
                 can_match = nullptr != query;
             } else {
                 auto* const matching_vars{get_or_build_var_matches(query_string)};
-                m_expr_var_match_map[expr.get()] = matching_vars;
+                m_expr_var_match_map.try_emplace(expr.get(), matching_vars);
                 can_match = false == matching_vars->empty();
             }
             if (can_match) {
@@ -1400,7 +1391,7 @@ auto QueryRunner::propagate_pure_wildcard_string_filter(
         std::shared_ptr<FilterExpr> const& filter
 ) -> EvaluatedValue {
     auto* const wildcard{filter->get_column().get()};
-    auto const& storage{m_wildcard_string_storage[wildcard]};
+    auto const& storage{m_wildcard_string_storage.at(wildcard)};
     bool const has_clp_storage{storage.clp};
     bool const has_var_storage{storage.var || storage.text};
     bool matches_clp_string{false};
@@ -1415,10 +1406,10 @@ auto QueryRunner::propagate_pure_wildcard_string_filter(
     }
     if (has_clp_storage) {
         if (can_never_equal_stored_string(*filter->get_operand(), NodeType::ClpString)) {
-            m_expr_clp_query[expr.get()] = nullptr;
+            m_expr_clp_query.try_emplace(expr.get(), nullptr);
         } else {
             auto* const query{get_or_build_clp_query(filter_string)};
-            m_expr_clp_query[expr.get()] = query;
+            m_expr_clp_query.try_emplace(expr.get(), query);
             matches_clp_string = nullptr != query;
         }
     }
@@ -1426,10 +1417,10 @@ auto QueryRunner::propagate_pure_wildcard_string_filter(
         if (storage.var && false == storage.text
             && can_never_equal_stored_string(*filter->get_operand(), NodeType::VarString))
         {
-            m_expr_var_match_map[expr.get()] = get_empty_var_match_set();
+            m_expr_var_match_map.try_emplace(expr.get(), m_empty_var_match_set.get());
         } else {
             auto* const matching_vars{get_or_build_var_matches(filter_string)};
-            m_expr_var_match_map[expr.get()] = matching_vars;
+            m_expr_var_match_map.try_emplace(expr.get(), matching_vars);
             matches_var_string = false == matching_vars->empty();
         }
     }

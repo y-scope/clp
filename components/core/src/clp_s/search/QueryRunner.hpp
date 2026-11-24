@@ -187,6 +187,11 @@ private:
     std::map<std::string, std::unordered_set<int64_t>> m_string_var_match_map;
     std::unordered_map<ast::Expression*, clp::Query*> m_expr_clp_query;
     std::unordered_map<ast::Expression*, std::unordered_set<int64_t>*> m_expr_var_match_map;
+    // The variable-match set for a pure-wildcard filter whose literal can never equal a `VarString`
+    // value. It must stay empty.
+    std::unique_ptr<std::unordered_set<int64_t>> m_empty_var_match_set{
+            std::make_unique<std::unordered_set<int64_t>>()
+    };
     std::unordered_map<int32_t, std::vector<ClpStringColumnReader*>> m_clp_string_readers;
     std::unordered_map<int32_t, std::vector<VariableStringColumnReader*>> m_var_string_readers;
     std::unordered_map<int32_t, TimestampColumnReader*> m_timestamp_readers;
