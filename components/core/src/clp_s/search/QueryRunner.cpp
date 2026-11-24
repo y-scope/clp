@@ -43,7 +43,6 @@
 #include "EvaluateTimestampIndex.hpp"
 
 using clp_s::search::ast::AndExpr;
-using clp_s::search::ast::ColumnDescriptor;
 using clp_s::search::ast::DescriptorList;
 using clp_s::search::ast::Expression;
 using clp_s::search::ast::FilterExpr;
@@ -217,17 +216,12 @@ auto QueryRunner::schema_init(int32_t schema_id) -> EvaluatedValue {
     m_expr_var_match_map.clear();
     m_wildcard_to_searched_basic_columns.clear();
     m_wildcard_string_storage.clear();
-    m_wildcard_columns.clear();
+    m_wildcard_type_mask = 0;
     m_expr = m_schema_expressions.at(schema_id);
     m_schema = schema_id;
     populate_searched_wildcard_columns(m_expr);
 
     m_expression_value = constant_propagate(m_expr);
-    if (m_expression_value == EvaluatedValue::False) {
-        return m_expression_value;
-    }
-
-    add_wildcard_columns_to_searched_columns();
     return m_expression_value;
 }
 
@@ -1217,7 +1211,6 @@ void QueryRunner::populate_searched_wildcard_columns(std::shared_ptr<Expression>
         if (false == col->is_pure_wildcard()) {
             return;
         }
-        m_wildcard_columns.push_back(col);
         auto& storage{m_wildcard_string_storage.try_emplace(col).first->second};
         literal_type_bitmask_t matching_types{0};
         (*m_schemas)[m_schema].get_view().for_each_node_id([&](mpt_node_id_t node) -> void {
@@ -1254,13 +1247,7 @@ void QueryRunner::populate_searched_wildcard_columns(std::shared_ptr<Expression>
             }
         });
         col->set_matching_types(matching_types);
-    }
-}
-
-void QueryRunner::add_wildcard_columns_to_searched_columns() {
-    m_wildcard_type_mask = 0;
-    for (ColumnDescriptor* wildcard : m_wildcard_columns) {
-        m_wildcard_type_mask |= wildcard->get_matching_types();
+        m_wildcard_type_mask |= matching_types;
     }
 }
 

@@ -202,7 +202,6 @@ private:
     uint64_t m_cur_message{0};
     EvaluatedValue m_expression_value{EvaluatedValue::Unknown};
 
-    std::vector<ast::ColumnDescriptor*> m_wildcard_columns;
     std::map<ast::ColumnDescriptor*, std::set<int32_t>> m_wildcard_to_searched_basic_columns;
     std::unordered_map<ast::ColumnDescriptor*, WildcardStringStorage> m_wildcard_string_storage;
     ast::literal_type_bitmask_t m_wildcard_type_mask{0};
@@ -668,11 +667,6 @@ private:
      * @param expr
      */
     void populate_searched_wildcard_columns(std::shared_ptr<ast::Expression> const& expr);
-
-    /**
-     * Adds wildcard columns to searched columns
-     */
-    void add_wildcard_columns_to_searched_columns();
 
     /**
      * Gets the cached decompressed unstructured array for the current message stored in the column
