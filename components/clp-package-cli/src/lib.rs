@@ -21,8 +21,6 @@ pub struct TerminationSignals {
 impl TerminationSignals {
     /// Starts listening for SIGINT and SIGTERM.
     ///
-    /// Must be called from within a Tokio runtime with I/O enabled.
-    ///
     /// # Returns
     ///
     /// The signals on success.
