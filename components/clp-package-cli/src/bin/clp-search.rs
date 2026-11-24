@@ -136,16 +136,6 @@ enum Failure {
 }
 
 impl Failure {
-    /// # Returns
-    ///
-    /// A tuple containing:
-    ///
-    /// * A [`Failure::Local`] caused by `error`.
-    /// * `None`, since a search that fails before its query job is submitted has no query job ID.
-    const fn local_failure(error: anyhow::Error) -> (Self, Option<u64>) {
-        (Self::Local(error), None)
-    }
-
     /// Logs the failure, with the ID of the search's query job, `query_job_id`, once it's known.
     ///
     /// # Returns
@@ -164,6 +154,26 @@ impl Failure {
             "The search failed."
         );
         ExitCode::from(exit_code)
+    }
+}
+
+/// A failure of a search, with the ID of the search's query job once it's known.
+struct SearchFailure {
+    failure: Failure,
+
+    /// The ID of the search's query job, or `None` if the search failed before it was submitted.
+    query_job_id: Option<u64>,
+}
+
+impl SearchFailure {
+    /// # Returns
+    ///
+    /// A search failure of a [`Failure::Local`] caused by `error`, without a query job ID.
+    const fn local(error: anyhow::Error) -> Self {
+        Self {
+            failure: Failure::Local(error),
+            query_job_id: None,
+        }
     }
 }
 
@@ -433,7 +443,10 @@ fn main() -> ExitCode {
             );
             ExitCode::from(INTERRUPTED_EXIT_CODE)
         }
-        Err((failure, query_job_id)) => failure.report(query_job_id),
+        Err(SearchFailure {
+            failure,
+            query_job_id,
+        }) => failure.report(query_job_id),
     }
 }
 
@@ -457,22 +470,22 @@ fn main() -> ExitCode {
 fn run(
     host_config_path: Option<PathBuf>,
     streaming_query_config: &StreamingQueryConfig,
-) -> Result<Outcome, (Failure, Option<u64>)> {
-    let config_path = resolve_config_path(host_config_path).map_err(Failure::local_failure)?;
-    let stream_query_url = read_stream_query_url(&config_path).map_err(Failure::local_failure)?;
+) -> Result<Outcome, SearchFailure> {
+    let config_path = resolve_config_path(host_config_path).map_err(SearchFailure::local)?;
+    let stream_query_url = read_stream_query_url(&config_path).map_err(SearchFailure::local)?;
     let http_client = reqwest::Client::builder()
         .no_proxy()
         .connect_timeout(CONNECT_TIMEOUT)
         .read_timeout(READ_TIMEOUT)
         .build()
         .context("failed to build the HTTP client")
-        .map_err(Failure::local_failure)?;
+        .map_err(SearchFailure::local)?;
     let outcome = run_on_runtime(search(
         &http_client,
         stream_query_url,
         streaming_query_config,
     ))
-    .map_err(Failure::local_failure)??;
+    .map_err(SearchFailure::local)??;
     Ok(outcome)
 }
 
@@ -518,15 +531,16 @@ fn read_stream_query_url(config_path: &Path) -> anyhow::Result<Url> {
 ///
 /// Returns an error if:
 ///
+/// * [`SearchFailure`] if:
+///   * [`submit`] fails, with its failure and without a query job ID.
+///   * [`stream_results`] fails, with its failure and the query job's ID.
 /// * Forwards [`TerminationSignals::listen`]'s return values as [`Failure::Local`] on failure.
-/// * Forwards [`submit`]'s return values on failure.
-/// * Forwards [`stream_results`]'s return values on failure.
 async fn search(
     http_client: &reqwest::Client,
     stream_query_url: Url,
     streaming_query_config: &StreamingQueryConfig,
-) -> Result<Outcome, (Failure, Option<u64>)> {
-    let mut signals = TerminationSignals::listen().map_err(Failure::local_failure)?;
+) -> Result<Outcome, SearchFailure> {
+    let mut signals = TerminationSignals::listen().map_err(SearchFailure::local)?;
     let Some(submitted) = signals
         .until_signal(submit(
             http_client,
@@ -540,7 +554,10 @@ async fn search(
     let SubmittedQuery {
         query_job_id,
         events,
-    } = submitted.map_err(|failure| (failure, None))?;
+    } = submitted.map_err(|failure| SearchFailure {
+        failure,
+        query_job_id: None,
+    })?;
     tracing::debug!(query_job_id, "Submitted the query job.");
     signals
         .until_signal(stream_results(events))
@@ -554,7 +571,10 @@ async fn search(
             |result| {
                 result
                     .map(|()| Outcome::Succeeded)
-                    .map_err(|failure| (failure, Some(query_job_id)))
+                    .map_err(|failure| SearchFailure {
+                        failure,
+                        query_job_id: Some(query_job_id),
+                    })
             },
         )
 }
