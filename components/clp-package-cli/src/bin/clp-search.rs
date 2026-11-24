@@ -138,8 +138,10 @@ enum Failure {
 impl Failure {
     /// # Returns
     ///
-    /// A [`Failure::Local`] caused by `error`, without a query job ID, for a search that fails
-    /// before its query job is submitted.
+    /// A tuple containing:
+    ///
+    /// * A [`Failure::Local`] caused by `error`.
+    /// * `None`, since a search that fails before its query job is submitted has no query job ID.
     const fn local_failure(error: anyhow::Error) -> (Self, Option<u64>) {
         (Self::Local(error), None)
     }
@@ -614,7 +616,7 @@ async fn submit(
         Some(Event::Error(StreamingQueryErrorEvent { message })) => Err(Failure::ApiServer(
             anyhow::anyhow!("the API server failed during the search: {message}"),
         )),
-        Some(_) => Err(Failure::ApiServer(anyhow::anyhow!(
+        Some(Event::Results(_) | Event::End(_)) => Err(Failure::ApiServer(anyhow::anyhow!(
             "the API server's first event isn't the `job` event"
         ))),
         None => Err(Failure::ApiServer(anyhow::anyhow!(
