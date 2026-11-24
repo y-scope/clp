@@ -13,7 +13,7 @@ use clap::Parser;
 use clap::builder::NonEmptyStringValueParser;
 use clap::builder::TypedValueParser;
 use clp_package_cli::INTERRUPTED_EXIT_CODE;
-use clp_package_cli::Signals;
+use clp_package_cli::TerminationSignals;
 use clp_package_cli::resolve_config_path;
 use clp_package_cli::run_on_runtime;
 use clp_rust_utils::api_server::SSE_KEEP_ALIVE_INTERVAL;
@@ -136,6 +136,14 @@ enum Failure {
 }
 
 impl Failure {
+    /// # Returns
+    ///
+    /// A [`Failure::Local`] caused by `error`, without a query job ID, for a search that fails
+    /// before its query job is submitted.
+    const fn local_failure(error: anyhow::Error) -> (Self, Option<u64>) {
+        (Self::Local(error), None)
+    }
+
     /// Logs the failure, with the ID of the search's query job, `query_job_id`, once it's known.
     ///
     /// # Returns
@@ -448,28 +456,22 @@ fn run(
     host_config_path: Option<PathBuf>,
     streaming_query_config: &StreamingQueryConfig,
 ) -> Result<Outcome, (Failure, Option<u64>)> {
-    let config_path = resolve_config_path(host_config_path).map_err(local_failure)?;
-    let stream_query_url = read_stream_query_url(&config_path).map_err(local_failure)?;
+    let config_path = resolve_config_path(host_config_path).map_err(Failure::local_failure)?;
+    let stream_query_url = read_stream_query_url(&config_path).map_err(Failure::local_failure)?;
     let http_client = reqwest::Client::builder()
         .no_proxy()
         .connect_timeout(CONNECT_TIMEOUT)
         .read_timeout(READ_TIMEOUT)
         .build()
         .context("failed to build the HTTP client")
-        .map_err(local_failure)?;
-    run_on_runtime(search(
+        .map_err(Failure::local_failure)?;
+    let outcome = run_on_runtime(search(
         &http_client,
         stream_query_url,
         streaming_query_config,
     ))
-    .map_err(local_failure)?
-}
-
-/// # Returns
-///
-/// A [`Failure::Local`] caused by `error`, without a query job ID.
-const fn local_failure(error: anyhow::Error) -> (Failure, Option<u64>) {
-    (Failure::Local(error), None)
+    .map_err(Failure::local_failure)??;
+    Ok(outcome)
 }
 
 /// Reads the URL of the API server's streaming query route from the package config at
@@ -514,7 +516,7 @@ fn read_stream_query_url(config_path: &Path) -> anyhow::Result<Url> {
 ///
 /// Returns an error if:
 ///
-/// * Forwards [`Signals::listen`]'s return values as [`Failure::Local`] on failure.
+/// * Forwards [`TerminationSignals::listen`]'s return values as [`Failure::Local`] on failure.
 /// * Forwards [`submit`]'s return values on failure.
 /// * Forwards [`stream_results`]'s return values on failure.
 async fn search(
@@ -522,7 +524,7 @@ async fn search(
     stream_query_url: Url,
     streaming_query_config: &StreamingQueryConfig,
 ) -> Result<Outcome, (Failure, Option<u64>)> {
-    let mut signals = Signals::listen().map_err(local_failure)?;
+    let mut signals = TerminationSignals::listen().map_err(Failure::local_failure)?;
     let Some(submitted) = signals
         .until_signal(submit(
             http_client,
@@ -645,8 +647,7 @@ async fn submit(
 async fn stream_results(events: EventReader) -> Result<(), Failure> {
     let (batch_sender, batch_receiver) = tokio::sync::mpsc::channel(MAX_NUM_PENDING_BATCHES.get());
     let writer = tokio::task::spawn_blocking(move || write_batches(batch_receiver));
-    let read_result = read_results(events, &batch_sender).await;
-    drop(batch_sender);
+    let read_result = read_results(events, batch_sender).await;
     match writer
         .await
         .context("the writer of the results panicked")
@@ -685,7 +686,8 @@ fn write_batches(mut batch_receiver: tokio::sync::mpsc::Receiver<Vec<u8>>) -> st
 }
 
 /// Reads the events after the `job` event from `events`, and sends each batch of results through
-/// `batch_sender`, until the query job ends or the batches' receiver is dropped.
+/// `batch_sender`, until the query job ends or the batches' receiver is dropped. Dropping
+/// `batch_sender` on return closes the channel, which tells the writer that no batch follows.
 ///
 /// # Errors
 ///
@@ -698,7 +700,7 @@ fn write_batches(mut batch_receiver: tokio::sync::mpsc::Receiver<Vec<u8>>) -> st
 /// * Forwards [`EventReader::next_event`]'s return values on failure.
 async fn read_results(
     mut events: EventReader,
-    batch_sender: &tokio::sync::mpsc::Sender<Vec<u8>>,
+    batch_sender: tokio::sync::mpsc::Sender<Vec<u8>>,
 ) -> Result<(), Failure> {
     loop {
         let Some(event) = events.next_event().await? else {

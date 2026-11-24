@@ -13,12 +13,12 @@ pub const INTERRUPTED_EXIT_CODE: u8 = 130;
 ///
 /// As a container's PID 1, the process has no default action for these signals, so it listens for
 /// them itself.
-pub struct Signals {
+pub struct TerminationSignals {
     interrupt: tokio::signal::unix::Signal,
     terminate: tokio::signal::unix::Signal,
 }
 
-impl Signals {
+impl TerminationSignals {
     /// Starts listening for SIGINT and SIGTERM.
     ///
     /// # Returns
