@@ -468,3 +468,178 @@ impl From<&JobOutcome> for QueryJobStatus {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::convert::identity;
+    use std::sync::Arc;
+    use std::time::Duration;
+
+    use async_trait::async_trait;
+    use clp_rust_utils::clp_config::package::config::Database;
+    use clp_rust_utils::dataset::DatasetName;
+    use clp_rust_utils::dataset::NonEmptyDatasetNames;
+    use clp_rust_utils::job_config::QueryJobConfig;
+    use clp_rust_utils::job_config::QueryJobId;
+    use clp_rust_utils::job_config::QueryOutput;
+    use clp_rust_utils::job_config::ResultsCacheOutput;
+    use clp_rust_utils::job_config::SearchQuery;
+    use clp_rust_utils::job_config::TimeRange;
+    use clp_rust_utils::types::ArchiveId;
+    use clp_rust_utils::types::non_empty_string::ExpectedNonEmpty;
+    use non_empty_string::NonEmptyString;
+    use spider_client::error::ClientError;
+    use spider_core::task::ExecutionPolicy;
+    use spider_core::task::TaskGraph;
+    use spider_core::types::id::JobId as SpiderJobId;
+    use spider_core::types::id::ResourceGroupId;
+    use spider_core::types::io::TaskGraphInput;
+    use sqlx::MySqlPool;
+
+    use super::QueryJobHandle;
+    use crate::Error;
+    use crate::job_handle::ArchiveMetadata;
+    use crate::job_handle::ArchiveSelectionOptions;
+    use crate::job_handle::QueryJobHandleContext;
+    use crate::job_handle::SpiderOption;
+    use crate::spider_job_submitter::JobOutcome;
+    use crate::spider_job_submitter::SpiderJobSubmitter;
+
+    const QUERY_JOB_ID: QueryJobId = 42;
+    const RESOURCE_GROUP_ID: ResourceGroupId = ResourceGroupId::from(7);
+    const TRANSPORT_ERROR_MESSAGE: &str = "connection lost during job registration";
+
+    #[derive(Clone)]
+    struct CheckingSubmitter {
+        config: QueryJobConfig,
+        dataset: DatasetName,
+        archive_id: ArchiveId,
+        policy: ExecutionPolicy,
+    }
+
+    #[async_trait]
+    impl SpiderJobSubmitter for CheckingSubmitter {
+        async fn submit_job(
+            &self,
+            resource_group_id: ResourceGroupId,
+            graph: &TaskGraph,
+            input: &TaskGraphInput,
+        ) -> Result<SpiderJobId, Error> {
+            assert_eq!(resource_group_id, RESOURCE_GROUP_ID);
+            assert_eq!(graph.get_num_tasks(), 1);
+            let task = graph.get_task(0).expect("the search task should exist");
+            assert_eq!(task.get_tdl_context().package, "clp");
+            assert_eq!(task.get_tdl_context().task_func, "query::clp_s_search");
+            assert_eq!(task.get_execution_policy(), &self.policy);
+
+            let payloads = input.clone().into_positional_inputs(identity);
+            let [query_job_id, query, dataset, archive_id, output] = payloads.as_slice() else {
+                panic!(
+                    "expected five positional search task inputs, got {}",
+                    payloads.len()
+                );
+            };
+            assert_eq!(
+                rmp_serde::from_slice::<QueryJobId>(query_job_id).expect("decode query job ID"),
+                QUERY_JOB_ID
+            );
+            assert_eq!(
+                rmp_serde::from_slice::<SearchQuery>(query).expect("decode search query"),
+                self.config.query
+            );
+            assert_eq!(
+                rmp_serde::from_slice::<DatasetName>(dataset).expect("decode dataset name"),
+                self.dataset
+            );
+            assert_eq!(
+                rmp_serde::from_slice::<ArchiveId>(archive_id).expect("decode archive ID"),
+                self.archive_id
+            );
+            assert_eq!(
+                rmp_serde::from_slice::<QueryOutput>(output).expect("decode query output"),
+                self.config.output
+            );
+
+            Err(ClientError::Transport(TRANSPORT_ERROR_MESSAGE.to_owned()).into())
+        }
+
+        async fn run_job_to_completion(
+            &self,
+            _spider_job_id: SpiderJobId,
+            _poll_interval: Duration,
+        ) -> Result<JobOutcome, Error> {
+            panic!("failed registration must not start a Spider job");
+        }
+
+        async fn cancel_job(&self, _spider_job_id: SpiderJobId) -> Result<(), Error> {
+            panic!("failed registration leaves no Spider job to cancel");
+        }
+    }
+
+    #[tokio::test]
+    async fn submit_passes_search_graph_and_inputs_and_forwards_registration_error() {
+        let archive = ArchiveMetadata {
+            id: "00000000-0000-0000-0000-000000000001"
+                .parse()
+                .expect("the fixture archive ID is a valid UUID"),
+            dataset: DatasetName::default(),
+            uncompressed_size: 1,
+            end_timestamp: 0,
+        };
+        let config = QueryJobConfig {
+            query: SearchQuery {
+                datasets: NonEmptyDatasetNames::try_from(vec![archive.dataset.clone()])
+                    .expect("the fixture query searches one dataset"),
+                query_string: NonEmptyString::from_static_str("level: error"),
+                time_range: TimeRange::default(),
+                ignore_case: false,
+            },
+            output: QueryOutput::ResultsCache(ResultsCacheOutput {
+                max_num_results: None,
+                aggregation: None,
+            }),
+        };
+        let policy = ExecutionPolicy {
+            max_num_retry: 4,
+            ..ExecutionPolicy::default()
+        };
+        let submitter = CheckingSubmitter {
+            config: config.clone(),
+            dataset: archive.dataset.clone(),
+            archive_id: archive.id,
+            policy: policy.clone(),
+        };
+
+        let db_pool = MySqlPool::connect_lazy("mysql://localhost/clp-db")
+            .expect("the fixture database URL is valid");
+        db_pool.close().await;
+        let handle = QueryJobHandle::new(
+            Arc::new(QueryJobHandleContext {
+                db_pool,
+                db_config: Database::default(),
+                archive_selection_options: ArchiveSelectionOptions {
+                    archive_retention_period_millisecs: None,
+                    max_datasets_per_query: None,
+                },
+                spider_option: SpiderOption {
+                    poll_interval: Duration::from_secs(1),
+                    query_task_max_retry: policy.max_num_retry,
+                },
+            }),
+            QUERY_JOB_ID,
+            submitter,
+            RESOURCE_GROUP_ID,
+            config,
+            0,
+        );
+
+        let error = handle
+            .submit(vec![(archive, policy)])
+            .await
+            .expect_err("Spider registration should fail");
+        let Error::SpiderClient(ClientError::Transport(message)) = error else {
+            panic!("expected Spider transport error, got {error:?}");
+        };
+        assert_eq!(message, TRANSPORT_ERROR_MESSAGE);
+    }
+}
