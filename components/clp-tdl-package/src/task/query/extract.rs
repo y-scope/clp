@@ -20,7 +20,6 @@ use clp_rust_utils::task_io::extraction::ExtractTaskInput;
 use serde::Deserialize;
 
 use crate::task::query::archive_input::ArchiveDescriptor;
-use crate::task::query::archive_input::resolve_archive_input;
 use crate::task::utils::clp_binary_path;
 
 /// Extracts one archive into ordered chunks in `output_directory`.
@@ -36,7 +35,7 @@ use crate::task::utils::clp_binary_path;
 /// * [`anyhow::Error`] if:
 ///   * The configured storage engine is not [`StorageEngine::ClpS`].
 ///   * `clp-s` exits unsuccessfully.
-/// * Forwards [`resolve_archive_input`]'s return values on failure.
+/// * Forwards [`ArchiveDescriptor::resolve`]'s return values on failure.
 /// * Forwards [`Command::spawn`]'s return values on failure.
 /// * Forwards [`thread::Builder::spawn_scoped`]'s return values on failure.
 /// * Forwards [`read_chunk_paths`]'s return values on failure.
@@ -65,7 +64,7 @@ pub(super) fn run_clp_s_extract(
     );
 
     let archive_descriptor =
-        resolve_archive_input(runtime, clp_home, config, &input.dataset, input.archive_id)?;
+        ArchiveDescriptor::resolve(runtime, clp_home, config, &input.dataset, input.archive_id)?;
     let clp_s_bin = clp_binary_path(clp_home, "clp-s");
     let mut command = build_clp_s_extract_command(
         &clp_s_bin,

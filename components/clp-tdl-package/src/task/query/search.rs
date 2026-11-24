@@ -28,7 +28,6 @@ use spider_core::types::id::TaskId;
 use crate::common::clp_home;
 use crate::common::runtime;
 use crate::task::query::archive_input::ArchiveDescriptor;
-use crate::task::query::archive_input::resolve_archive_input;
 use crate::task::utils::build_s3_client;
 use crate::task::utils::clp_binary_path;
 use crate::task::utils::upload_file_to_s3;
@@ -44,7 +43,7 @@ use crate::task::utils::upload_file_to_s3;
 ///
 /// * The configured storage engine is not [`StorageEngine::ClpS`].
 /// * `ctx.task_id` isn't a [`TaskId::Index`].
-/// * Forwards [`resolve_archive_input`]'s return values on failure.
+/// * Forwards [`ArchiveDescriptor::resolve`]'s return values on failure.
 /// * Forwards [`ResultsFile::create`]'s return values on failure.
 /// * Forwards [`run_clp_s_search`]'s return values on failure.
 /// * Forwards [`ResultsFile::publish`]'s return values on failure.
@@ -79,17 +78,19 @@ pub(super) fn search(
 
     let clp_home = clp_home();
     let runtime = runtime();
-    let archive_descriptor = resolve_archive_input(&runtime, clp_home, config, dataset, archive_id)
-        .inspect_err(|e| {
-            tracing::error!(
-                job_id = % ctx.job_id,
-                task_id = % ctx.task_id,
-                task_instance_id = % ctx.task_instance_id,
-                query_job_id = % query_job_id,
-                error = % e,
-                "Failed to resolve the archive input."
-            );
-        })?;
+    let archive_descriptor = ArchiveDescriptor::resolve(
+        &runtime, clp_home, config, dataset, archive_id,
+    )
+    .inspect_err(|e| {
+        tracing::error!(
+            job_id = % ctx.job_id,
+            task_id = % ctx.task_id,
+            task_instance_id = % ctx.task_instance_id,
+            query_job_id = % query_job_id,
+            error = % e,
+            "Failed to resolve the archive input."
+        );
+    })?;
     let results_file = match output {
         QueryOutput::File {} => Some(
             ResultsFile::create(clp_home, config, query_job_id, archive_id).inspect_err(|e| {

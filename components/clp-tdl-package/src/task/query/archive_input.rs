@@ -30,6 +30,59 @@ pub(super) enum ArchiveDescriptor {
 }
 
 impl ArchiveDescriptor {
+    /// Factory function.
+    ///
+    /// Resolves the archive location and any credentials needed to read it.
+    ///
+    /// # Returns
+    ///
+    /// The archive descriptor on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`generate_s3_url`]'s return values on failure.
+    /// * Forwards [`s3_credential_env`]'s return values on failure.
+    pub(super) fn resolve(
+        runtime: &tokio::runtime::Handle,
+        clp_home: &Path,
+        config: &SpiderTaskExecutorConfig,
+        dataset: &DatasetName,
+        archive_id: ArchiveId,
+    ) -> anyhow::Result<Self> {
+        let s3_config = match &config.archive_output.storage {
+            ArchiveOutputStorage::Fs { .. } => {
+                return Ok(Self::Directory {
+                    path: config
+                        .abs_archive_output_staging(clp_home)
+                        .join(dataset.as_str()),
+                    archive_id,
+                });
+            }
+            ArchiveOutputStorage::S3 { s3_config, .. } => s3_config,
+        };
+
+        let object_key = config
+            .archive_output
+            .dataset_archive_object_key(dataset, &archive_id);
+        let url = generate_s3_url(
+            s3_config.endpoint_url.as_ref().map(NonEmptyString::as_str),
+            s3_config.region_code.as_ref().map(NonEmptyString::as_str),
+            &s3_config.bucket,
+            &object_key,
+        )?;
+        let region = s3_config
+            .region_code
+            .as_ref()
+            .map_or(AWS_DEFAULT_REGION, NonEmptyString::as_str);
+        let credential_env = s3_credential_env(runtime, region, &s3_config.aws_authentication)?;
+        Ok(Self::S3 {
+            url,
+            credential_env,
+        })
+    }
+
     /// Configures a `clp-s` subcommand to read this archive.
     ///
     /// # Returns
@@ -58,57 +111,6 @@ impl ArchiveDescriptor {
         }
         command
     }
-}
-
-/// Resolves the archive location and any credentials needed to read it.
-///
-/// # Returns
-///
-/// The archive descriptor on success.
-///
-/// # Errors
-///
-/// Returns an error if:
-///
-/// * Forwards [`generate_s3_url`]'s return values on failure.
-/// * Forwards [`s3_credential_env`]'s return values on failure.
-pub(super) fn resolve_archive_input(
-    runtime: &tokio::runtime::Handle,
-    clp_home: &Path,
-    config: &SpiderTaskExecutorConfig,
-    dataset: &DatasetName,
-    archive_id: ArchiveId,
-) -> anyhow::Result<ArchiveDescriptor> {
-    let s3_config = match &config.archive_output.storage {
-        ArchiveOutputStorage::Fs { .. } => {
-            return Ok(ArchiveDescriptor::Directory {
-                path: config
-                    .abs_archive_output_staging(clp_home)
-                    .join(dataset.as_str()),
-                archive_id,
-            });
-        }
-        ArchiveOutputStorage::S3 { s3_config, .. } => s3_config,
-    };
-
-    let object_key = config
-        .archive_output
-        .dataset_archive_object_key(dataset, &archive_id);
-    let url = generate_s3_url(
-        s3_config.endpoint_url.as_ref().map(NonEmptyString::as_str),
-        s3_config.region_code.as_ref().map(NonEmptyString::as_str),
-        &s3_config.bucket,
-        &object_key,
-    )?;
-    let region = s3_config
-        .region_code
-        .as_ref()
-        .map_or(AWS_DEFAULT_REGION, NonEmptyString::as_str);
-    let credential_env = s3_credential_env(runtime, region, &s3_config.aws_authentication)?;
-    Ok(ArchiveDescriptor::S3 {
-        url,
-        credential_env,
-    })
 }
 
 /// # Returns
@@ -154,8 +156,8 @@ mod tests {
     use clp_rust_utils::types::non_empty_string::ExpectedNonEmpty;
     use non_empty_string::NonEmptyString;
 
+    use super::ArchiveDescriptor;
     use super::base_s3_config;
-    use super::resolve_archive_input;
 
     const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
 
@@ -186,7 +188,7 @@ mod tests {
     }
 
     #[test]
-    fn resolve_archive_input_fs_joins_dataset_and_returns_no_credentials() -> anyhow::Result<()> {
+    fn resolve_fs_joins_dataset_and_returns_no_credentials() -> anyhow::Result<()> {
         let runtime = tokio::runtime::Runtime::new().expect("failed to create Tokio runtime");
         let config = SpiderTaskExecutorConfig {
             package: Package {
@@ -201,7 +203,7 @@ mod tests {
             ..SpiderTaskExecutorConfig::default()
         };
 
-        let descriptor = resolve_archive_input(
+        let descriptor = ArchiveDescriptor::resolve(
             runtime.handle(),
             Path::new("/clp"),
             &config,
@@ -226,11 +228,11 @@ mod tests {
     }
 
     #[test]
-    fn resolve_archive_input_s3_builds_object_url_and_credentials() -> anyhow::Result<()> {
+    fn resolve_s3_builds_object_url_and_credentials() -> anyhow::Result<()> {
         let runtime = tokio::runtime::Runtime::new().expect("failed to create Tokio runtime");
         let config = s3_backed_config("var/data/staged-archives", None);
 
-        let descriptor = resolve_archive_input(
+        let descriptor = ArchiveDescriptor::resolve(
             runtime.handle(),
             Path::new("/clp"),
             &config,
@@ -263,13 +265,13 @@ mod tests {
     }
 
     #[test]
-    fn resolve_archive_input_s3_ignores_staging_directory() -> anyhow::Result<()> {
+    fn resolve_s3_ignores_staging_directory() -> anyhow::Result<()> {
         const STAGING_DIRECTORY: &str = "/wrong-staging-directory";
 
         let runtime = tokio::runtime::Runtime::new().expect("failed to create Tokio runtime");
         let config = s3_backed_config(STAGING_DIRECTORY, None);
 
-        let descriptor = resolve_archive_input(
+        let descriptor = ArchiveDescriptor::resolve(
             runtime.handle(),
             Path::new("/clp"),
             &config,
@@ -288,11 +290,11 @@ mod tests {
     }
 
     #[test]
-    fn resolve_archive_input_s3_custom_endpoint_uses_path_style_url() -> anyhow::Result<()> {
+    fn resolve_s3_custom_endpoint_uses_path_style_url() -> anyhow::Result<()> {
         let runtime = tokio::runtime::Runtime::new().expect("failed to create Tokio runtime");
         let config = s3_backed_config("var/data/staged-archives", Some("http://minio:9000"));
 
-        let descriptor = resolve_archive_input(
+        let descriptor = ArchiveDescriptor::resolve(
             runtime.handle(),
             Path::new("/clp"),
             &config,
