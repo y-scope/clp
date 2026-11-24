@@ -518,6 +518,8 @@ mod tests {
 
     #[test]
     fn run_clp_s_extract_preserves_path_order_and_reaps_the_child() -> anyhow::Result<()> {
+        const TARGET_CHUNK_SIZE: NonZeroU64 = NonZeroU64::new(1024).expect("1024 is nonzero");
+
         let clp_home = tempfile::tempdir()?;
         let archive_output = ArchiveOutput {
             storage: ArchiveOutputStorage::S3 {
@@ -526,16 +528,30 @@ mod tests {
             },
             ..ArchiveOutput::default()
         };
-        let script = r#"
+        let script = format!(
+            r#"
 printf '%s\n' "$$" > "$0.pid"
 test "$AWS_ACCESS_KEY_ID" = the-access-key
 test "$AWS_SECRET_ACCESS_KEY" = the-secret-key
+while [ "$#" -gt 0 ] && [ "$1" != --target-ordered-chunk-size ]; do
+    shift
+done
+if [ "$#" -lt 2 ] || [ "$2" != "{TARGET_CHUNK_SIZE}" ]; then
+    printf '%s\n' 'expected --target-ordered-chunk-size {TARGET_CHUNK_SIZE}' >&2
+    exit 1
+fi
 head -c 131072 /dev/zero >&2
-printf '%s\n' '{"path":"/staging/z"}' '{"path":"/staging/a"}'
-"#;
+printf '%s\n' '{{"path":"/staging/z"}}' '{{"path":"/staging/a"}}'
+"#
+        );
 
         assert_eq!(
-            run_stand_in(clp_home.path(), archive_output, script)?,
+            run_stand_in(
+                clp_home.path(),
+                archive_output,
+                Some(TARGET_CHUNK_SIZE),
+                &script
+            )?,
             [PathBuf::from("/staging/z"), PathBuf::from("/staging/a")]
         );
         assert_child_reaped(clp_home.path());
@@ -551,7 +567,7 @@ head -c {MAX_STDERR_TAIL_SIZE} /dev/zero | tr '\000' x >&2
 printf 'last error\n' >&2
 exit 23"
         );
-        let error = run_stand_in(clp_home.path(), ArchiveOutput::default(), &script)
+        let error = run_stand_in(clp_home.path(), ArchiveOutput::default(), None, &script)
             .expect_err("a failed clp-s exit should be reported even with no stats");
 
         assert_eq!(
@@ -579,7 +595,7 @@ exit 23"
 head -c {line_size} /dev/zero | tr '\000' x
 exec sleep 30"#
         );
-        let error = run_stand_in(clp_home.path(), ArchiveOutput::default(), &script)
+        let error = run_stand_in(clp_home.path(), ArchiveOutput::default(), None, &script)
             .expect_err("an overlong stats record should fail extraction");
 
         assert_eq!(
@@ -608,6 +624,7 @@ exec sleep 30"#
     fn run_stand_in(
         clp_home: &Path,
         archive_output: ArchiveOutput,
+        target_chunk_size: Option<NonZeroU64>,
         script: &str,
     ) -> anyhow::Result<Vec<PathBuf>> {
         const RETURN_TIMEOUT: Duration = Duration::from_secs(10);
@@ -639,7 +656,7 @@ exec sleep 30"#
                 archive_id: ARCHIVE_ID
                     .parse::<ArchiveId>()
                     .expect("the fixture has a valid archive ID"),
-                target_chunk_size: None,
+                target_chunk_size,
             };
             let result = run_clp_s_extract(
                 runtime.handle(),
