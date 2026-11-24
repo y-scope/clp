@@ -14,18 +14,19 @@ use sqlx::MySql;
 use sqlx::Transaction;
 
 use super::archive_selector::ArchiveSelector;
+use super::task_graph::build_query_task_graph;
 use crate::Error;
 use crate::job_handle::ArchiveMetadata;
 use crate::job_handle::QueryJobHandleContext;
-use crate::query_job_submitter::QueryJobOutcome;
-use crate::query_job_submitter::QueryJobSubmitter;
+use crate::spider_job_submitter::JobOutcome;
+use crate::spider_job_submitter::SpiderJobSubmitter;
 
 /// Handles the asynchronous submission of a query job and the retrieval of its result.
 ///
 /// # Type Parameters
 ///
 /// * `SubmitterType` - The type of the job submitter for Spider job submission.
-pub struct QueryJobHandle<SubmitterType: QueryJobSubmitter> {
+pub struct QueryJobHandle<SubmitterType: SpiderJobSubmitter> {
     context: Arc<QueryJobHandleContext>,
     query_job_id: QueryJobId,
     job_submitter: SubmitterType,
@@ -34,7 +35,7 @@ pub struct QueryJobHandle<SubmitterType: QueryJobSubmitter> {
     job_creation_timestamp_millisecs: i64,
 }
 
-impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
+impl<SubmitterType: SpiderJobSubmitter> QueryJobHandle<SubmitterType> {
     /// Factory function.
     ///
     /// # Returns
@@ -61,8 +62,8 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
 
     /// Submits the query job to Spider and drives it to completion.
     ///
-    /// This method prepares the query tasks' inputs, submits the job, persists the Spider job ID it
-    /// was assigned, and then waits for the job to reach a terminal state. On failure, it attempts
+    /// This method builds the task graph and its inputs, submits the job, persists the assigned
+    /// Spider job ID, and then waits for the job to reach a terminal state. On failure, it attempts
     /// to persist a terminal status for the query job before the error is returned.
     ///
     /// If no archives are selected and no timeline is requested, it marks the query job as
@@ -82,7 +83,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
         let result = async {
             let archives_to_search = self.plan().await?;
             if archives_to_search.is_empty() && !self.query_job_config.output.has_timeline() {
-                return self.terminate(QueryJobOutcome::Succeeded).await;
+                return self.terminate(JobOutcome::Succeeded).await;
             }
 
             let spider_job_id = self.submit(archives_to_search).await?;
@@ -134,7 +135,8 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     /// Returns an error if:
     ///
     /// * [`Error::TooManyQueryTasks`] if the number of query tasks exceeds `i32`'s range.
-    /// * Forwards [`QueryJobSubmitter::submit_query_job`]'s return values on failure.
+    /// * Forwards [`build_query_task_graph`]'s return values on failure.
+    /// * Forwards [`SpiderJobSubmitter::submit_job`]'s return values on failure.
     /// * Forwards [`Self::start`]'s return values on failure.
     async fn submit(
         &self,
@@ -143,16 +145,26 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
         let num_tasks = archives_to_search.len();
         let persisted_num_tasks =
             i32::try_from(num_tasks).map_err(|_| Error::TooManyQueryTasks(num_tasks))?;
-        let spider_job_id = self
-            .job_submitter
-            .submit_query_job(
+        let spider_job_id = {
+            let (graph, input) = build_query_task_graph(
                 self.query_job_id,
-                self.resource_group_id,
-                self.query_job_config.query.clone(),
-                self.query_job_config.output.clone(),
+                &self.query_job_config.query,
+                &self.query_job_config.output,
                 archives_to_search,
-            )
-            .await?;
+            )?;
+            let spider_job_id = self
+                .job_submitter
+                .submit_job(self.resource_group_id, &graph, &input)
+                .await?;
+
+            tracing::info!(
+                query_job_id = % self.query_job_id,
+                spider_job_id = % spider_job_id,
+                num_tasks = graph.get_num_tasks(),
+                "Submitted query job to Spider.",
+            );
+            spider_job_id
+        };
 
         tracing::info!(
             query_job_id = % self.query_job_id,
@@ -164,7 +176,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
         if let Err(start_error) = self.start(spider_job_id, persisted_num_tasks).await {
             let _ = self
                 .job_submitter
-                .cancel_query_job(spider_job_id)
+                .cancel_job(spider_job_id)
                 .await
                 .inspect_err(|e| {
                     tracing::warn!(
@@ -270,12 +282,12 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`QueryJobSubmitter::run_query_job_to_completion`]'s return values on failure.
+    /// * Forwards [`SpiderJobSubmitter::run_job_to_completion`]'s return values on failure.
     /// * Forwards [`Self::terminate`]'s return values on failure.
     async fn to_completion(&self, spider_job_id: SpiderJobId) -> Result<(), Error> {
         let outcome = self
             .job_submitter
-            .run_query_job_to_completion(spider_job_id, self.context.spider_option.poll_interval)
+            .run_job_to_completion(spider_job_id, self.context.spider_option.poll_interval)
             .await?;
 
         tracing::info!(
@@ -306,8 +318,8 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
         let outcome = match error {
             Error::QueryJobMetadataCorrupted(_) => return,
             Error::InvalidQueryJobStatusTransition { from, .. } if from.is_terminal() => return,
-            Error::QueryJobCancelled => QueryJobOutcome::Cancelled,
-            error => QueryJobOutcome::Failed {
+            Error::QueryJobCancelled => JobOutcome::Cancelled,
+            error => JobOutcome::Failed {
                 error_message: format!("Query job failed: {error}"),
             },
         };
@@ -338,15 +350,15 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     /// This method runs in a transaction that locks the query job's row, and resolves the status to
     /// persist from the locked status as follows:
     ///
-    /// * [`QueryJobOutcome::Succeeded`] is permitted from [`QueryJobStatus::Pending`] and
+    /// * [`JobOutcome::Succeeded`] is permitted from [`QueryJobStatus::Pending`] and
     ///   [`QueryJobStatus::Running`]. From [`QueryJobStatus::CancelRequested`] and
     ///   [`QueryJobStatus::Cancelling`], the job is terminated as [`QueryJobStatus::Cancelled`]
     ///   instead, since a cancellation wins over a success.
-    /// * [`QueryJobOutcome::Cancelled`] is permitted only from [`QueryJobStatus::CancelRequested`]
-    ///   and [`QueryJobStatus::Cancelling`]. From [`QueryJobStatus::Running`], the job is
-    ///   terminated as [`QueryJobStatus::Failed`] instead.
-    /// * [`QueryJobOutcome::Failed`] is permitted from any non-terminal status, since a failure
-    ///   wins over both a success and a cancellation.
+    /// * [`JobOutcome::Cancelled`] is permitted only from [`QueryJobStatus::CancelRequested`] and
+    ///   [`QueryJobStatus::Cancelling`]. From [`QueryJobStatus::Running`], the job is terminated as
+    ///   [`QueryJobStatus::Failed`] instead.
+    /// * [`JobOutcome::Failed`] is permitted from any non-terminal status, since a failure wins
+    ///   over both a success and a cancellation.
     ///
     /// # Errors
     ///
@@ -358,7 +370,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     /// * Forwards [`Self::lock_and_get_status`]'s return values on failure.
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     /// * Forwards [`sqlx::Transaction::commit`]'s return values on failure.
-    async fn terminate(&self, outcome: QueryJobOutcome) -> Result<(), Error> {
+    async fn terminate(&self, outcome: JobOutcome) -> Result<(), Error> {
         const UPDATE_QUERY: &str = formatcp!(
             "UPDATE `{QUERY_JOBS_TABLE_NAME}` SET `status` = ?, `status_msg` = ? WHERE `id` = ?"
         );
@@ -373,15 +385,15 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
 
         let to = QueryJobStatus::from(&outcome);
         let (status_to_persist, status_message) = match (outcome, current_status) {
-            (QueryJobOutcome::Succeeded, QueryJobStatus::Pending | QueryJobStatus::Running) => {
+            (JobOutcome::Succeeded, QueryJobStatus::Pending | QueryJobStatus::Running) => {
                 (to, None)
             }
             (
-                QueryJobOutcome::Cancelled,
+                JobOutcome::Cancelled,
                 QueryJobStatus::CancelRequested | QueryJobStatus::Cancelling,
             ) => (to, Some(CANCELLED_MESSAGE.to_owned())),
             (
-                QueryJobOutcome::Succeeded,
+                JobOutcome::Succeeded,
                 QueryJobStatus::CancelRequested | QueryJobStatus::Cancelling,
             ) => {
                 tracing::info!(
@@ -393,7 +405,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
                     Some(CANCELLED_AFTER_COMPLETION_MESSAGE.to_owned()),
                 )
             }
-            (QueryJobOutcome::Cancelled, QueryJobStatus::Running) => {
+            (JobOutcome::Cancelled, QueryJobStatus::Running) => {
                 tracing::error!(
                     query_job_id = % self.query_job_id,
                     "{CANCELLED_UNEXPECTED_MESSAGE}",
@@ -403,7 +415,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
                     Some(CANCELLED_UNEXPECTED_MESSAGE.to_owned()),
                 )
             }
-            (QueryJobOutcome::Failed { error_message }, from) if !from.is_terminal() => {
+            (JobOutcome::Failed { error_message }, from) if !from.is_terminal() => {
                 (to, Some(error_message))
             }
             (_, from) => return Err(Error::InvalidQueryJobStatusTransition { from, to }),
@@ -447,12 +459,12 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     }
 }
 
-impl From<&QueryJobOutcome> for QueryJobStatus {
-    fn from(outcome: &QueryJobOutcome) -> Self {
+impl From<&JobOutcome> for QueryJobStatus {
+    fn from(outcome: &JobOutcome) -> Self {
         match outcome {
-            QueryJobOutcome::Succeeded => Self::Succeeded,
-            QueryJobOutcome::Failed { .. } => Self::Failed,
-            QueryJobOutcome::Cancelled => Self::Cancelled,
+            JobOutcome::Succeeded => Self::Succeeded,
+            JobOutcome::Failed { .. } => Self::Failed,
+            JobOutcome::Cancelled => Self::Cancelled,
         }
     }
 }
