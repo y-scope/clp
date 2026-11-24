@@ -7,7 +7,7 @@ use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::dataset::NonEmptyDatasetNames;
 use clp_rust_utils::job_config::SearchQuery;
 use clp_rust_utils::job_config::TimeRange;
-use clp_rust_utils::types::ArchiveId;
+use clp_rust_utils::types::ArchiveUuid;
 use spider_core::task::ExecutionPolicy;
 use sqlx::MySql;
 use sqlx::MySqlPool;
@@ -169,7 +169,7 @@ impl<'context_lifetime> ArchiveSelector<'context_lifetime> {
             .await?
             .into_iter()
             .map(|row| ArchiveMetadata {
-                id: row.id,
+                uuid: row.uuid,
                 dataset: dataset.clone(),
                 uncompressed_size: row.uncompressed_size,
                 end_timestamp: row.end_timestamp,
@@ -184,7 +184,8 @@ impl<'context_lifetime> ArchiveSelector<'context_lifetime> {
 /// archives table's name rather than stored in a column.
 #[derive(sqlx::FromRow)]
 struct ArchiveRowProjection {
-    id: ArchiveId,
+    #[sqlx(rename = "id")]
+    uuid: ArchiveUuid,
     #[sqlx(try_from = "i64")]
     uncompressed_size: u64,
     end_timestamp: i64,

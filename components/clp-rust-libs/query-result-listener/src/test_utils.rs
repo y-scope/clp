@@ -4,20 +4,20 @@ use std::convert::Infallible;
 use std::ops::Range;
 use std::time::Duration;
 
-use clp_rust_utils::types::ArchiveId;
+use clp_rust_utils::types::ArchiveUuid;
 use spider_core::task::TaskIndex;
 
 use crate::encoding::ResultEncoder;
 use crate::encoding::ResultEncoding;
 
-/// The ID of the archive that the tests' query tasks search.
-pub const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
+/// The UUID of the archive that the tests' query tasks search.
+pub const ARCHIVE_UUID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
 
-/// The ID of an archive other than [`ARCHIVE_ID`].
-pub const OTHER_ARCHIVE_ID: &str = "4b0c2f8e-6d13-4f4e-9a57-1c2d3e4f5a6b";
+/// The UUID of an archive other than [`ARCHIVE_UUID`].
+pub const OTHER_ARCHIVE_UUID: &str = "4b0c2f8e-6d13-4f4e-9a57-1c2d3e4f5a6b";
 
-/// The ID of an archive for which a [`FallibleQueryResultEncoder`] can't be created.
-pub const UNENCODABLE_ARCHIVE_ID: &str = "9c3e5a71-2f4b-4d8e-b6a0-7e1f2d3c4b5a";
+/// The UUID of an archive for which a [`FallibleQueryResultEncoder`] can't be created.
+pub const UNENCODABLE_ARCHIVE_UUID: &str = "9c3e5a71-2f4b-4d8e-b6a0-7e1f2d3c4b5a";
 
 /// A message that a [`FallibleQueryResultEncoder`] can't encode.
 pub const UNENCODABLE_MESSAGE: &str = "unencodable\n";
@@ -34,8 +34,8 @@ pub const TIMEOUT: Duration = Duration::from_secs(10);
 /// A query result in the batches of a [`QueryResultEncoding`].
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct QueryResult {
-    /// The ID of the archive that produced the result.
-    pub archive_id: ArchiveId,
+    /// The UUID of the archive that produced the result.
+    pub archive_uuid: ArchiveUuid,
 
     /// The result's timestamp in milliseconds since the Unix epoch.
     pub timestamp_millisecs: i64,
@@ -55,7 +55,7 @@ impl ResultEncoding for QueryResultEncoding {
 
 /// The [`ResultEncoder`] for [`QueryResultEncoding`].
 pub struct QueryResultEncoder {
-    archive_id: ArchiveId,
+    archive_uuid: ArchiveUuid,
     batch: Vec<QueryResult>,
 }
 
@@ -63,16 +63,16 @@ impl ResultEncoder for QueryResultEncoder {
     type Batch = Vec<QueryResult>;
     type Error = Infallible;
 
-    fn new(archive_id: ArchiveId) -> Result<Self, Infallible> {
+    fn new(archive_uuid: ArchiveUuid) -> Result<Self, Infallible> {
         Ok(Self {
-            archive_id,
+            archive_uuid,
             batch: Vec::new(),
         })
     }
 
     fn encode(&mut self, timestamp_millisecs: i64, message: &str) -> Result<(), Infallible> {
         self.batch.push(QueryResult {
-            archive_id: self.archive_id,
+            archive_uuid: self.archive_uuid,
             timestamp_millisecs,
             message: message.to_owned(),
         });
@@ -84,8 +84,8 @@ impl ResultEncoder for QueryResultEncoder {
     }
 }
 
-/// A [`ResultEncoding`] like [`QueryResultEncoding`] that fails for [`UNENCODABLE_ARCHIVE_ID`] and
-/// [`UNENCODABLE_MESSAGE`].
+/// A [`ResultEncoding`] like [`QueryResultEncoding`] that fails for [`UNENCODABLE_ARCHIVE_UUID`]
+/// and [`UNENCODABLE_MESSAGE`].
 pub enum FallibleQueryResultEncoding {}
 
 impl ResultEncoding for FallibleQueryResultEncoding {
@@ -103,18 +103,18 @@ impl ResultEncoder for FallibleQueryResultEncoder {
     type Batch = Vec<QueryResult>;
     type Error = EncodingError;
 
-    fn new(archive_id: ArchiveId) -> Result<Self, EncodingError> {
-        if UNENCODABLE_ARCHIVE_ID == archive_id.to_string() {
-            return Err(EncodingError::UnencodableArchive(archive_id));
+    fn new(archive_uuid: ArchiveUuid) -> Result<Self, EncodingError> {
+        if UNENCODABLE_ARCHIVE_UUID == archive_uuid.to_string() {
+            return Err(EncodingError::UnencodableArchive(archive_uuid));
         }
-        let Ok(encoder) = QueryResultEncoder::new(archive_id);
+        let Ok(encoder) = QueryResultEncoder::new(archive_uuid);
         Ok(Self { encoder })
     }
 
     fn encode(&mut self, timestamp_millisecs: i64, message: &str) -> Result<(), EncodingError> {
         if UNENCODABLE_MESSAGE == message {
             return Err(EncodingError::UnencodableMessage {
-                archive_id: self.encoder.archive_id,
+                archive_uuid: self.encoder.archive_uuid,
                 timestamp_millisecs,
             });
         }
@@ -131,13 +131,14 @@ impl ResultEncoder for FallibleQueryResultEncoder {
 #[derive(Debug, Eq, PartialEq, thiserror::Error)]
 pub enum EncodingError {
     #[error("archive {0} is unencodable")]
-    UnencodableArchive(ArchiveId),
+    UnencodableArchive(ArchiveUuid),
 
     #[error(
-        "the message of the result at {timestamp_millisecs} of archive {archive_id} is unencodable"
+        "the message of the result at {timestamp_millisecs} of archive {archive_uuid} is \
+         unencodable"
     )]
     UnencodableMessage {
-        archive_id: ArchiveId,
+        archive_uuid: ArchiveUuid,
         timestamp_millisecs: i64,
     },
 }
@@ -150,14 +151,14 @@ pub fn encode_handshake(
     version: u64,
     session_token: &str,
     task_index: u64,
-    archive_id: &str,
+    archive_uuid: &str,
 ) -> Vec<u8> {
     let mut bytes = rmp::encode::ByteBuf::new();
     rmp::encode::write_array_len(&mut bytes, 4);
     rmp::encode::write_uint(&mut bytes, version);
     rmp::encode::write_str(&mut bytes, session_token);
     rmp::encode::write_uint(&mut bytes, task_index);
-    rmp::encode::write_str(&mut bytes, archive_id);
+    rmp::encode::write_str(&mut bytes, archive_uuid);
     bytes.into_vec()
 }
 
@@ -226,23 +227,23 @@ pub fn message(task_index: TaskIndex, result_index: u64) -> String {
 
 /// # Returns
 ///
-/// The results at `result_indices` of task `task_index` of archive `archive_id`, in index order.
+/// The results at `result_indices` of task `task_index` of archive `archive_uuid`, in index order.
 ///
 /// # Panics
 ///
-/// Panics if `archive_id` isn't a valid UUID.
+/// Panics if `archive_uuid` isn't a valid UUID.
 #[must_use]
 pub fn expected_results(
     task_index: TaskIndex,
-    archive_id: &str,
+    archive_uuid: &str,
     result_indices: Range<u64>,
 ) -> Vec<QueryResult> {
-    let archive_id = archive_id
-        .parse::<ArchiveId>()
-        .expect("archive ID fixtures should be valid UUIDs");
+    let archive_uuid = archive_uuid
+        .parse::<ArchiveUuid>()
+        .expect("archive UUID fixtures should be valid UUIDs");
     result_indices
         .map(|result_index| QueryResult {
-            archive_id,
+            archive_uuid,
             timestamp_millisecs: timestamp(result_index),
             message: message(task_index, result_index),
         })

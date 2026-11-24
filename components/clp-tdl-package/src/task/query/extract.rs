@@ -63,8 +63,13 @@ pub(super) fn run_clp_s_extract(
         "the clp-s extraction task requires the `clp-s` storage engine"
     );
 
-    let archive_descriptor =
-        ArchiveDescriptor::resolve(runtime, clp_home, config, &input.dataset, input.archive_id)?;
+    let archive_descriptor = ArchiveDescriptor::resolve(
+        runtime,
+        clp_home,
+        config,
+        &input.dataset,
+        input.archive_uuid,
+    )?;
     let clp_s_bin = clp_binary_path(clp_home, "clp-s");
     let mut command = build_clp_s_extract_command(
         &clp_s_bin,
@@ -318,7 +323,7 @@ mod tests {
     use clp_rust_utils::clp_config::package::config::StorageEngine;
     use clp_rust_utils::dataset::DatasetName;
     use clp_rust_utils::task_io::extraction::ExtractTaskInput;
-    use clp_rust_utils::types::ArchiveId;
+    use clp_rust_utils::types::ArchiveUuid;
 
     use super::MAX_CHUNKS;
     use super::MAX_STATS_LINE_SIZE;
@@ -330,7 +335,7 @@ mod tests {
     use crate::task::query::archive_input::ArchiveDescriptor;
     use crate::task::query::archive_input::base_s3_config;
 
-    const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
+    const ARCHIVE_UUID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
 
     /// A stream of repeated records backed by one borrowed record.
     struct RepeatedRecords<'record> {
@@ -363,12 +368,12 @@ mod tests {
     }
 
     #[test]
-    fn extract_args_use_the_filesystem_archive_id_without_a_chunk_target() {
+    fn extract_args_use_the_filesystem_archive_uuid_without_a_chunk_target() {
         let descriptor = ArchiveDescriptor::Directory {
             path: PathBuf::from("/archives/ds1"),
-            archive_id: ARCHIVE_ID
+            archive_uuid: ARCHIVE_UUID
                 .parse()
-                .expect("the fixture has a valid archive ID"),
+                .expect("the fixture has a valid archive UUID"),
         };
         let command = build_clp_s_extract_command(
             Path::new("clp-s"),
@@ -382,7 +387,7 @@ mod tests {
                 "x",
                 "/archives/ds1",
                 "--archive-id",
-                ARCHIVE_ID,
+                ARCHIVE_UUID,
                 "/staging",
                 "--ordered",
                 "--print-ordered-chunk-stats",
@@ -653,9 +658,9 @@ exec sleep 30"#
             let input = ExtractTaskInput {
                 job_id: 42,
                 dataset: DatasetName::default(),
-                archive_id: ARCHIVE_ID
-                    .parse::<ArchiveId>()
-                    .expect("the fixture has a valid archive ID"),
+                archive_uuid: ARCHIVE_UUID
+                    .parse::<ArchiveUuid>()
+                    .expect("the fixture has a valid archive UUID"),
                 target_chunk_size,
             };
             let result = run_clp_s_extract(

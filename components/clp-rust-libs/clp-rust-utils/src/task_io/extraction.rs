@@ -9,7 +9,7 @@ use serde_with::serde_as;
 
 use crate::dataset::DatasetName;
 use crate::job_config::QueryJobId;
-use crate::types::ArchiveId;
+use crate::types::ArchiveUuid;
 
 /// Input for extracting one archive into ordered JSON chunks.
 #[serde_as]
@@ -19,7 +19,7 @@ pub struct ExtractTaskInput {
     pub job_id: QueryJobId,
     #[serde_as(deserialize_as = "DisplayFromStr")]
     pub dataset: DatasetName,
-    pub archive_id: ArchiveId,
+    pub archive_uuid: ArchiveUuid,
     pub target_chunk_size: Option<NonZeroU64>,
 }
 
@@ -29,15 +29,15 @@ mod tests {
 
     use super::ExtractTaskInput;
     use crate::dataset::DatasetName;
-    use crate::types::ArchiveId;
+    use crate::types::ArchiveUuid;
 
     #[test]
     fn extract_task_input_requires_an_explicit_dataset() {
-        let archive_id = "018e90e5-8b2a-4a61-a2fc-cac799936caf"
-            .parse::<ArchiveId>()
-            .expect("the fixture contains a valid archive ID");
+        let archive_uuid = "018e90e5-8b2a-4a61-a2fc-cac799936caf"
+            .parse::<ArchiveUuid>()
+            .expect("the fixture contains a valid archive UUID");
         let task_input = |dataset: Option<&str>| {
-            rmp_serde::to_vec(&(42, dataset, archive_id, None::<NonZeroU64>))
+            rmp_serde::to_vec(&(42, dataset, archive_uuid, None::<NonZeroU64>))
                 .expect("the positional task fixture should serialize")
         };
 

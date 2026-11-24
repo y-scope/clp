@@ -175,7 +175,7 @@ async fn insert_archives(
         ));
         builder.push_values(archives, |mut row, archive| {
             // NOTE: clp-s does not set `creator_id` or `creation_ix`.
-            row.push_bind(archive.id)
+            row.push_bind(archive.uuid)
                 .push_bind(archive.begin_timestamp)
                 .push_bind(archive.end_timestamp)
                 .push_bind(archive.uncompressed_size)
@@ -256,9 +256,9 @@ mod tests {
         use clp_rust_utils::task_io::compression::ArchiveMetadata;
 
         let archive = ArchiveMetadata {
-            id: "00000000-0000-0000-0000-000000000001"
+            uuid: "00000000-0000-0000-0000-000000000001"
                 .parse()
-                .expect("test archive ID should be valid"),
+                .expect("test archive UUID should be valid"),
             begin_timestamp: 1,
             end_timestamp: 2,
             size: 10,

@@ -26,7 +26,7 @@ use clp_rust_utils::task_io::compression::ClpSCompressionOption;
 use clp_rust_utils::task_io::compression::CompressionTaskOutput;
 use clp_rust_utils::task_io::compression::FsInputSource;
 use clp_rust_utils::task_io::compression::S3InputSource;
-use clp_rust_utils::types::ArchiveId;
+use clp_rust_utils::types::ArchiveUuid;
 use clp_rust_utils::types::non_empty_string::ExpectedNonEmpty;
 use non_empty_string::NonEmptyString;
 
@@ -418,7 +418,7 @@ impl Destination {
     async fn finish(
         self,
         local_path: &Path,
-        archive_id: ArchiveId,
+        archive_uuid: ArchiveUuid,
         dataset: &DatasetName,
         indexing_task: tokio::task::JoinHandle<anyhow::Result<()>>,
     ) -> anyhow::Result<()> {
@@ -427,16 +427,16 @@ impl Destination {
                 indexing_task
                     .await
                     .context("failed to join indexing task")??;
-                tokio::fs::rename(local_path, directory.join(archive_id.to_string()))
+                tokio::fs::rename(local_path, directory.join(archive_uuid.to_string()))
                     .await
-                    .with_context(|| format!("failed to publish archive {archive_id}"))?;
+                    .with_context(|| format!("failed to publish archive {archive_uuid}"))?;
             }
             Self::S3 {
                 client,
                 bucket,
                 archive_output,
             } => {
-                let key = archive_output.dataset_archive_object_key(dataset, &archive_id);
+                let key = archive_output.dataset_archive_object_key(dataset, &archive_uuid);
                 let (publication_result, indexing_result) = tokio::join!(
                     upload_file_to_s3(&client, &bucket, key.as_str(), local_path),
                     indexing_task
@@ -466,18 +466,18 @@ impl ArchiveFinisher {
     /// Returns an error if:
     ///
     /// * Forwards [`Destination::finish`]'s return values on failure.
-    async fn finish(self, local_path: PathBuf, archive_id: ArchiveId) -> anyhow::Result<()> {
+    async fn finish(self, local_path: PathBuf, archive_uuid: ArchiveUuid) -> anyhow::Result<()> {
         let index_path = local_path.clone();
         let dataset = self.dataset.clone();
         let indexing_task = tokio::task::spawn_blocking(move || {
             run_indexer(&self.indexer_bin, &self.database, &dataset, &index_path)
         });
         self.destination
-            .finish(&local_path, archive_id, &self.dataset, indexing_task)
+            .finish(&local_path, archive_uuid, &self.dataset, indexing_task)
             .await
             .inspect_err(|e| {
                 tracing::error!(
-                    archive_id = % archive_id,
+                    archive_uuid = % archive_uuid,
                     local_path = % local_path.display(),
                     error = ? e,
                     "Failed to finish archive."
@@ -496,10 +496,10 @@ impl ArchiveFinisher {
 ///
 /// Returns an error if:
 ///
-/// * Forwards [`tokio::task::JoinSet::join_next`]'s task-join errors on failure.
+/// * Forwards [`tokio::task::JoinSet::join_next`]'s return values on failure.
 /// * Forwards [`ArchiveFinisher::finish`]'s return values on failure.
 /// * Forwards [`run_clp_s`]'s return values on failure.
-/// * Forwards [`drain_finishers`]'s collected error, if any.
+/// * Forwards [`drain_finishers`]'s return values on failure.
 ///
 /// # Panics
 ///
@@ -525,7 +525,7 @@ fn run_compression(
         finishers.spawn_on(
             finisher
                 .clone()
-                .finish(archive_dir.join(archive.id.to_string()), archive.id),
+                .finish(archive_dir.join(archive.uuid.to_string()), archive.uuid),
             runtime,
         );
         archives.push(archive);
@@ -1515,10 +1515,11 @@ mod tests {
         let fixture = FsFixture::new();
         let staging = fixture.root.join("staging");
         std::fs::create_dir(&staging).expect("archive staging should be created");
-        let archive_id: clp_rust_utils::types::ArchiveId = "d545842b-f959-4f2f-9c12-206b107c6713"
-            .parse()
-            .expect("test archive id should be valid");
-        let staged_archive = staging.join(archive_id.to_string());
+        let archive_uuid: clp_rust_utils::types::ArchiveUuid =
+            "d545842b-f959-4f2f-9c12-206b107c6713"
+                .parse()
+                .expect("test archive UUID should be valid");
+        let staged_archive = staging.join(archive_uuid.to_string());
         std::fs::write(&staged_archive, b"archive contents")
             .expect("test archive should be written");
         std::fs::write(staging.join("unfinished"), b"partial archive")
@@ -1530,7 +1531,7 @@ mod tests {
                 directory: fixture.root.clone(),
             },
             &staged_archive,
-            archive_id,
+            archive_uuid,
             &DatasetName::default(),
             tokio::spawn(async { Ok(()) }),
         )
@@ -1539,7 +1540,7 @@ mod tests {
         drop(cleanup);
         assert!(!staging.exists());
         assert_eq!(
-            std::fs::read(fixture.root.join(archive_id.to_string()))
+            std::fs::read(fixture.root.join(archive_uuid.to_string()))
                 .expect("published archive should survive scratch cleanup"),
             b"archive contents",
         );
@@ -1551,10 +1552,11 @@ mod tests {
         let fixture = FsFixture::new();
         let staging = fixture.root.join("staging");
         std::fs::create_dir(&staging).expect("archive staging should be created");
-        let archive_id: clp_rust_utils::types::ArchiveId = "d545842b-f959-4f2f-9c12-206b107c6713"
-            .parse()
-            .expect("test archive id should be valid");
-        let staged_archive = staging.join(archive_id.to_string());
+        let archive_uuid: clp_rust_utils::types::ArchiveUuid =
+            "d545842b-f959-4f2f-9c12-206b107c6713"
+                .parse()
+                .expect("test archive UUID should be valid");
+        let staged_archive = staging.join(archive_uuid.to_string());
         std::fs::write(&staged_archive, b"archive contents")
             .expect("test archive should be written");
         let error = super::ArchiveFinisher {
@@ -1565,12 +1567,12 @@ mod tests {
             database: super::Database::default(),
             dataset: DatasetName::default(),
         }
-        .finish(staged_archive.clone(), archive_id)
+        .finish(staged_archive.clone(), archive_uuid)
         .await
         .expect_err("failed indexing must prevent filesystem publication");
         assert!(error.to_string().contains("indexer exited with"));
         assert!(staged_archive.is_file());
-        assert!(!fixture.root.join(archive_id.to_string()).exists());
+        assert!(!fixture.root.join(archive_uuid.to_string()).exists());
     }
 
     #[test]

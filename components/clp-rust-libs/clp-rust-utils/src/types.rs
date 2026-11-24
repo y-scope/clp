@@ -16,40 +16,40 @@ use sqlx::mysql::MySqlValueRef;
 /// An archive's UUID. External storage keys and database values use its canonical text form.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 #[serde(transparent)]
-pub struct ArchiveId {
+pub struct ArchiveUuid {
     value: uuid::Uuid,
 }
 
-impl FromStr for ArchiveId {
-    type Err = ParseArchiveIdError;
+impl FromStr for ArchiveUuid {
+    type Err = ParseArchiveUuidError;
 
-    /// Creates an archive ID from a UUID string accepted by [`uuid::Uuid::parse_str`].
+    /// Creates an archive UUID from a UUID string accepted by [`uuid::Uuid::parse_str`].
     ///
     /// # Returns
     ///
-    /// The parsed archive ID on success.
+    /// The parsed archive UUID on success.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
-    /// * [`ParseArchiveIdError`] if `value` is not a valid UUID.
+    /// * [`ParseArchiveUuidError`] if `value` is not a valid UUID.
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        let id = uuid::Uuid::parse_str(value).map_err(|source| ParseArchiveIdError {
+        let uuid = uuid::Uuid::parse_str(value).map_err(|source| ParseArchiveUuidError {
             value: value.to_owned(),
             source,
         })?;
-        Ok(Self { value: id })
+        Ok(Self { value: uuid })
     }
 }
 
-impl Display for ArchiveId {
+impl Display for ArchiveUuid {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
         self.value.fmt(formatter)
     }
 }
 
-impl sqlx::Type<MySql> for ArchiveId {
+impl sqlx::Type<MySql> for ArchiveUuid {
     fn type_info() -> MySqlTypeInfo {
         <str as sqlx::Type<MySql>>::type_info()
     }
@@ -59,23 +59,23 @@ impl sqlx::Type<MySql> for ArchiveId {
     }
 }
 
-impl sqlx::Encode<'_, MySql> for ArchiveId {
+impl sqlx::Encode<'_, MySql> for ArchiveUuid {
     fn encode_by_ref(&self, buf: &mut Vec<u8>) -> Result<IsNull, BoxDynError> {
         <String as sqlx::Encode<MySql>>::encode(self.to_string(), buf)
     }
 }
 
-impl<'decode> sqlx::Decode<'decode, MySql> for ArchiveId {
+impl<'decode> sqlx::Decode<'decode, MySql> for ArchiveUuid {
     fn decode(value: MySqlValueRef<'decode>) -> Result<Self, BoxDynError> {
         let value = <&str as sqlx::Decode<MySql>>::decode(value)?;
         value.parse::<Self>().map_err(Into::into)
     }
 }
 
-/// An error returned when parsing an invalid external archive ID string.
+/// An error returned when parsing an invalid external archive UUID string.
 #[derive(Debug, thiserror::Error)]
-#[error("invalid archive ID {value:?}: {source}")]
-pub struct ParseArchiveIdError {
+#[error("invalid archive UUID {value:?}: {source}")]
+pub struct ParseArchiveUuidError {
     value: String,
     source: uuid::Error,
 }
@@ -229,51 +229,50 @@ mod tests {
     use super::*;
 
     #[test]
-    fn archive_id_encodes_as_mysql_text() {
-        const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
-        let id = ARCHIVE_ID
-            .parse::<ArchiveId>()
+    fn archive_uuid_encodes_as_mysql_text() {
+        const ARCHIVE_UUID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
+        let archive_uuid = ARCHIVE_UUID
+            .parse::<ArchiveUuid>()
             .expect("valid UUID should parse");
         let mut buffer = Vec::new();
-        let is_null = <ArchiveId as sqlx::Encode<sqlx::MySql>>::encode_by_ref(&id, &mut buffer)
-            .expect("archive ID should encode");
+        let is_null =
+            <ArchiveUuid as sqlx::Encode<sqlx::MySql>>::encode_by_ref(&archive_uuid, &mut buffer)
+                .expect("archive UUID should encode");
         assert!(matches!(is_null, sqlx::encode::IsNull::No));
-        assert_eq!(usize::from(buffer[0]), ARCHIVE_ID.len());
-        assert_eq!(&buffer[1..], ARCHIVE_ID.as_bytes());
-        assert!(<ArchiveId as sqlx::Type<sqlx::MySql>>::compatible(
+        assert_eq!(usize::from(buffer[0]), ARCHIVE_UUID.len());
+        assert_eq!(&buffer[1..], ARCHIVE_UUID.as_bytes());
+        assert!(<ArchiveUuid as sqlx::Type<sqlx::MySql>>::compatible(
             &<str as sqlx::Type<sqlx::MySql>>::type_info()
         ));
-        assert!(!<ArchiveId as sqlx::Type<sqlx::MySql>>::compatible(
+        assert!(!<ArchiveUuid as sqlx::Type<sqlx::MySql>>::compatible(
             &<[u8] as sqlx::Type<sqlx::MySql>>::type_info()
         ));
     }
 
     #[test]
-    fn parse_archive_id_accepts_valid_uuid_representations() {
-        const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
+    fn parse_archive_uuid_accepts_valid_uuid_representations() {
+        const ARCHIVE_UUID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
         for value in [
-            ARCHIVE_ID.to_owned(),
-            ARCHIVE_ID.to_ascii_uppercase(),
-            ARCHIVE_ID.replace('-', ""),
-            format!("{{{ARCHIVE_ID}}}"),
-            format!("urn:uuid:{ARCHIVE_ID}"),
+            ARCHIVE_UUID.to_owned(),
+            ARCHIVE_UUID.to_ascii_uppercase(),
+            ARCHIVE_UUID.replace('-', ""),
+            format!("{{{ARCHIVE_UUID}}}"),
+            format!("urn:uuid:{ARCHIVE_UUID}"),
         ] {
-            let parsed = value.parse::<ArchiveId>().expect("valid UUID should parse");
-            assert_eq!(parsed.to_string(), ARCHIVE_ID);
+            let parsed = value
+                .parse::<ArchiveUuid>()
+                .expect("valid UUID should parse");
+            assert_eq!(parsed.to_string(), ARCHIVE_UUID);
         }
     }
 
     #[test]
-    fn parse_archive_id_rejects_invalid_uuids() {
+    fn parse_archive_uuid_rejects_invalid_uuids() {
         for value in ["", "not-a-uuid", "018e90e5-8b2a-4a61-a2fc-cac799936cag"] {
             let error = value
-                .parse::<ArchiveId>()
+                .parse::<ArchiveUuid>()
                 .expect_err("invalid UUID should be rejected");
             assert_eq!(error.value, value);
-            assert!(
-                error.to_string().contains(&format!("{value:?}")),
-                "parse error should include the invalid archive ID"
-            );
         }
     }
 

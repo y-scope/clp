@@ -3,7 +3,7 @@
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
 
-use clp_rust_utils::types::ArchiveId;
+use clp_rust_utils::types::ArchiveUuid;
 
 /// The outcome of claiming a result index on a [`TaskCursor`].
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -19,26 +19,26 @@ pub(super) enum Claim {
 #[derive(Debug)]
 pub(super) struct TaskCursor {
     next_result_index: AtomicU64,
-    archive_id: ArchiveId,
+    archive_uuid: ArchiveUuid,
 }
 
 impl TaskCursor {
-    /// Creates a cursor for `archive_id`.
+    /// Creates a cursor for `archive_uuid`.
     ///
     /// # Returns
     ///
     /// A cursor whose next unclaimed result index is 0.
     #[must_use]
-    pub const fn new(archive_id: ArchiveId) -> Self {
+    pub const fn new(archive_uuid: ArchiveUuid) -> Self {
         Self {
             next_result_index: AtomicU64::new(0),
-            archive_id,
+            archive_uuid,
         }
     }
 
     #[must_use]
-    pub const fn archive_id(&self) -> ArchiveId {
-        self.archive_id
+    pub const fn archive_uuid(&self) -> ArchiveUuid {
+        self.archive_uuid
     }
 
     /// Claims the result at `result_index` for the calling attempt.
@@ -81,14 +81,14 @@ mod tests {
     ///
     /// A cursor for the test archive.
     fn new_cursor() -> TaskCursor {
-        use clp_rust_utils::types::ArchiveId;
+        use clp_rust_utils::types::ArchiveUuid;
 
-        use crate::test_utils::ARCHIVE_ID;
+        use crate::test_utils::ARCHIVE_UUID;
 
         TaskCursor::new(
-            ARCHIVE_ID
-                .parse::<ArchiveId>()
-                .expect("archive ID fixture should be a valid UUID"),
+            ARCHIVE_UUID
+                .parse::<ArchiveUuid>()
+                .expect("archive UUID fixture should be a valid UUID"),
         )
     }
 

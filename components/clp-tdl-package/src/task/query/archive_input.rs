@@ -9,7 +9,7 @@ use clp_rust_utils::clp_config::package::config::ArchiveOutputStorage;
 use clp_rust_utils::clp_config::package::config::SpiderTaskExecutorConfig;
 use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::s3::generate_s3_url;
-use clp_rust_utils::types::ArchiveId;
+use clp_rust_utils::types::ArchiveUuid;
 use non_empty_string::NonEmptyString;
 
 use crate::task::utils::s3_credential_env;
@@ -19,7 +19,7 @@ pub(super) enum ArchiveDescriptor {
     /// A local dataset archives directory plus the `--archive-id` selecting one archive in it.
     Directory {
         path: PathBuf,
-        archive_id: ArchiveId,
+        archive_uuid: ArchiveUuid,
     },
 
     /// The URL and credentials of an S3-hosted archive.
@@ -49,7 +49,7 @@ impl ArchiveDescriptor {
         clp_home: &Path,
         config: &SpiderTaskExecutorConfig,
         dataset: &DatasetName,
-        archive_id: ArchiveId,
+        archive_uuid: ArchiveUuid,
     ) -> anyhow::Result<Self> {
         let s3_config = match &config.archive_output.storage {
             ArchiveOutputStorage::Fs { .. } => {
@@ -57,7 +57,7 @@ impl ArchiveDescriptor {
                     path: config
                         .abs_archive_output_staging(clp_home)
                         .join(dataset.as_str()),
-                    archive_id,
+                    archive_uuid,
                 });
             }
             ArchiveOutputStorage::S3 { s3_config, .. } => s3_config,
@@ -65,7 +65,7 @@ impl ArchiveDescriptor {
 
         let object_key = config
             .archive_output
-            .dataset_archive_object_key(dataset, &archive_id);
+            .dataset_archive_object_key(dataset, &archive_uuid);
         let url = generate_s3_url(
             s3_config.endpoint_url.as_ref().map(NonEmptyString::as_str),
             s3_config.region_code.as_ref().map(NonEmptyString::as_str),
@@ -92,11 +92,11 @@ impl ArchiveDescriptor {
         let mut command = Command::new(clp_s_bin);
         command.arg(subcommand);
         match self {
-            Self::Directory { path, archive_id } => {
+            Self::Directory { path, archive_uuid } => {
                 command
                     .arg(path)
                     .arg("--archive-id")
-                    .arg(archive_id.to_string());
+                    .arg(archive_uuid.to_string());
             }
             Self::S3 {
                 url,
@@ -152,14 +152,14 @@ mod tests {
     use clp_rust_utils::clp_config::package::config::SpiderTaskExecutorConfig;
     use clp_rust_utils::clp_config::package::config::StorageEngine;
     use clp_rust_utils::dataset::DatasetName;
-    use clp_rust_utils::types::ArchiveId;
+    use clp_rust_utils::types::ArchiveUuid;
     use clp_rust_utils::types::non_empty_string::ExpectedNonEmpty;
     use non_empty_string::NonEmptyString;
 
     use super::ArchiveDescriptor;
     use super::base_s3_config;
 
-    const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
+    const ARCHIVE_UUID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
 
     /// # Returns
     ///
@@ -208,7 +208,9 @@ mod tests {
             Path::new("/clp"),
             &config,
             &"ds1".parse::<DatasetName>()?,
-            ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
+            ARCHIVE_UUID
+                .parse::<ArchiveUuid>()
+                .expect("valid archive UUID"),
         )?;
 
         let command = descriptor.clp_s_command(Path::new("clp-s"), "s");
@@ -218,7 +220,7 @@ mod tests {
                 "s",
                 "/clp/var/data/archives/ds1",
                 "--archive-id",
-                ARCHIVE_ID
+                ARCHIVE_UUID
             ]
             .map(OsStr::new)
         );
@@ -237,10 +239,12 @@ mod tests {
             Path::new("/clp"),
             &config,
             &"ds1".parse::<DatasetName>()?,
-            ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
+            ARCHIVE_UUID
+                .parse::<ArchiveUuid>()
+                .expect("valid archive UUID"),
         )?;
 
-        let url = format!("https://bucket.s3.amazonaws.com/LIB1/ds1/{ARCHIVE_ID}");
+        let url = format!("https://bucket.s3.amazonaws.com/LIB1/ds1/{ARCHIVE_UUID}");
         let command = descriptor.clp_s_command(Path::new("clp-s"), "s");
         assert_eq!(
             command.get_args().collect::<Vec<_>>(),
@@ -276,7 +280,9 @@ mod tests {
             Path::new("/clp"),
             &config,
             &"ds1".parse::<DatasetName>()?,
-            ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
+            ARCHIVE_UUID
+                .parse::<ArchiveUuid>()
+                .expect("valid archive UUID"),
         )?;
         let command = descriptor.clp_s_command(Path::new("clp-s"), "s");
 
@@ -299,10 +305,12 @@ mod tests {
             Path::new("/clp"),
             &config,
             &"ds1".parse::<DatasetName>()?,
-            ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
+            ARCHIVE_UUID
+                .parse::<ArchiveUuid>()
+                .expect("valid archive UUID"),
         )?;
 
-        let url = format!("http://minio:9000/bucket/LIB1/ds1/{ARCHIVE_ID}");
+        let url = format!("http://minio:9000/bucket/LIB1/ds1/{ARCHIVE_UUID}");
         let command = descriptor.clp_s_command(Path::new("clp-s"), "s");
         assert_eq!(
             command.get_args().collect::<Vec<_>>(),

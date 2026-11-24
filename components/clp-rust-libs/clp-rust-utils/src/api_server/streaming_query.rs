@@ -6,7 +6,7 @@ use utoipa::ToSchema;
 
 use crate::job_config::QueryJobStatus;
 use crate::job_config::SearchQuery;
-use crate::types::ArchiveId;
+use crate::types::ArchiveUuid;
 
 /// Defines the request configuration for submitting a query job whose results are streamed instead
 /// of buffered.
@@ -39,9 +39,11 @@ pub struct StreamingQueryJobEvent {
 #[derive(Serialize, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct StreamingQueryResultEvent {
-    /// The ID of the archive that contains the result.
+    /// The UUID of the archive that contains the result.
+    // Search results keep reporting the UUID under the `archive_id` key of the public API.
+    #[serde(rename = "archive_id")]
     #[schema(value_type = String)]
-    pub archive_id: ArchiveId,
+    pub archive_uuid: ArchiveUuid,
 
     /// The result's timestamp, in milliseconds since the Unix epoch.
     pub timestamp_millisecs: i64,

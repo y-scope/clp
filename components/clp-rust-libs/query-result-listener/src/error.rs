@@ -2,8 +2,8 @@
 
 use std::time::Duration;
 
-use clp_rust_utils::types::ArchiveId;
-use clp_rust_utils::types::ParseArchiveIdError;
+use clp_rust_utils::types::ArchiveUuid;
+use clp_rust_utils::types::ParseArchiveUuidError;
 use clp_rust_utils::types::ParseSessionTokenError;
 use clp_rust_utils::types::SessionToken;
 use spider_core::task::TaskIndex;
@@ -15,17 +15,17 @@ pub enum ProtocolError {
         "task {task_index} is bound to archive {expected}, but the connection streams archive \
          {received}"
     )]
-    ArchiveIdMismatch {
+    ArchiveUuidMismatch {
         task_index: TaskIndex,
-        expected: ArchiveId,
-        received: ArchiveId,
+        expected: ArchiveUuid,
+        received: ArchiveUuid,
     },
 
     #[error("bytes followed the trailer")]
     DataAfterTrailer,
 
     #[error(transparent)]
-    InvalidArchiveId(#[from] ParseArchiveIdError),
+    InvalidArchiveUuid(#[from] ParseArchiveUuidError),
 
     #[error(transparent)]
     InvalidSessionToken(#[from] ParseSessionTokenError),
