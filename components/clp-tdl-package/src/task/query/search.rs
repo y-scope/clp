@@ -41,8 +41,9 @@ use crate::task::utils::upload_file_to_s3;
 ///
 /// Returns an error if:
 ///
-/// * The configured storage engine is not [`StorageEngine::ClpS`].
-/// * `ctx.task_id` isn't a [`TaskId::Index`].
+/// * [`anyhow::Error`] if:
+///   * The configured storage engine is not [`StorageEngine::ClpS`].
+///   * `ctx.task_id` isn't a [`TaskId::Index`].
 /// * Forwards [`ArchiveDescriptor::resolve`]'s return values on failure.
 /// * Forwards [`ResultsFile::create`]'s return values on failure.
 /// * Forwards [`run_clp_s_search`]'s return values on failure.
@@ -458,7 +459,7 @@ fn build_clp_s_query_command(
 ///
 /// Returns an error if:
 ///
-/// * clp-s exits with a non-zero status.
+/// * [`anyhow::Error`] if `clp-s` exits with a non-zero status.
 /// * Forwards [`Command::spawn`]'s return values on failure.
 /// * Forwards [`std::process::Child::wait`]'s return values on failure.
 ///
