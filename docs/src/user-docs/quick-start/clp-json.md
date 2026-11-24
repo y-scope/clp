@@ -120,6 +120,9 @@ database:
 
 results_cache:
   port: 30017
+
+api_server:
+  port: 30301
 ```
 
 :::
@@ -367,6 +370,19 @@ To search your compressed logs from the command line, run:
 sbin/search.sh '<query>'
 ```
 
+The command writes one JSON object per result to stdout, each on its own line.
+
+:::{note}
+The command sends your query to the API server. The server must be running and reachable at the
+host and port specified by `api_server.host` and `api_server.port` in `etc/clp-config.yaml`.
+:::
+
+:::{tip}
+The command starts a new container for each search. For latency-sensitive searches, avoid container
+startup overhead by sending your query directly to the API server's
+[streaming search endpoint][api-server-streaming-search].
+:::
+
 To narrow your search to a specific time range:
 
 * Add `--begin-time <epoch-timestamp-millis>` to filter for log events after a certain time.
@@ -419,6 +435,7 @@ kind delete cluster --name clp
 ::::
 
 [api-server]: ../guides-using-the-api-server.md
+[api-server-streaming-search]: ../guides-using-the-api-server.md#example-streaming-search-results-in-a-single-request
 [clp-json-format]: ./index.md#clp-json
 [datasets]: ../resources-datasets.md
 [json-search-syntax]: ../reference-json-search-syntax.md
