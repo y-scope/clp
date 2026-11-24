@@ -72,7 +72,9 @@ pub trait SpiderJobSubmitter: Clone + Send + Sync + 'static {
         poll_interval: Duration,
     ) -> Result<JobOutcome, Error>;
 
-    /// Idempotently cancels the job identified by `spider_job_id`.
+    /// Idempotently requests cancellation for the job identified by `spider_job_id`.
+    ///
+    /// Spider can accept a cancellation request before the job finishes running its cleanup task.
     ///
     /// Safe to call regardless of whether the job is not-yet-started, already running, or already
     /// terminal.
