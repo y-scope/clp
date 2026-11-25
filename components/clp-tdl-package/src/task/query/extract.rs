@@ -376,16 +376,23 @@ fn publish_files(
 ///
 /// Returns an error if:
 ///
+/// * [`anyhow::Error`] if the configured stream collection name is invalid.
 /// * Forwards [`parse_results_cache_uri`]'s return values on failure.
 /// * Forwards [`Client::with_options`]'s return values on failure.
 async fn prepare_metadata_collection(
     config: &ResultsCache,
 ) -> anyhow::Result<Collection<Document>> {
+    let collection_name = &config.stream_collection_name;
+    anyhow::ensure!(
+        !collection_name.is_empty()
+            && !collection_name.contains(['$', '\0'])
+            && !collection_name.starts_with("system.")
+            && !collection_name.contains(".system."),
+        "invalid results-cache stream collection name {collection_name:?}"
+    );
     let options = parse_results_cache_uri(config.uri().as_str()).await?;
     let client = Client::with_options(options)?;
-    Ok(client
-        .database(&config.db_name)
-        .collection(&config.stream_collection_name))
+    Ok(client.database(&config.db_name).collection(collection_name))
 }
 
 /// Upserts stream metadata in bounded batches.
@@ -796,19 +803,40 @@ mod tests {
 
     #[test]
     fn extract_validates_the_results_cache_only_when_ordered_chunks_exist() -> anyhow::Result<()> {
+        const INVALID_COLLECTION_NAME: &str = "bad$name";
+
         let filename = format!("{ARCHIVE_ID}_0_1.jsonl");
-        for (body, expected_error) in [
-            (":".to_owned(), None),
+        let ordered_chunk = format!(
+            r#"touch "$5/{filename}"
+printf '{{"path":"%s"}}\n' "$5/{filename}""#
+        );
+        let invalid_database = ResultsCache {
+            db_name: String::new(),
+            ..ResultsCache::default()
+        };
+        let invalid_collection = ResultsCache {
+            stream_collection_name: INVALID_COLLECTION_NAME.to_owned(),
+            ..ResultsCache::default()
+        };
+        let invalid_collection_error =
+            format!("invalid results-cache stream collection name {INVALID_COLLECTION_NAME:?}");
+        for (body, results_cache, expected_error) in [
+            (":", invalid_database.clone(), None),
             (
-                r#"touch "$5/original""#.to_owned(),
+                r#"touch "$5/original""#,
+                invalid_database.clone(),
                 Some("clp-s produced unordered output; the archive lacks log ordering"),
             ),
             (
-                format!(
-                    r#"touch "$5/{filename}"
-printf '{{"path":"%s"}}\n' "$5/{filename}""#
-                ),
+                ordered_chunk.as_str(),
+                invalid_database,
                 Some("results-cache URI must name a database"),
+            ),
+            (":", invalid_collection.clone(), None),
+            (
+                ordered_chunk.as_str(),
+                invalid_collection,
+                Some(invalid_collection_error.as_str()),
             ),
         ] {
             let clp_home = tempfile::tempdir()?;
@@ -822,10 +850,7 @@ printf '{{"path":"%s"}}\n' "$5/{filename}""#
                     },
                     ..StreamOutput::default()
                 },
-                results_cache: ResultsCache {
-                    db_name: String::new(),
-                    ..ResultsCache::default()
-                },
+                results_cache,
                 ..SpiderTaskExecutorConfig::default()
             };
             let check_path = r#"test -d "$5"
