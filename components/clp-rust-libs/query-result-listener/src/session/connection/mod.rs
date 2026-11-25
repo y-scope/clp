@@ -129,7 +129,7 @@ impl<EncodingType: ResultEncoding> Connection<EncodingType> {
         cursor: Arc<TaskCursor>,
     ) -> Result<Self, ConnectionError> {
         let encoder =
-            EncodingType::Encoder::new(cursor.archive_id()).map_err(|e| session_state.fail(e))?;
+            EncodingType::Encoder::new(cursor.archive_uuid()).map_err(|e| session_state.fail(e))?;
         Ok(Self {
             session_state,
             cursor,
@@ -322,7 +322,7 @@ mod tests {
     use std::sync::Arc;
     use std::time::Duration;
 
-    use clp_rust_utils::types::ArchiveId;
+    use clp_rust_utils::types::ArchiveUuid;
     use spider_core::task::TaskIndex;
     use tokio::io::AsyncReadExt;
     use tokio::io::AsyncWriteExt;
@@ -338,7 +338,7 @@ mod tests {
     use crate::session::SessionStats;
     use crate::session::state::State;
     use crate::session::stats::AtomicSessionStats;
-    use crate::test_utils::ARCHIVE_ID;
+    use crate::test_utils::ARCHIVE_UUID;
     use crate::test_utils::EncodingError;
     use crate::test_utils::FallibleQueryResultEncoding;
     use crate::test_utils::QueryResult;
@@ -385,7 +385,7 @@ mod tests {
             }
         }
 
-        /// Connects an attempt of task `task_index` of archive `archive_id` to the session.
+        /// Connects an attempt of task `task_index` of archive `archive_uuid` to the session.
         ///
         /// # Returns
         ///
@@ -393,13 +393,13 @@ mod tests {
         ///
         /// # Panics
         ///
-        /// Panics if `archive_id` isn't a valid UUID, the cursor of task `task_index` is bound to
+        /// Panics if `archive_uuid` isn't a valid UUID, the cursor of task `task_index` is bound to
         /// another archive, or the attempt's encoder can't be created.
-        fn connect(&self, task_index: TaskIndex, archive_id: &str) -> Attempt {
-            self.connect_with_buffered(task_index, archive_id, &[])
+        fn connect(&self, task_index: TaskIndex, archive_uuid: &str) -> Attempt {
+            self.connect_with_buffered(task_index, archive_uuid, &[])
         }
 
-        /// Connects an attempt of task `task_index` of archive `archive_id` to the session, as if
+        /// Connects an attempt of task `task_index` of archive `archive_uuid` to the session, as if
         /// `buffered` had been read along with the attempt's handshake.
         ///
         /// # Returns
@@ -408,12 +408,12 @@ mod tests {
         ///
         /// # Panics
         ///
-        /// Panics if `archive_id` isn't a valid UUID, the cursor of task `task_index` is bound to
+        /// Panics if `archive_uuid` isn't a valid UUID, the cursor of task `task_index` is bound to
         /// another archive, or the attempt's encoder can't be created.
         fn connect_with_buffered(
             &self,
             task_index: TaskIndex,
-            archive_id: &str,
+            archive_uuid: &str,
             buffered: &[u8],
         ) -> Attempt {
             use bytes::BytesMut;
@@ -423,9 +423,9 @@ mod tests {
                 .session_state
                 .cursor(
                     task_index,
-                    archive_id
-                        .parse::<ArchiveId>()
-                        .expect("archive ID fixtures should be valid UUIDs"),
+                    archive_uuid
+                        .parse::<ArchiveUuid>()
+                        .expect("archive UUID fixtures should be valid UUIDs"),
                 )
                 .expect("the task's first connection should get a cursor");
             let mut connection = Connection::new(Arc::clone(&self.session_state), cursor)
@@ -594,7 +594,7 @@ mod tests {
         let mut harness = Harness::new(1);
         // The batch of the results read with the handshake fills the channel, so the last batch
         // waits to be sent.
-        let mut attempt = harness.connect_with_buffered(0, ARCHIVE_ID, &encode_results(0, 0..5));
+        let mut attempt = harness.connect_with_buffered(0, ARCHIVE_UUID, &encode_results(0, 0..5));
         attempt.send_results(0, 5..10).await;
         attempt.send(&encode_trailer(10)).await;
         attempt.shut_down_write().await;
@@ -604,11 +604,11 @@ mod tests {
         let end = attempt.wait_closed().await;
         end.result?;
 
-        assert_eq!(first_batch, expected_results(0, ARCHIVE_ID, 0..5));
+        assert_eq!(first_batch, expected_results(0, ARCHIVE_UUID, 0..5));
         assert_eq!(end.received, Ack { num_results: 10 }.encode());
         assert_eq!(
             harness.take_batches(),
-            [expected_results(0, ARCHIVE_ID, 5..10)]
+            [expected_results(0, ARCHIVE_UUID, 5..10)]
         );
         Ok(())
     }
@@ -616,11 +616,11 @@ mod tests {
     #[tokio::test]
     async fn retry_of_only_duplicates_is_acknowledged() -> anyhow::Result<()> {
         let mut harness = Harness::new(CHANNEL_CAPACITY);
-        let mut first_attempt = harness.connect(0, ARCHIVE_ID);
+        let mut first_attempt = harness.connect(0, ARCHIVE_UUID);
         first_attempt.send_results(0, 0..3).await;
         first_attempt.finish(3).await.result?;
 
-        let mut retry = harness.connect(0, ARCHIVE_ID);
+        let mut retry = harness.connect(0, ARCHIVE_UUID);
         retry.send_results(0, 0..3).await;
         let retry_end = retry.finish(3).await;
         retry_end.result?;
@@ -628,7 +628,7 @@ mod tests {
         assert_eq!(retry_end.received, Ack { num_results: 3 }.encode());
         assert_eq!(
             harness.take_batches(),
-            [expected_results(0, ARCHIVE_ID, 0..3)]
+            [expected_results(0, ARCHIVE_UUID, 0..3)]
         );
         assert_eq!(
             harness.stats.load(),
@@ -646,8 +646,8 @@ mod tests {
         const TASK_INDEX: TaskIndex = 3;
 
         let mut harness = Harness::new(CHANNEL_CAPACITY);
-        let mut first_attempt = harness.connect(TASK_INDEX, ARCHIVE_ID);
-        let mut second_attempt = harness.connect(TASK_INDEX, ARCHIVE_ID);
+        let mut first_attempt = harness.connect(TASK_INDEX, ARCHIVE_UUID);
+        let mut second_attempt = harness.connect(TASK_INDEX, ARCHIVE_UUID);
         let mut batches = Vec::new();
         first_attempt.send_results(TASK_INDEX, 0..2).await;
         batches.push(harness.next_batch().await);
@@ -669,10 +669,10 @@ mod tests {
         assert_eq!(
             batches,
             [
-                expected_results(TASK_INDEX, ARCHIVE_ID, 0..2),
-                expected_results(TASK_INDEX, ARCHIVE_ID, 2..3),
-                expected_results(TASK_INDEX, ARCHIVE_ID, 3..4),
-                expected_results(TASK_INDEX, ARCHIVE_ID, 4..6),
+                expected_results(TASK_INDEX, ARCHIVE_UUID, 0..2),
+                expected_results(TASK_INDEX, ARCHIVE_UUID, 2..3),
+                expected_results(TASK_INDEX, ARCHIVE_UUID, 3..4),
+                expected_results(TASK_INDEX, ARCHIVE_UUID, 4..6),
             ]
         );
         assert_eq!(
@@ -688,13 +688,13 @@ mod tests {
     #[tokio::test]
     async fn two_tasks_in_one_session_each_emit_every_result_and_are_acknowledged()
     -> anyhow::Result<()> {
-        use crate::test_utils::OTHER_ARCHIVE_ID;
+        use crate::test_utils::OTHER_ARCHIVE_UUID;
 
         const NUM_RESULTS: u64 = 3;
 
         let mut harness = Harness::new(CHANNEL_CAPACITY);
-        let mut first_task_attempt = harness.connect(0, ARCHIVE_ID);
-        let mut second_task_attempt = harness.connect(1, OTHER_ARCHIVE_ID);
+        let mut first_task_attempt = harness.connect(0, ARCHIVE_UUID);
+        let mut second_task_attempt = harness.connect(1, OTHER_ARCHIVE_UUID);
         let mut first_task_batches = Vec::new();
         let mut second_task_batches = Vec::new();
         for result_index in 0..NUM_RESULTS {
@@ -716,11 +716,11 @@ mod tests {
         assert_eq!(second_task_end.received, ack);
         assert_eq!(
             first_task_batches.concat(),
-            expected_results(0, ARCHIVE_ID, 0..NUM_RESULTS)
+            expected_results(0, ARCHIVE_UUID, 0..NUM_RESULTS)
         );
         assert_eq!(
             second_task_batches.concat(),
-            expected_results(1, OTHER_ARCHIVE_ID, 0..NUM_RESULTS)
+            expected_results(1, OTHER_ARCHIVE_UUID, 0..NUM_RESULTS)
         );
         assert_eq!(
             harness.stats.load(),
@@ -737,11 +737,11 @@ mod tests {
     -> anyhow::Result<()> {
         for out_of_order_indices in [[0, 2], [0, 0]] {
             let mut harness = Harness::new(CHANNEL_CAPACITY);
-            let mut attempt = harness.connect(0, ARCHIVE_ID);
+            let mut attempt = harness.connect(0, ARCHIVE_UUID);
             attempt.send_results(0, out_of_order_indices).await;
             let end = attempt.wait_closed().await;
 
-            let mut retry = harness.connect(0, ARCHIVE_ID);
+            let mut retry = harness.connect(0, ARCHIVE_UUID);
             retry.send_results(0, 0..4).await;
             retry.finish(4).await.result?;
 
@@ -759,7 +759,7 @@ mod tests {
             );
             assert_eq!(
                 harness.take_batches().concat(),
-                expected_results(0, ARCHIVE_ID, 0..4),
+                expected_results(0, ARCHIVE_UUID, 0..4),
                 "{out_of_order_indices:?}"
             );
             assert_eq!(
@@ -778,7 +778,7 @@ mod tests {
     async fn trailer_counting_other_results_is_a_protocol_error() {
         for trailer_num_results in [2, 4] {
             let harness = Harness::new(CHANNEL_CAPACITY);
-            let mut attempt = harness.connect(0, ARCHIVE_ID);
+            let mut attempt = harness.connect(0, ARCHIVE_UUID);
             attempt.send_results(0, 0..3).await;
             let end = attempt.finish(trailer_num_results).await;
 
@@ -801,7 +801,7 @@ mod tests {
     async fn bytes_after_the_trailer_are_a_protocol_error() {
         for is_same_read in [true, false] {
             let mut harness = Harness::new(CHANNEL_CAPACITY);
-            let mut attempt = harness.connect(0, ARCHIVE_ID);
+            let mut attempt = harness.connect(0, ARCHIVE_UUID);
             let mut bytes = encode_results(0, 0..2);
             bytes.extend(encode_trailer(2));
             if is_same_read {
@@ -831,7 +831,7 @@ mod tests {
     #[tokio::test]
     async fn eof_without_a_trailer_is_not_acknowledged() {
         let mut harness = Harness::new(CHANNEL_CAPACITY);
-        let mut attempt = harness.connect(0, ARCHIVE_ID);
+        let mut attempt = harness.connect(0, ARCHIVE_UUID);
         attempt.send_results(0, 0..3).await;
         attempt.shut_down_write().await;
         let end = attempt.wait_closed().await;
@@ -844,14 +844,14 @@ mod tests {
         );
         assert_eq!(
             harness.take_batches().concat(),
-            expected_results(0, ARCHIVE_ID, 0..3)
+            expected_results(0, ARCHIVE_UUID, 0..3)
         );
     }
 
     #[tokio::test]
     async fn result_cut_off_by_a_disconnect_is_never_claimed() -> anyhow::Result<()> {
         let mut harness = Harness::new(CHANNEL_CAPACITY);
-        let mut attempt = harness.connect(0, ARCHIVE_ID);
+        let mut attempt = harness.connect(0, ARCHIVE_UUID);
         attempt.send_results(0, 0..2).await;
         let cut_off_result = encode_result(2, timestamp(2), &message(0, 2));
         attempt
@@ -860,7 +860,7 @@ mod tests {
         attempt.shut_down_write().await;
         let end = attempt.wait_closed().await;
 
-        let mut retry = harness.connect(0, ARCHIVE_ID);
+        let mut retry = harness.connect(0, ARCHIVE_UUID);
         retry.send_results(0, 0..4).await;
         retry.finish(4).await.result?;
 
@@ -872,7 +872,7 @@ mod tests {
         );
         assert_eq!(
             harness.take_batches().concat(),
-            expected_results(0, ARCHIVE_ID, 0..4)
+            expected_results(0, ARCHIVE_UUID, 0..4)
         );
         assert_eq!(
             harness.stats.load(),
@@ -888,7 +888,7 @@ mod tests {
     async fn malformed_frame_closes_the_connection_after_emitting_the_results_claimed_before_it()
     -> anyhow::Result<()> {
         let mut harness = Harness::new(CHANNEL_CAPACITY);
-        let mut attempt = harness.connect(0, ARCHIVE_ID);
+        let mut attempt = harness.connect(0, ARCHIVE_UUID);
         let mut bytes = encode_results(0, 0..2);
         rmp::encode::write_array_len(&mut bytes, 2)?;
         rmp::encode::write_uint(&mut bytes, 2)?;
@@ -907,7 +907,7 @@ mod tests {
         );
         assert_eq!(
             harness.take_batches(),
-            [expected_results(0, ARCHIVE_ID, 0..2)]
+            [expected_results(0, ARCHIVE_UUID, 0..2)]
         );
         Ok(())
     }
@@ -923,8 +923,8 @@ mod tests {
         const STALL_CHECK_DURATION: Duration = Duration::from_millis(200);
 
         let mut harness = Harness::new(1);
-        let mut attempt = harness.connect(0, ARCHIVE_ID);
-        let expected = expected_results(0, ARCHIVE_ID, 0..NUM_RESULTS)
+        let mut attempt = harness.connect(0, ARCHIVE_UUID);
+        let expected = expected_results(0, ARCHIVE_UUID, 0..NUM_RESULTS)
             .into_iter()
             .map(|result| QueryResult {
                 message: format!(
@@ -975,8 +975,8 @@ mod tests {
                 .zip(&expected)
                 .position(|(result, expected_result)| result != expected_result),
             None,
-            "every result should arrive once, in order, with the attempt's archive ID and its own \
-             message"
+            "every result should arrive once, in order, with the attempt's archive UUID and its \
+             own message"
         );
         Ok(())
     }
@@ -992,7 +992,7 @@ mod tests {
             stream_capacity: 1024 * 1024,
             ..Harness::new(CHANNEL_CAPACITY)
         };
-        let mut attempt = harness.connect(0, ARCHIVE_ID);
+        let mut attempt = harness.connect(0, ARCHIVE_UUID);
         attempt.send_results(0, 0..NUM_RESULTS).await;
         let end = attempt.finish(NUM_RESULTS).await;
         end.result?;
@@ -1012,7 +1012,7 @@ mod tests {
         );
         assert_eq!(
             batches.concat(),
-            expected_results(0, ARCHIVE_ID, 0..NUM_RESULTS)
+            expected_results(0, ARCHIVE_UUID, 0..NUM_RESULTS)
         );
         Ok(())
     }
@@ -1024,7 +1024,7 @@ mod tests {
         const NUM_RESULTS_RECEIVED: u64 = 2;
 
         let mut harness = Harness::new(CHANNEL_CAPACITY);
-        let mut attempt = harness.connect(0, ARCHIVE_ID);
+        let mut attempt = harness.connect(0, ARCHIVE_UUID);
         attempt.send_results(0, 0..NUM_RESULTS_RECEIVED).await;
         harness.next_batch().await;
         harness.batches_receiver = None;
@@ -1058,7 +1058,7 @@ mod tests {
         let mut harness = Harness::new(1);
         // The batch of the results read with the handshake fills the channel, so the batch claimed
         // before the unencodable result can't be sent.
-        let mut attempt = harness.connect_with_buffered(0, ARCHIVE_ID, &encode_results(0, 0..2));
+        let mut attempt = harness.connect_with_buffered(0, ARCHIVE_UUID, &encode_results(0, 0..2));
         attempt
             .send(
                 &[
@@ -1073,7 +1073,7 @@ mod tests {
         let end = attempt.wait_closed().await;
 
         let expected_error = EncodingError::UnencodableMessage {
-            archive_id: ARCHIVE_ID.parse::<ArchiveId>()?,
+            archive_uuid: ARCHIVE_UUID.parse::<ArchiveUuid>()?,
             timestamp_millisecs: timestamp(4),
         };
         assert_eq!(end.received, [] as [u8; 0]);
@@ -1091,7 +1091,7 @@ mod tests {
         );
         assert_eq!(
             harness.take_batches(),
-            [expected_results(0, ARCHIVE_ID, 0..2)]
+            [expected_results(0, ARCHIVE_UUID, 0..2)]
         );
         Ok(())
     }
@@ -1099,17 +1099,17 @@ mod tests {
     #[tokio::test]
     async fn open_connections_of_a_failed_session_are_cut_off_with_session_failed() {
         let mut harness = Harness::new(CHANNEL_CAPACITY);
-        let mut streaming_attempt = harness.connect(1, ARCHIVE_ID);
+        let mut streaming_attempt = harness.connect(1, ARCHIVE_UUID);
         streaming_attempt.send_results(1, 0..2).await;
         harness.next_batch().await;
-        let mut finished_attempt = harness.connect(2, ARCHIVE_ID);
+        let mut finished_attempt = harness.connect(2, ARCHIVE_UUID);
         // One write, so that the batch shows that the handler has read the trailer.
         finished_attempt
             .send(&[encode_results(2, 0..2), encode_trailer(2)].concat())
             .await;
         harness.next_batch().await;
 
-        let mut failing_attempt = harness.connect(0, ARCHIVE_ID);
+        let mut failing_attempt = harness.connect(0, ARCHIVE_UUID);
         failing_attempt
             .send(&encode_result(0, timestamp(0), UNENCODABLE_MESSAGE))
             .await;
@@ -1133,7 +1133,7 @@ mod tests {
         // The batch of the results read with the handshake fills the channel, so the next batch
         // waits to be sent.
         let mut blocked_attempt =
-            harness.connect_with_buffered(1, ARCHIVE_ID, &encode_results(1, 0..2));
+            harness.connect_with_buffered(1, ARCHIVE_UUID, &encode_results(1, 0..2));
         blocked_attempt
             .send(&[encode_results(1, 2..4), encode_trailer(4)].concat())
             .await;
@@ -1142,7 +1142,7 @@ mod tests {
 
         let failing_attempt = harness.connect_with_buffered(
             0,
-            ARCHIVE_ID,
+            ARCHIVE_UUID,
             &encode_result(0, timestamp(0), UNENCODABLE_MESSAGE),
         );
         failing_attempt.wait_closed().await;
@@ -1150,8 +1150,8 @@ mod tests {
         let second_batch = harness.next_batch().await;
         let blocked_end = blocked_attempt.wait_closed().await;
 
-        assert_eq!(first_batch, expected_results(1, ARCHIVE_ID, 0..2));
-        assert_eq!(second_batch, expected_results(1, ARCHIVE_ID, 2..4));
+        assert_eq!(first_batch, expected_results(1, ARCHIVE_UUID, 0..2));
+        assert_eq!(second_batch, expected_results(1, ARCHIVE_UUID, 2..4));
         assert_eq!(blocked_end.received, [] as [u8; 0]);
         assert!(
             matches!(blocked_end.result, Err(ConnectionError::SessionFailed)),
@@ -1163,7 +1163,7 @@ mod tests {
     #[tokio::test]
     async fn only_the_first_encoding_failure_of_a_session_is_recorded() -> anyhow::Result<()> {
         let harness = Harness::new(CHANNEL_CAPACITY);
-        let mut first_failing_attempt = harness.connect(0, ARCHIVE_ID);
+        let mut first_failing_attempt = harness.connect(0, ARCHIVE_UUID);
         first_failing_attempt
             .send(&encode_result(0, timestamp(0), UNENCODABLE_MESSAGE))
             .await;
@@ -1172,14 +1172,14 @@ mod tests {
         // off the connection.
         let second_failing_attempt = harness.connect_with_buffered(
             1,
-            ARCHIVE_ID,
+            ARCHIVE_UUID,
             &encode_result(0, timestamp(1), UNENCODABLE_MESSAGE),
         );
         let second_end = second_failing_attempt.wait_closed().await;
 
-        let archive_id = ARCHIVE_ID.parse::<ArchiveId>()?;
+        let archive_uuid = ARCHIVE_UUID.parse::<ArchiveUuid>()?;
         let second_error = EncodingError::UnencodableMessage {
-            archive_id,
+            archive_uuid,
             timestamp_millisecs: timestamp(1),
         };
         assert!(
@@ -1193,7 +1193,7 @@ mod tests {
         assert_eq!(
             harness.session_state.encoding_error(),
             Some(&EncodingError::UnencodableMessage {
-                archive_id,
+                archive_uuid,
                 timestamp_millisecs: timestamp(0),
             })
         );

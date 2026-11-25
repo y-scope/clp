@@ -11,7 +11,7 @@ use serde::Deserialize;
 use crate::clp_config::AwsAuthentication;
 use crate::clp_config::S3Config;
 use crate::dataset::DatasetName;
-use crate::types::ArchiveId;
+use crate::types::ArchiveUuid;
 use crate::types::non_empty_string::ExpectedNonEmpty;
 
 /// Mirror of `clp_py_utils.clp_config.CLP_METADATA_TABLE_PREFIX`. Must be kept in sync.
@@ -520,15 +520,15 @@ impl ArchiveOutput {
     ///
     /// # Returns
     ///
-    /// The dataset's archive storage directory joined with `archive_id`.
+    /// The dataset's archive storage directory joined with `archive_uuid`.
     #[must_use]
     pub fn dataset_archive_object_key(
         &self,
         dataset: &DatasetName,
-        archive_id: &ArchiveId,
+        archive_uuid: &ArchiveUuid,
     ) -> NonEmptyString {
         NonEmptyString::from_string(format!(
-            "{}/{archive_id}",
+            "{}/{archive_uuid}",
             self.dataset_archive_storage_directory(dataset)
         ))
     }
@@ -901,12 +901,14 @@ mod tests {
 
         use crate::clp_config::AwsAuthentication;
         use crate::clp_config::S3Config;
-        use crate::types::ArchiveId;
+        use crate::types::ArchiveUuid;
         use crate::types::non_empty_string::ExpectedNonEmpty;
 
-        const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
+        const ARCHIVE_UUID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
 
-        let archive_id = ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID");
+        let archive_uuid = ARCHIVE_UUID
+            .parse::<ArchiveUuid>()
+            .expect("valid archive UUID");
         let archive_output = ArchiveOutput {
             storage: ArchiveOutputStorage::S3 {
                 staging_directory: "var/data/staged-archives".to_owned(),
@@ -926,15 +928,15 @@ mod tests {
 
         assert_eq!(
             archive_output
-                .dataset_archive_object_key(&DatasetName::default(), &archive_id)
+                .dataset_archive_object_key(&DatasetName::default(), &archive_uuid)
                 .as_str(),
-            format!("LIB1/default/{ARCHIVE_ID}")
+            format!("LIB1/default/{ARCHIVE_UUID}")
         );
         assert_eq!(
             archive_output
-                .dataset_archive_object_key(&dataset, &archive_id)
+                .dataset_archive_object_key(&dataset, &archive_uuid)
                 .as_str(),
-            format!("LIB1/mydataset/{ARCHIVE_ID}")
+            format!("LIB1/mydataset/{ARCHIVE_UUID}")
         );
     }
 

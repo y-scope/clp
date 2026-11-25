@@ -7,7 +7,7 @@ use serde_with::DisplayFromStr;
 use serde_with::serde_as;
 
 use crate::dataset::DatasetName;
-use crate::types::ArchiveId;
+use crate::types::ArchiveUuid;
 
 /// Config of a job that extracts the IR stream of an original file containing a given log event.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -23,7 +23,9 @@ pub struct ExtractIrJobConfig {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct ExtractJsonJobConfig {
     pub dataset: DatasetName,
+    // The extraction job scheduler reads the archive's UUID as `archive_id`.
+    #[serde(rename = "archive_id")]
     #[serde_as(as = "DisplayFromStr")]
-    pub archive_id: ArchiveId,
+    pub archive_uuid: ArchiveUuid,
     pub target_chunk_size: Option<u64>,
 }

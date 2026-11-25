@@ -267,7 +267,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Extracts a JSON stream file that contains the log event at `log_event_idx` in the archive with ID `archive_id`. Only the clp-s storage engine is supported. If the results cache already has such a stream file, returns its metadata directly; otherwise submits an extraction job, waits for it to finish, and returns the metadata of the stream file it extracted. The wait is bounded by `api_server.stream_file_extraction_timeout_secs`; the job keeps running when the timeout is reached. */
+        /** @description Extracts a JSON stream file that contains the log event at `log_event_idx` in the archive with UUID `archive_id`. Only the clp-s storage engine is supported. If the results cache already has such a stream file, returns its metadata directly; otherwise submits an extraction job, waits for it to finish, and returns the metadata of the stream file it extracted. The wait is bounded by `api_server.stream_file_extraction_timeout_secs`; the job keeps running when the timeout is reached. */
         post: operations["extract_stream_file"];
         delete?: never;
         options?: never;
@@ -605,7 +605,7 @@ export interface components {
         StreamFileExtraction: {
             /**
              * Format: uuid
-             * @description ID of the archive to extract the JSON stream from.
+             * @description UUID of the archive to extract the JSON stream from.
              */
             archive_id: string;
             /**
@@ -677,7 +677,7 @@ export interface components {
         };
         /** @description The data of a streaming query's result event. */
         StreamingQueryResultEvent: {
-            /** @description The ID of the archive that contains the result. */
+            /** @description The UUID of the archive that contains the result. */
             archive_id: string;
             /** @description The result's message with its trailing newline removed. */
             message: string;

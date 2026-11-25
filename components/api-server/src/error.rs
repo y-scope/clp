@@ -6,7 +6,7 @@ use aws_sdk_s3::primitives::ByteStreamError;
 use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::job_config::QueryJobStatus;
 use clp_rust_utils::logs_input::LogsInputError;
-use clp_rust_utils::types::ArchiveId;
+use clp_rust_utils::types::ArchiveUuid;
 use num_enum::TryFromPrimitive;
 use query_result_listener::SessionError;
 use thiserror::Error;
@@ -64,9 +64,9 @@ pub enum ClientError {
     #[error("extraction job {0} not found in the query jobs table")]
     ExtractionJobNotFound(u64),
 
-    #[error("log event {log_event_idx} not found in the stream files of archive {archive_id}")]
+    #[error("log event {log_event_idx} not found in the stream files of archive {archive_uuid}")]
     LogEventNotFound {
-        archive_id: ArchiveId,
+        archive_uuid: ArchiveUuid,
         log_event_idx: u64,
     },
 

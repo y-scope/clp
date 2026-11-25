@@ -6,7 +6,7 @@ use std::time::Duration;
 use anyhow::Result;
 use clp_rust_utils::job_config::NetworkOutput;
 use clp_rust_utils::job_config::QueryJobStatus;
-use clp_rust_utils::types::ArchiveId;
+use clp_rust_utils::types::ArchiveUuid;
 use clp_rust_utils::types::SessionToken;
 use futures::Stream;
 use futures::StreamExt;
@@ -19,10 +19,10 @@ use query_result_listener::session::SessionConfig;
 use query_result_listener::session::SessionEvent;
 use query_result_listener::session::SessionEventError;
 use query_result_listener::session::SessionStats;
-use query_result_listener::test_utils::ARCHIVE_ID;
+use query_result_listener::test_utils::ARCHIVE_UUID;
 use query_result_listener::test_utils::EncodingError;
 use query_result_listener::test_utils::FallibleQueryResultEncoding;
-use query_result_listener::test_utils::OTHER_ARCHIVE_ID;
+use query_result_listener::test_utils::OTHER_ARCHIVE_UUID;
 use query_result_listener::test_utils::QueryResult;
 use query_result_listener::test_utils::QueryResultEncoding;
 use query_result_listener::test_utils::TIMEOUT;
@@ -91,18 +91,18 @@ impl FakeClpS {
             .expect("sending to the listener should succeed");
     }
 
-    /// Sends a handshake for task `task_index` of archive `archive_id`, presenting the token of the
-    /// session that the attempt connected to.
+    /// Sends a handshake for task `task_index` of archive `archive_uuid`, presenting the token of
+    /// the session that the attempt connected to.
     ///
     /// # Panics
     ///
     /// Panics if `task_index` doesn't fit in `u64`, or the write fails.
-    async fn send_handshake(&mut self, task_index: TaskIndex, archive_id: &str) {
+    async fn send_handshake(&mut self, task_index: TaskIndex, archive_uuid: &str) {
         self.send(&encode_handshake(
             PROTOCOL_VERSION,
             &self.session_token.to_string(),
             u64::try_from(task_index).expect("test task indices fit in `u64`"),
-            archive_id,
+            archive_uuid,
         ))
         .await;
     }
@@ -407,7 +407,7 @@ async fn receive_results(
     received
 }
 
-/// Connects an attempt of task 0 of archive [`ARCHIVE_ID`] to the session that `network_output`
+/// Connects an attempt of task 0 of archive [`ARCHIVE_UUID`] to the session that `network_output`
 /// names, and sends its results at `0..2`, then those at `2..4` in a separate read, so that the
 /// first batch fills a session's channel of capacity 1 that nothing consumes, and the attempt waits
 /// to send the second.
@@ -417,7 +417,7 @@ async fn receive_results(
 /// The connected attempt.
 async fn connect_attempt_blocked_on_its_second_batch(network_output: &NetworkOutput) -> FakeClpS {
     let mut attempt = FakeClpS::connect(network_output).await;
-    attempt.send_handshake(0, ARCHIVE_ID).await;
+    attempt.send_handshake(0, ARCHIVE_UUID).await;
     attempt.send_results(0, 0..2).await;
     sleep(SETTLE_DELAY).await;
     attempt.send_results(0, 2..4).await;
@@ -438,7 +438,7 @@ async fn results_sent_along_with_the_handshake_are_delivered_and_acknowledged() 
     attempt
         .send(
             &[
-                encode_handshake(PROTOCOL_VERSION, &session_token, 0, ARCHIVE_ID),
+                encode_handshake(PROTOCOL_VERSION, &session_token, 0, ARCHIVE_UUID),
                 encode_results(0, 0..3),
             ]
             .concat(),
@@ -451,7 +451,7 @@ async fn results_sent_along_with_the_handshake_are_delivered_and_acknowledged() 
     let ending = Ending::receive(&mut events).await;
 
     assert_eq!(acknowledgement, Ack { num_results: 3 }.encode());
-    assert_eq!(ending.results, expected_results(0, ARCHIVE_ID, 0..3));
+    assert_eq!(ending.results, expected_results(0, ARCHIVE_UUID, 0..3));
     assert_eq!(
         ending.ended(),
         Ended {
@@ -476,7 +476,7 @@ async fn unknown_session_token_is_rejected() -> Result<()> {
     stranger
         .send(
             &[
-                encode_handshake(PROTOCOL_VERSION, UNKNOWN_SESSION_TOKEN, 0, ARCHIVE_ID),
+                encode_handshake(PROTOCOL_VERSION, UNKNOWN_SESSION_TOKEN, 0, ARCHIVE_UUID),
                 encode_results(0, 0..3),
             ]
             .concat(),
@@ -537,7 +537,7 @@ async fn connection_that_sent_its_handshake_outlasts_the_handshake_timeout() -> 
     let mut events = Box::pin(session.into_events(wait_for_termination, async {}));
 
     let mut attempt = FakeClpS::connect(&network_output).await;
-    attempt.send_handshake(0, ARCHIVE_ID).await;
+    attempt.send_handshake(0, ARCHIVE_UUID).await;
     tokio::time::sleep(2 * Duration::from_secs(HANDSHAKE_TIMEOUT_SEC.get())).await;
     attempt.send_results(0, 0..3).await;
     let acknowledgement = attempt.finish(3).await;
@@ -547,7 +547,7 @@ async fn connection_that_sent_its_handshake_outlasts_the_handshake_timeout() -> 
     let ending = Ending::receive(&mut events).await;
 
     assert_eq!(acknowledgement, Ack { num_results: 3 }.encode());
-    assert_eq!(ending.results, expected_results(0, ARCHIVE_ID, 0..3));
+    assert_eq!(ending.results, expected_results(0, ARCHIVE_UUID, 0..3));
     assert_eq!(
         ending.ended(),
         Ended {
@@ -576,7 +576,7 @@ async fn dropping_a_session_unregisters_it() -> Result<()> {
                     PROTOCOL_VERSION,
                     &network_output.session_token.to_string(),
                     0,
-                    ARCHIVE_ID,
+                    ARCHIVE_UUID,
                 ),
                 encode_results(0, 0..3),
             ]
@@ -602,11 +602,11 @@ async fn sessions_on_one_listener_receive_only_their_own_results() -> Result<()>
         Box::pin(second_session.into_events(second_wait_for_termination, async {}));
 
     let mut first_attempt = FakeClpS::connect(&first_network_output).await;
-    first_attempt.send_handshake(0, ARCHIVE_ID).await;
+    first_attempt.send_handshake(0, ARCHIVE_UUID).await;
     first_attempt.send_results(0, 0..3).await;
     let first_acknowledgement = first_attempt.finish(3).await;
     let mut second_attempt = FakeClpS::connect(&second_network_output).await;
-    second_attempt.send_handshake(0, OTHER_ARCHIVE_ID).await;
+    second_attempt.send_handshake(0, OTHER_ARCHIVE_UUID).await;
     second_attempt.send_results(0, 0..2).await;
     let second_acknowledgement = second_attempt.finish(2).await;
     for termination_sender in [first_termination_sender, second_termination_sender] {
@@ -619,10 +619,13 @@ async fn sessions_on_one_listener_receive_only_their_own_results() -> Result<()>
 
     assert_eq!(first_acknowledgement, Ack { num_results: 3 }.encode());
     assert_eq!(second_acknowledgement, Ack { num_results: 2 }.encode());
-    assert_eq!(first_ending.results, expected_results(0, ARCHIVE_ID, 0..3));
+    assert_eq!(
+        first_ending.results,
+        expected_results(0, ARCHIVE_UUID, 0..3)
+    );
     assert_eq!(
         second_ending.results,
-        expected_results(0, OTHER_ARCHIVE_ID, 0..2)
+        expected_results(0, OTHER_ARCHIVE_UUID, 0..2)
     );
     assert_eq!(
         first_ending.ended(),
@@ -657,12 +660,12 @@ async fn tasks_connecting_one_after_another_each_deliver_their_results_and_are_a
     let mut events = Box::pin(session.into_events(wait_for_termination, async {}));
 
     let mut first_task_attempt = FakeClpS::connect(&network_output).await;
-    first_task_attempt.send_handshake(0, ARCHIVE_ID).await;
+    first_task_attempt.send_handshake(0, ARCHIVE_UUID).await;
     first_task_attempt.send_results(0, 0..3).await;
     let first_task_acknowledgement = first_task_attempt.finish(3).await;
     let mut second_task_attempt = FakeClpS::connect(&network_output).await;
     second_task_attempt
-        .send_handshake(1, OTHER_ARCHIVE_ID)
+        .send_handshake(1, OTHER_ARCHIVE_UUID)
         .await;
     second_task_attempt.send_results(1, 0..2).await;
     let second_task_acknowledgement = second_task_attempt.finish(2).await;
@@ -676,8 +679,8 @@ async fn tasks_connecting_one_after_another_each_deliver_their_results_and_are_a
     assert_eq!(
         ending.results,
         [
-            expected_results(0, ARCHIVE_ID, 0..3),
-            expected_results(1, OTHER_ARCHIVE_ID, 0..2),
+            expected_results(0, ARCHIVE_UUID, 0..3),
+            expected_results(1, OTHER_ARCHIVE_UUID, 0..2),
         ]
         .concat()
     );
@@ -703,10 +706,10 @@ async fn concurrent_tasks_each_deliver_their_results_and_are_acknowledged() -> R
     let mut events = Box::pin(session.into_events(wait_for_termination, async {}));
 
     let mut first_task_attempt = FakeClpS::connect(&network_output).await;
-    first_task_attempt.send_handshake(0, ARCHIVE_ID).await;
+    first_task_attempt.send_handshake(0, ARCHIVE_UUID).await;
     let mut second_task_attempt = FakeClpS::connect(&network_output).await;
     second_task_attempt
-        .send_handshake(1, OTHER_ARCHIVE_ID)
+        .send_handshake(1, OTHER_ARCHIVE_UUID)
         .await;
     first_task_attempt.send_results(0, 0..1).await;
     second_task_attempt.send_results(1, 0..2).await;
@@ -717,19 +720,19 @@ async fn concurrent_tasks_each_deliver_their_results_and_are_acknowledged() -> R
         .send(Ok(QueryJobStatus::Succeeded))
         .expect("the stream should wait for the job's termination");
     let ending = Ending::receive(&mut events).await;
-    let first_task_archive_id = ARCHIVE_ID.parse::<ArchiveId>()?;
+    let first_task_archive_uuid = ARCHIVE_UUID.parse::<ArchiveUuid>()?;
     let (first_task_results, second_task_results): (Vec<_>, Vec<_>) = ending
         .results
         .iter()
         .cloned()
-        .partition(|result| first_task_archive_id == result.archive_id);
+        .partition(|result| first_task_archive_uuid == result.archive_uuid);
 
     assert_eq!(first_task_acknowledgement, Ack { num_results: 3 }.encode());
     assert_eq!(second_task_acknowledgement, Ack { num_results: 2 }.encode());
-    assert_eq!(first_task_results, expected_results(0, ARCHIVE_ID, 0..3));
+    assert_eq!(first_task_results, expected_results(0, ARCHIVE_UUID, 0..3));
     assert_eq!(
         second_task_results,
-        expected_results(1, OTHER_ARCHIVE_ID, 0..2)
+        expected_results(1, OTHER_ARCHIVE_UUID, 0..2)
     );
     assert_eq!(
         ending.ended(),
@@ -754,12 +757,12 @@ async fn retry_after_a_partial_attempt_delivers_only_the_missing_results_and_is_
     let mut events = Box::pin(session.into_events(wait_for_termination, async {}));
 
     let mut first_attempt = FakeClpS::connect(&network_output).await;
-    first_attempt.send_handshake(0, ARCHIVE_ID).await;
+    first_attempt.send_handshake(0, ARCHIVE_UUID).await;
     first_attempt.send_results(0, 0..2).await;
     let mut received = receive_results(&mut events, 2).await;
     drop(first_attempt);
     let mut retry = FakeClpS::connect(&network_output).await;
-    retry.send_handshake(0, ARCHIVE_ID).await;
+    retry.send_handshake(0, ARCHIVE_UUID).await;
     retry.send_results(0, 0..4).await;
     let acknowledgement = retry.finish(4).await;
     termination_sender
@@ -769,7 +772,7 @@ async fn retry_after_a_partial_attempt_delivers_only_the_missing_results_and_is_
     received.extend_from_slice(&ending.results);
 
     assert_eq!(acknowledgement, Ack { num_results: 4 }.encode());
-    assert_eq!(received, expected_results(0, ARCHIVE_ID, 0..4));
+    assert_eq!(received, expected_results(0, ARCHIVE_UUID, 0..4));
     assert_eq!(
         ending.ended(),
         Ended {
@@ -793,9 +796,9 @@ async fn concurrent_attempts_of_one_task_deliver_each_result_once_and_are_both_a
     let mut events = Box::pin(session.into_events(wait_for_termination, async {}));
 
     let mut first_attempt = FakeClpS::connect(&network_output).await;
-    first_attempt.send_handshake(0, ARCHIVE_ID).await;
+    first_attempt.send_handshake(0, ARCHIVE_UUID).await;
     let mut second_attempt = FakeClpS::connect(&network_output).await;
-    second_attempt.send_handshake(0, ARCHIVE_ID).await;
+    second_attempt.send_handshake(0, ARCHIVE_UUID).await;
     first_attempt.send_results(0, 0..2).await;
     let mut received = receive_results(&mut events, 2).await;
     second_attempt.send_results(0, 0..3).await;
@@ -811,7 +814,7 @@ async fn concurrent_attempts_of_one_task_deliver_each_result_once_and_are_both_a
 
     assert_eq!(first_acknowledgement, Ack { num_results: 3 }.encode());
     assert_eq!(second_acknowledgement, Ack { num_results: 3 }.encode());
-    assert_eq!(received, expected_results(0, ARCHIVE_ID, 0..3));
+    assert_eq!(received, expected_results(0, ARCHIVE_UUID, 0..3));
     assert_eq!(
         ending.ended(),
         Ended {
@@ -833,7 +836,7 @@ async fn events_end_once_the_job_terminates_and_its_open_connection_is_cut_off()
     let (termination_sender, wait_for_termination) = wait_for_termination();
     let mut events = Box::pin(session.into_events(wait_for_termination, async {}));
     let mut attempt = FakeClpS::connect(&network_output).await;
-    attempt.send_handshake(0, ARCHIVE_ID).await;
+    attempt.send_handshake(0, ARCHIVE_UUID).await;
     attempt.send_results(0, 0..2).await;
     let received = receive_results(&mut events, 2).await;
 
@@ -843,7 +846,7 @@ async fn events_end_once_the_job_terminates_and_its_open_connection_is_cut_off()
     let ending = Ending::receive(&mut events).await;
     attempt.expect_closed_by_listener().await;
 
-    assert_eq!(received, expected_results(0, ARCHIVE_ID, 0..2));
+    assert_eq!(received, expected_results(0, ARCHIVE_UUID, 0..2));
     assert_eq!(ending.results, [] as [QueryResult; 0]);
     assert_eq!(
         ending.ended(),
@@ -868,7 +871,7 @@ async fn dropping_the_listener_stops_accepting_and_keeps_serving_open_connection
     let (termination_sender, wait_for_termination) = wait_for_termination();
     let mut events = Box::pin(session.into_events(wait_for_termination, async {}));
     let mut attempt = FakeClpS::connect(&network_output).await;
-    attempt.send_handshake(0, ARCHIVE_ID).await;
+    attempt.send_handshake(0, ARCHIVE_UUID).await;
     attempt.send_results(0, 0..2).await;
     let mut received = receive_results(&mut events, 2).await;
 
@@ -890,7 +893,7 @@ async fn dropping_the_listener_stops_accepting_and_keeps_serving_open_connection
     received.extend_from_slice(&ending.results);
 
     assert_eq!(acknowledgement, Ack { num_results: 4 }.encode());
-    assert_eq!(received, expected_results(0, ARCHIVE_ID, 0..4));
+    assert_eq!(received, expected_results(0, ARCHIVE_UUID, 0..4));
     assert_eq!(
         ending.ended(),
         Ended {
@@ -929,7 +932,7 @@ async fn connection_streaming_past_its_jobs_termination_delivers_only_the_result
     sleep(SETTLE_DELAY).await;
     let ending = Ending::receive(&mut events).await;
 
-    assert_eq!(ending.results, expected_results(0, ARCHIVE_ID, 0..4));
+    assert_eq!(ending.results, expected_results(0, ARCHIVE_UUID, 0..4));
     assert_eq!(
         ending.ended(),
         Ended {
@@ -957,7 +960,7 @@ async fn claimed_batch_of_a_blocked_attempt_is_delivered_after_its_retry_is_ackn
     let mut events = Box::pin(session.into_events(wait_for_termination, async {}));
     let blocked_attempt = connect_attempt_blocked_on_its_second_batch(&network_output).await;
     let mut retry = FakeClpS::connect(&network_output).await;
-    retry.send_handshake(0, ARCHIVE_ID).await;
+    retry.send_handshake(0, ARCHIVE_UUID).await;
     retry.send_results(0, 0..4).await;
     let retry_acknowledgement = retry.finish(4).await;
 
@@ -968,7 +971,7 @@ async fn claimed_batch_of_a_blocked_attempt_is_delivered_after_its_retry_is_ackn
     blocked_attempt.expect_closed_by_listener().await;
 
     assert_eq!(retry_acknowledgement, Ack { num_results: 4 }.encode());
-    assert_eq!(ending.results, expected_results(0, ARCHIVE_ID, 0..4));
+    assert_eq!(ending.results, expected_results(0, ARCHIVE_UUID, 0..4));
     assert_eq!(
         ending.ended(),
         Ended {
@@ -991,7 +994,7 @@ async fn connection_waiting_for_eof_after_its_trailer_is_cut_off_once_its_sessio
     let (termination_sender, wait_for_termination) = wait_for_termination();
     let mut events = Box::pin(session.into_events(wait_for_termination, async {}));
     let mut attempt = FakeClpS::connect(&network_output).await;
-    attempt.send_handshake(0, ARCHIVE_ID).await;
+    attempt.send_handshake(0, ARCHIVE_UUID).await;
     // One write, so that the batch shows that the connection has read the trailer.
     attempt
         .send(&[encode_results(0, 0..2), encode_trailer(2)].concat())
@@ -1028,7 +1031,7 @@ async fn dropping_a_session_does_not_cut_off_another_sessions_connection() -> Re
         async {},
     ));
     let mut attempt = FakeClpS::connect(&second_network_output).await;
-    attempt.send_handshake(0, ARCHIVE_ID).await;
+    attempt.send_handshake(0, ARCHIVE_UUID).await;
     attempt.send_results(0, 0..2).await;
     receive_results(&mut second_events, 2).await;
 
@@ -1048,11 +1051,11 @@ async fn end_carries_the_statistics_of_all_the_sessions_connections() -> Result<
     let (termination_sender, wait_for_termination) = wait_for_termination();
     let mut events = Box::pin(session.into_events(wait_for_termination, async {}));
     let mut first_attempt = FakeClpS::connect(&network_output).await;
-    first_attempt.send_handshake(0, ARCHIVE_ID).await;
+    first_attempt.send_handshake(0, ARCHIVE_UUID).await;
     first_attempt.send_results(0, 0..3).await;
     first_attempt.finish(3).await;
     let mut retry = FakeClpS::connect(&network_output).await;
-    retry.send_handshake(0, ARCHIVE_ID).await;
+    retry.send_handshake(0, ARCHIVE_UUID).await;
     retry.send_results(0, 0..5).await;
     retry.finish(5).await;
 
@@ -1088,12 +1091,12 @@ async fn encoding_failure_in_one_session_does_not_affect_another_session() -> Re
     let (termination_sender, wait_for_termination) = wait_for_termination();
     let mut other_events = Box::pin(other_session.into_events(wait_for_termination, async {}));
     let mut other_session_attempt = FakeClpS::connect(&other_network_output).await;
-    other_session_attempt.send_handshake(0, ARCHIVE_ID).await;
+    other_session_attempt.send_handshake(0, ARCHIVE_UUID).await;
     other_session_attempt.send_results(0, 0..2).await;
     let mut received = receive_results(&mut other_events, 2).await;
 
     let mut failing_attempt = FakeClpS::connect(&failing_network_output).await;
-    failing_attempt.send_handshake(0, ARCHIVE_ID).await;
+    failing_attempt.send_handshake(0, ARCHIVE_UUID).await;
     failing_attempt
         .send(&encode_result(0, timestamp(0), UNENCODABLE_MESSAGE))
         .await;
@@ -1102,7 +1105,7 @@ async fn encoding_failure_in_one_session_does_not_affect_another_session() -> Re
     other_session_attempt.send_results(0, 2..3).await;
     let acknowledgement = other_session_attempt.finish(3).await;
     let mut late_attempt = FakeClpS::connect(&other_network_output).await;
-    late_attempt.send_handshake(1, ARCHIVE_ID).await;
+    late_attempt.send_handshake(1, ARCHIVE_UUID).await;
     late_attempt.send_results(1, 0..1).await;
     let late_acknowledgement = late_attempt.finish(1).await;
     termination_sender
@@ -1123,8 +1126,8 @@ async fn encoding_failure_in_one_session_does_not_affect_another_session() -> Re
     assert_eq!(
         received,
         [
-            expected_results(0, ARCHIVE_ID, 0..3),
-            expected_results(1, ARCHIVE_ID, 0..1),
+            expected_results(0, ARCHIVE_UUID, 0..3),
+            expected_results(1, ARCHIVE_UUID, 0..1),
         ]
         .concat()
     );
@@ -1149,11 +1152,11 @@ async fn healthy_session_does_not_fail() -> Result<()> {
     let (termination_sender, wait_for_termination) = wait_for_termination();
     let mut events = Box::pin(session.into_events(wait_for_termination, async {}));
     let mut acknowledged_attempt = FakeClpS::connect(&network_output).await;
-    acknowledged_attempt.send_handshake(0, ARCHIVE_ID).await;
+    acknowledged_attempt.send_handshake(0, ARCHIVE_UUID).await;
     acknowledged_attempt.send_results(0, 0..3).await;
     let acknowledgement = acknowledged_attempt.finish(3).await;
     let mut rejected_attempt = FakeClpS::connect(&network_output).await;
-    rejected_attempt.send_handshake(1, ARCHIVE_ID).await;
+    rejected_attempt.send_handshake(1, ARCHIVE_UUID).await;
     rejected_attempt.send_results(1, [1]).await;
     rejected_attempt.expect_closed_by_listener().await;
 
@@ -1187,7 +1190,7 @@ async fn results_are_forwarded_while_the_job_runs_and_the_end_carries_its_status
     let (termination_sender, wait_for_termination) = wait_for_termination();
     let mut events = Box::pin(session.into_events(wait_for_termination, async {}));
     let mut attempt = FakeClpS::connect(&network_output).await;
-    attempt.send_handshake(0, ARCHIVE_ID).await;
+    attempt.send_handshake(0, ARCHIVE_UUID).await;
     attempt.send_results(0, 0..3).await;
     let received = receive_results(&mut events, 3).await;
     attempt.finish(3).await;
@@ -1197,7 +1200,7 @@ async fn results_are_forwarded_while_the_job_runs_and_the_end_carries_its_status
         .expect("the stream should wait for the job's termination");
     let ending = Ending::receive(&mut events).await;
 
-    assert_eq!(received, expected_results(0, ARCHIVE_ID, 0..3));
+    assert_eq!(received, expected_results(0, ARCHIVE_UUID, 0..3));
     assert_eq!(ending.results, [] as [QueryResult; 0]);
     assert_eq!(
         ending.ended(),
@@ -1231,7 +1234,7 @@ async fn end_comes_only_after_a_batch_claimed_before_the_job_terminated_is_forwa
 
     let ending = Ending::receive(&mut events).await;
 
-    assert_eq!(ending.results, expected_results(0, ARCHIVE_ID, 0..4));
+    assert_eq!(ending.results, expected_results(0, ARCHIVE_UUID, 0..4));
     assert_eq!(
         ending.ended(),
         Ended {
@@ -1275,7 +1278,7 @@ async fn session_failure_takes_priority_over_a_terminal_status_and_requests_canc
     let (request_cancellation, cancellation_requests) = request_cancellation();
     let mut events = Box::pin(session.into_events(wait_for_termination, request_cancellation));
     let mut failing_attempt = FakeClpS::connect(&network_output).await;
-    failing_attempt.send_handshake(0, ARCHIVE_ID).await;
+    failing_attempt.send_handshake(0, ARCHIVE_UUID).await;
     failing_attempt
         .send(
             &[
@@ -1297,7 +1300,7 @@ async fn session_failure_takes_priority_over_a_terminal_status_and_requests_canc
     let ending = Ending::receive_without_polling_further(&mut events).await;
 
     let expected_error = EncodingError::UnencodableMessage {
-        archive_id: ARCHIVE_ID.parse::<ArchiveId>()?,
+        archive_uuid: ARCHIVE_UUID.parse::<ArchiveUuid>()?,
         timestamp_millisecs: timestamp(2),
     };
     assert!(
@@ -1330,7 +1333,7 @@ async fn failure_is_yielded_only_after_the_wait_is_stopped_and_the_cancellation_
     };
     let mut events = Box::pin(session.into_events(wait_for_termination, request_cancellation));
     let mut failing_attempt = FakeClpS::connect(&network_output).await;
-    failing_attempt.send_handshake(0, ARCHIVE_ID).await;
+    failing_attempt.send_handshake(0, ARCHIVE_UUID).await;
     failing_attempt
         .send(&encode_result(0, timestamp(0), UNENCODABLE_MESSAGE))
         .await;
@@ -1379,7 +1382,7 @@ async fn dropping_the_stream_during_the_cancellation_request_lets_the_request_fi
     };
     let mut events = Box::pin(session.into_events(wait_for_termination, request_cancellation));
     let mut failing_attempt = FakeClpS::connect(&network_output).await;
-    failing_attempt.send_handshake(0, ARCHIVE_ID).await;
+    failing_attempt.send_handshake(0, ARCHIVE_UUID).await;
     failing_attempt
         .send(&encode_result(0, timestamp(0), UNENCODABLE_MESSAGE))
         .await;
@@ -1489,7 +1492,7 @@ async fn dropping_the_stream_before_its_end_requests_cancellation_once_and_ends_
         request_cancellation,
     );
     let mut attempt = FakeClpS::connect(&network_output).await;
-    attempt.send_handshake(0, ARCHIVE_ID).await;
+    attempt.send_handshake(0, ARCHIVE_UUID).await;
     // Lets the listener join the attempt to the session while the job runs.
     sleep(SETTLE_DELAY).await;
 

@@ -692,7 +692,7 @@
     },
     "/stream_files/extract": {
       "post": {
-        "description": "Extracts a JSON stream file that contains the log event at `log_event_idx` in the archive with ID `archive_id`. Only the clp-s storage engine is supported. If the results cache already has such a stream file, returns its metadata directly; otherwise submits an extraction job, waits for it to finish, and returns the metadata of the stream file it extracted. The wait is bounded by `api_server.stream_file_extraction_timeout_secs`; the job keeps running when the timeout is reached.",
+        "description": "Extracts a JSON stream file that contains the log event at `log_event_idx` in the archive with UUID `archive_id`. Only the clp-s storage engine is supported. If the results cache already has such a stream file, returns its metadata directly; otherwise submits an extraction job, waits for it to finish, and returns the metadata of the stream file it extracted. The wait is bounded by `api_server.stream_file_extraction_timeout_secs`; the job keeps running when the timeout is reached.",
         "operationId": "extract_stream_file",
         "requestBody": {
           "content": {
@@ -1427,7 +1427,7 @@
           "archive_id": {
             "type": "string",
             "format": "uuid",
-            "description": "ID of the archive to extract the JSON stream from."
+            "description": "UUID of the archive to extract the JSON stream from."
           },
           "dataset": {
             "type": [
@@ -1573,7 +1573,7 @@
         "properties": {
           "archive_id": {
             "type": "string",
-            "description": "The ID of the archive that contains the result."
+            "description": "The UUID of the archive that contains the result."
           },
           "message": {
             "type": "string",

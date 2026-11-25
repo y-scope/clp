@@ -8,7 +8,7 @@ use axum::body::Bytes;
 use axum::response::IntoResponse;
 use axum::response::Response;
 use clp_rust_utils::api_server::SSE_KEEP_ALIVE_INTERVAL;
-use clp_rust_utils::types::ArchiveId;
+use clp_rust_utils::types::ArchiveUuid;
 use futures::Stream;
 use futures::StreamExt;
 use query_result_listener::encoding::ResultEncoder;
@@ -35,9 +35,9 @@ impl ResultEncoder for SseEncoder {
     type Batch = Bytes;
     type Error = serde_json::Error;
 
-    fn new(archive_id: ArchiveId) -> Result<Self, serde_json::Error> {
+    fn new(archive_uuid: ArchiveUuid) -> Result<Self, serde_json::Error> {
         let mut event_prefix = b"data: {\"archive_id\":".to_vec();
-        serde_json::to_writer(&mut event_prefix, &archive_id)?;
+        serde_json::to_writer(&mut event_prefix, &archive_uuid)?;
         event_prefix.extend_from_slice(b",\"timestamp_millisecs\":");
         Ok(Self {
             event_prefix: event_prefix.into_boxed_slice(),
@@ -167,20 +167,20 @@ mod tests {
 
     use anyhow::Result;
     use axum::response::sse::Event;
-    use query_result_listener::test_utils::ARCHIVE_ID;
+    use query_result_listener::test_utils::ARCHIVE_UUID;
 
     use super::*;
 
     /// # Returns
     ///
-    /// The event that [`Event::json_data`] encodes for the result made of `archive_id`,
+    /// The event that [`Event::json_data`] encodes for the result made of `archive_uuid`,
     /// `timestamp_millisecs` and `message`.
     ///
     /// # Panics
     ///
     /// Panics if serializing the result fails.
     fn axum_result_event(
-        archive_id: ArchiveId,
+        archive_uuid: ArchiveUuid,
         timestamp_millisecs: i64,
         message: String,
     ) -> Event {
@@ -188,7 +188,7 @@ mod tests {
 
         Event::default()
             .json_data(StreamingQueryResultEvent {
-                archive_id,
+                archive_uuid,
                 timestamp_millisecs,
                 message,
             })
@@ -223,8 +223,8 @@ mod tests {
     async fn sse_encoder_matches_axum_json_events() -> Result<()> {
         const TIMESTAMP_MILLISECS: i64 = -1;
 
-        let archive_id = ARCHIVE_ID.parse::<ArchiveId>()?;
-        let mut encoder = <SseEncoding as ResultEncoding>::Encoder::new(archive_id)?;
+        let archive_uuid = ARCHIVE_UUID.parse::<ArchiveUuid>()?;
+        let mut encoder = <SseEncoding as ResultEncoding>::Encoder::new(archive_uuid)?;
         let mut axum_events = Vec::new();
         for (message, event_message) in [
             ("{\"quoted\":\"value\"}\n", "{\"quoted\":\"value\"}"),
@@ -236,7 +236,7 @@ mod tests {
         ] {
             encoder.encode(TIMESTAMP_MILLISECS, message)?;
             axum_events.push(axum_result_event(
-                archive_id,
+                archive_uuid,
                 TIMESTAMP_MILLISECS,
                 event_message.to_owned(),
             ));
@@ -248,15 +248,20 @@ mod tests {
 
     #[tokio::test]
     async fn sse_encoder_starts_the_next_batch_empty() -> Result<()> {
-        let archive_id = ARCHIVE_ID.parse::<ArchiveId>()?;
-        let mut encoder = <SseEncoding as ResultEncoding>::Encoder::new(archive_id)?;
+        let archive_uuid = ARCHIVE_UUID.parse::<ArchiveUuid>()?;
+        let mut encoder = <SseEncoding as ResultEncoding>::Encoder::new(archive_uuid)?;
         encoder.encode(1, "first\n")?;
         encoder.take_batch();
         encoder.encode(2, "second\n")?;
 
         assert_eq!(
             encoder.take_batch(),
-            axum_sse_body(vec![axum_result_event(archive_id, 2, "second".to_owned())]).await
+            axum_sse_body(vec![axum_result_event(
+                archive_uuid,
+                2,
+                "second".to_owned()
+            )])
+            .await
         );
         Ok(())
     }

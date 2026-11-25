@@ -1,6 +1,6 @@
 //! Encodes query results into transport-specific batches.
 
-use clp_rust_utils::types::ArchiveId;
+use clp_rust_utils::types::ArchiveUuid;
 
 /// A transport-specific encoding of query results.
 ///
@@ -30,7 +30,7 @@ pub trait ResultEncoder: Send + Sized + 'static {
     ///
     /// # Parameters
     ///
-    /// * `archive_id` - The ID of the archive searched by the connection.
+    /// * `archive_uuid` - The UUID of the archive searched by the connection.
     ///
     /// # Returns
     ///
@@ -41,7 +41,7 @@ pub trait ResultEncoder: Send + Sized + 'static {
     /// Returns an error if:
     ///
     /// * [`Self::Error`] if the encoder can't be created for the archive.
-    fn new(archive_id: ArchiveId) -> Result<Self, Self::Error>;
+    fn new(archive_uuid: ArchiveUuid) -> Result<Self, Self::Error>;
 
     /// Appends a query result to the pending batch.
     ///
@@ -69,7 +69,7 @@ pub trait ResultEncoder: Send + Sized + 'static {
 #[cfg(test)]
 mod tests {
     use anyhow::Result;
-    use clp_rust_utils::types::ArchiveId;
+    use clp_rust_utils::types::ArchiveUuid;
 
     use super::ResultEncoder;
     use super::ResultEncoding;
@@ -77,16 +77,16 @@ mod tests {
     use crate::test_utils::QueryResultEncoding;
 
     #[test]
-    fn query_result_encoder_stamps_the_archive_id_and_starts_next_batch_empty() -> Result<()> {
-        use crate::test_utils::ARCHIVE_ID;
+    fn query_result_encoder_stamps_the_archive_uuid_and_starts_next_batch_empty() -> Result<()> {
+        use crate::test_utils::ARCHIVE_UUID;
 
-        let archive_id = ARCHIVE_ID.parse::<ArchiveId>()?;
+        let archive_uuid = ARCHIVE_UUID.parse::<ArchiveUuid>()?;
         let query_result = |timestamp_millisecs: i64, message: &str| QueryResult {
-            archive_id,
+            archive_uuid,
             timestamp_millisecs,
             message: message.to_owned(),
         };
-        let mut encoder = <QueryResultEncoding as ResultEncoding>::Encoder::new(archive_id)?;
+        let mut encoder = <QueryResultEncoding as ResultEncoding>::Encoder::new(archive_uuid)?;
 
         encoder.encode(2, "b\n")?;
         encoder.encode(1, "a\n")?;

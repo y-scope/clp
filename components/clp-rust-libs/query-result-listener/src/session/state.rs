@@ -3,7 +3,7 @@
 use std::sync::Arc;
 use std::sync::OnceLock;
 
-use clp_rust_utils::types::ArchiveId;
+use clp_rust_utils::types::ArchiveUuid;
 use dashmap::DashMap;
 use spider_core::task::TaskIndex;
 use tokio::sync::mpsc;
@@ -52,7 +52,8 @@ impl<EncodingType: ResultEncoding> State<EncodingType> {
         }
     }
 
-    /// Gets or creates the cursor of task `task_index`, checking that it is bound to `archive_id`.
+    /// Gets or creates the cursor of task `task_index`, checking that it is bound to
+    /// `archive_uuid`.
     ///
     /// # Returns
     ///
@@ -62,25 +63,25 @@ impl<EncodingType: ResultEncoding> State<EncodingType> {
     ///
     /// Returns an error if:
     ///
-    /// * [`ProtocolError::ArchiveIdMismatch`] if the cursor of task `task_index` is bound to
+    /// * [`ProtocolError::ArchiveUuidMismatch`] if the cursor of task `task_index` is bound to
     ///   another archive.
     pub fn cursor(
         &self,
         task_index: TaskIndex,
-        archive_id: ArchiveId,
+        archive_uuid: ArchiveUuid,
     ) -> Result<Arc<TaskCursor>, ProtocolError> {
         let cursor = Arc::clone(
             self.cursors
                 .entry(task_index)
-                .or_insert_with(|| Arc::new(TaskCursor::new(archive_id)))
+                .or_insert_with(|| Arc::new(TaskCursor::new(archive_uuid)))
                 .value(),
         );
-        let expected = cursor.archive_id();
-        if expected != archive_id {
-            return Err(ProtocolError::ArchiveIdMismatch {
+        let expected = cursor.archive_uuid();
+        if expected != archive_uuid {
+            return Err(ProtocolError::ArchiveUuidMismatch {
                 task_index,
                 expected,
-                received: archive_id,
+                received: archive_uuid,
             });
         }
         Ok(cursor)

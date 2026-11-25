@@ -4,7 +4,7 @@ use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::job_config::QueryOutput;
 use clp_rust_utils::job_config::SearchQuery;
-use clp_rust_utils::types::ArchiveId;
+use clp_rust_utils::types::ArchiveUuid;
 use spider_tdl::TaskContext;
 use spider_tdl::TdlError;
 use spider_tdl::task;
@@ -21,7 +21,7 @@ pub(crate) fn clp_s_search_task(
     query_job_id: QueryJobId,
     query: SearchQuery,
     dataset: DatasetName,
-    archive_id: ArchiveId,
+    archive_uuid: ArchiveUuid,
     output: QueryOutput,
 ) -> Result<(), TdlError> {
     search::search(
@@ -29,7 +29,7 @@ pub(crate) fn clp_s_search_task(
         crate::common::spider_task_executor_config(),
         query_job_id,
         &query,
-        archive_id,
+        archive_uuid,
         &dataset,
         &output,
     )

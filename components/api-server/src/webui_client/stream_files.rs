@@ -12,7 +12,7 @@ use clp_rust_utils::job_config::ExtractJsonJobConfig;
 use clp_rust_utils::job_config::QUERY_JOBS_TABLE_NAME;
 use clp_rust_utils::job_config::QueryJobStatus;
 use clp_rust_utils::job_config::QueryJobType;
-use clp_rust_utils::types::ArchiveId;
+use clp_rust_utils::types::ArchiveUuid;
 use mongodb::bson::doc;
 use non_empty_string::NonEmptyString;
 use serde::Deserialize;
@@ -26,9 +26,11 @@ use crate::webui_client::WebuiClient;
 #[derive(Debug, Deserialize, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct StreamFileExtraction {
-    /// ID of the archive to extract the JSON stream from.
+    /// UUID of the archive to extract the JSON stream from.
+    // The WebUI sends the archive's UUID under the `archive_id` key.
+    #[serde(rename = "archive_id")]
     #[schema(value_type = String, format = "uuid")]
-    pub archive_id: ArchiveId,
+    pub archive_uuid: ArchiveUuid,
     /// The dataset of the archive to extract the stream from. Defaults to the default dataset when
     /// absent or `null`.
     #[schema(value_type = Option<String>)]
@@ -56,7 +58,7 @@ pub struct StreamFileMetadata {
 
 impl WebuiClient {
     /// Extracts a JSON stream file that contains the log event at `log_event_idx` in the archive
-    /// with ID `archive_id`.
+    /// with UUID `archive_uuid`.
     ///
     /// If the results cache already has such a stream file, its metadata is returned directly.
     /// Otherwise, an extraction job is submitted, and the stream file is looked up again once the
@@ -103,7 +105,7 @@ impl WebuiClient {
             .database(&self.config.results_cache.db_name)
             .collection::<StreamFileMetadata>(&self.config.results_cache.stream_collection_name);
         let filter = doc! {
-            "stream_id": extraction.archive_id.to_string(),
+            "stream_id": extraction.archive_uuid.to_string(),
             "begin_msg_ix": {"$lte": log_event_idx},
             "end_msg_ix": {"$gt": log_event_idx},
         };
@@ -117,7 +119,7 @@ impl WebuiClient {
                 .get();
             let job_config = ExtractJsonJobConfig {
                 dataset: extraction.dataset,
-                archive_id: extraction.archive_id,
+                archive_uuid: extraction.archive_uuid,
                 target_chunk_size: Some(self.config.stream_output.target_uncompressed_size.get()),
             };
             tokio::time::timeout(
@@ -130,7 +132,7 @@ impl WebuiClient {
                 .find_one(filter)
                 .await?
                 .ok_or(ClientError::LogEventNotFound {
-                    archive_id: extraction.archive_id,
+                    archive_uuid: extraction.archive_uuid,
                     log_event_idx: extraction.log_event_idx,
                 })?
         };
@@ -332,7 +334,7 @@ mod tests {
 
         let error = client
             .extract_stream_file(StreamFileExtraction {
-                archive_id: "3f1c1a5e-5b6e-4a43-9d6b-0f2b2f5a8c11".parse()?,
+                archive_uuid: "3f1c1a5e-5b6e-4a43-9d6b-0f2b2f5a8c11".parse()?,
                 dataset: DatasetName::default(),
                 log_event_idx: 0,
             })

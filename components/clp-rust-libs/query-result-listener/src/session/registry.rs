@@ -119,7 +119,7 @@ impl<EncodingType: ResultEncoding> SessionRegistry<EncodingType> {
         if session_state.encoding_error().is_some() {
             return Err(ConnectionError::SessionFailed);
         }
-        let cursor = session_state.cursor(handshake.task_index, handshake.archive_id)?;
+        let cursor = session_state.cursor(handshake.task_index, handshake.archive_uuid)?;
         Connection::new(session_state, cursor)
     }
 
@@ -207,7 +207,7 @@ impl<EncodingType: ResultEncoding> Drop for Registration<EncodingType> {
 mod tests {
     use std::sync::Arc;
 
-    use clp_rust_utils::types::ArchiveId;
+    use clp_rust_utils::types::ArchiveUuid;
     use clp_rust_utils::types::SessionToken;
 
     use super::Session;
@@ -218,11 +218,11 @@ mod tests {
     use crate::protocol::Handshake;
     use crate::session::OpenSession;
     use crate::session::SessionConfig;
-    use crate::test_utils::ARCHIVE_ID;
+    use crate::test_utils::ARCHIVE_UUID;
     use crate::test_utils::FallibleQueryResultEncoding;
     use crate::test_utils::QueryResultEncoding;
     use crate::test_utils::TIMEOUT;
-    use crate::test_utils::UNENCODABLE_ARCHIVE_ID;
+    use crate::test_utils::UNENCODABLE_ARCHIVE_UUID;
 
     /// Opens a session on `session_registry`, dropping the stream of its results.
     ///
@@ -265,7 +265,7 @@ mod tests {
         let Err(error) = session_registry.join(&Handshake {
             session_token: unknown_session_token,
             task_index: 0,
-            archive_id: ARCHIVE_ID.parse::<ArchiveId>()?,
+            archive_uuid: ARCHIVE_UUID.parse::<ArchiveUuid>()?,
         }) else {
             anyhow::bail!("an attempt presenting an unknown token shouldn't join a session");
         };
@@ -281,22 +281,22 @@ mod tests {
     }
 
     #[test]
-    fn join_returns_archive_id_mismatch_for_a_different_archive_from_the_tasks_first_connection()
+    fn join_returns_archive_uuid_mismatch_for_a_different_archive_from_the_tasks_first_connection()
     -> anyhow::Result<()> {
-        use crate::test_utils::OTHER_ARCHIVE_ID;
+        use crate::test_utils::OTHER_ARCHIVE_UUID;
 
         let session_registry = Arc::new(SessionRegistry::<QueryResultEncoding>::new());
         let session = open_session(&session_registry);
-        let archive_id = ARCHIVE_ID.parse::<ArchiveId>()?;
-        let other_archive_id = OTHER_ARCHIVE_ID.parse::<ArchiveId>()?;
+        let archive_uuid = ARCHIVE_UUID.parse::<ArchiveUuid>()?;
+        let other_archive_uuid = OTHER_ARCHIVE_UUID.parse::<ArchiveUuid>()?;
         let handshake = Handshake {
             session_token: session.network_output().session_token,
             task_index: 0,
-            archive_id,
+            archive_uuid,
         };
         session_registry.join(&handshake)?;
         let Err(error) = session_registry.join(&Handshake {
-            archive_id: other_archive_id,
+            archive_uuid: other_archive_uuid,
             ..handshake
         }) else {
             anyhow::bail!("an attempt of another archive shouldn't join the session");
@@ -305,11 +305,11 @@ mod tests {
         assert!(
             matches!(
                 error,
-                ConnectionError::Protocol(ProtocolError::ArchiveIdMismatch {
+                ConnectionError::Protocol(ProtocolError::ArchiveUuidMismatch {
                     task_index: 0,
                     expected,
                     received,
-                }) if archive_id == expected && other_archive_id == received
+                }) if archive_uuid == expected && other_archive_uuid == received
             ),
             "unexpected error: {error:?}"
         );
@@ -323,16 +323,16 @@ mod tests {
 
         let session_registry = Arc::new(SessionRegistry::<FallibleQueryResultEncoding>::new());
         let session = open_session(&session_registry);
-        let unencodable_archive_id = UNENCODABLE_ARCHIVE_ID.parse::<ArchiveId>()?;
+        let unencodable_archive_uuid = UNENCODABLE_ARCHIVE_UUID.parse::<ArchiveUuid>()?;
         let Err(error) = session_registry.join(&Handshake {
             session_token: session.network_output().session_token,
             task_index: 0,
-            archive_id: unencodable_archive_id,
+            archive_uuid: unencodable_archive_uuid,
         }) else {
             anyhow::bail!("an attempt whose encoder can't be created shouldn't join the session");
         };
 
-        let expected_error = EncodingError::UnencodableArchive(unencodable_archive_id);
+        let expected_error = EncodingError::UnencodableArchive(unencodable_archive_uuid);
         assert!(
             matches!(
                 &error,
@@ -354,14 +354,14 @@ mod tests {
         let handshake = Handshake {
             session_token: session.network_output().session_token,
             task_index: 0,
-            archive_id: UNENCODABLE_ARCHIVE_ID.parse::<ArchiveId>()?,
+            archive_uuid: UNENCODABLE_ARCHIVE_UUID.parse::<ArchiveUuid>()?,
         };
         let Err(ConnectionError::Encoding(_)) = session_registry.join(&handshake) else {
             anyhow::bail!("an attempt whose encoder can't be created shouldn't join the session");
         };
         let Err(error) = session_registry.join(&Handshake {
             task_index: 0,
-            archive_id: ARCHIVE_ID.parse::<ArchiveId>()?,
+            archive_uuid: ARCHIVE_UUID.parse::<ArchiveUuid>()?,
             ..handshake
         }) else {
             anyhow::bail!("an attempt shouldn't join a failed session");
@@ -383,7 +383,7 @@ mod tests {
         let mut connection = session_registry.join(&Handshake {
             session_token: session.network_output().session_token,
             task_index: 0,
-            archive_id: ARCHIVE_ID.parse::<ArchiveId>()?,
+            archive_uuid: ARCHIVE_UUID.parse::<ArchiveUuid>()?,
         })?;
         let (_stream, mut handler_stream) = tokio::io::duplex(1024);
         let handler =

@@ -8,7 +8,7 @@ use std::borrow::Cow;
 
 use bytes::Buf;
 use bytes::BytesMut;
-use clp_rust_utils::types::ArchiveId;
+use clp_rust_utils::types::ArchiveUuid;
 use clp_rust_utils::types::SessionToken;
 use rmp::decode::Bytes;
 use rmp::decode::NumValueReadError;
@@ -30,8 +30,8 @@ pub struct Handshake {
     /// The task's index within its query job.
     pub task_index: TaskIndex,
 
-    /// The ID of the archive the task searches.
-    pub archive_id: ArchiveId,
+    /// The UUID of the archive the task searches.
+    pub archive_uuid: ArchiveUuid,
 }
 
 impl Handshake {
@@ -52,7 +52,7 @@ impl Handshake {
     ///   [`PROTOCOL_VERSION`].
     /// * [`ProtocolError::MalformedFrame`] if the bytes don't form a handshake.
     /// * [`ProtocolError::InvalidSessionToken`] if the session token isn't a valid UUID.
-    /// * [`ProtocolError::InvalidArchiveId`] if the archive ID isn't a valid UUID.
+    /// * [`ProtocolError::InvalidArchiveUuid`] if the archive UUID is invalid.
     pub fn decode(buffer: &mut BytesMut) -> Result<Option<Self>, ProtocolError> {
         decode_frame(buffer, |reader| {
             let num_fields = rmp::decode::read_array_len(reader)?;
@@ -71,13 +71,13 @@ impl Handshake {
                 .parse::<SessionToken>()
                 .map_err(ProtocolError::from)?;
             let task_index = rmp::decode::read_int(reader)?;
-            let archive_id = read_str(reader, MAX_HANDSHAKE_STRING_LEN)?
-                .parse::<ArchiveId>()
+            let archive_uuid = read_str(reader, MAX_HANDSHAKE_STRING_LEN)?
+                .parse::<ArchiveUuid>()
                 .map_err(ProtocolError::from)?;
             Ok(Self {
                 session_token,
                 task_index,
-                archive_id,
+                archive_uuid,
             })
         })
     }
@@ -320,7 +320,7 @@ fn read_str<'buffer>(
 #[cfg(test)]
 mod tests {
     use bytes::BytesMut;
-    use clp_rust_utils::types::ArchiveId;
+    use clp_rust_utils::types::ArchiveUuid;
     use clp_rust_utils::types::SessionToken;
     use spider_core::task::TaskIndex;
 
@@ -332,7 +332,7 @@ mod tests {
     use super::ResultFrame;
     use super::Trailer;
     use crate::error::ProtocolError;
-    use crate::test_utils::ARCHIVE_ID;
+    use crate::test_utils::ARCHIVE_UUID;
     use crate::test_utils::SESSION_TOKEN;
     use crate::test_utils::encode_handshake;
     use crate::test_utils::encode_result;
@@ -360,7 +360,7 @@ mod tests {
 
     #[test]
     fn handshake_decodes_only_once_complete() -> anyhow::Result<()> {
-        let encoded = encode_handshake(PROTOCOL_VERSION, SESSION_TOKEN, TASK_INDEX, ARCHIVE_ID);
+        let encoded = encode_handshake(PROTOCOL_VERSION, SESSION_TOKEN, TASK_INDEX, ARCHIVE_UUID);
         let mut buffer = BytesMut::new();
         for &byte in &encoded[..encoded.len() - 1] {
             buffer.extend_from_slice(&[byte]);
@@ -375,7 +375,7 @@ mod tests {
             Some(Handshake {
                 session_token: SESSION_TOKEN.parse::<SessionToken>()?,
                 task_index: TaskIndex::try_from(TASK_INDEX)?,
-                archive_id: ARCHIVE_ID.parse::<ArchiveId>()?,
+                archive_uuid: ARCHIVE_UUID.parse::<ArchiveUuid>()?,
             })
         );
         assert_eq!(&buffer[..], &[0x93]);
@@ -396,7 +396,7 @@ mod tests {
     fn handshake_of_another_version_is_rejected_before_its_other_fields() {
         for version in [0, 2] {
             let mut buffer = BytesMut::from(
-                &encode_handshake(version, SESSION_TOKEN, TASK_INDEX, ARCHIVE_ID)[..2],
+                &encode_handshake(version, SESSION_TOKEN, TASK_INDEX, ARCHIVE_UUID)[..2],
             );
             let error = Handshake::decode(&mut buffer).expect_err("the version should be rejected");
             assert!(
@@ -414,7 +414,7 @@ mod tests {
             rmp::encode::write_uint(&mut bytes, PROTOCOL_VERSION)?;
             rmp::encode::write_str(&mut bytes, SESSION_TOKEN)?;
             rmp::encode::write_uint(&mut bytes, TASK_INDEX)?;
-            rmp::encode::write_str(&mut bytes, ARCHIVE_ID)?;
+            rmp::encode::write_str(&mut bytes, ARCHIVE_UUID)?;
             let mut buffer = BytesMut::from(&bytes[..]);
 
             let error =

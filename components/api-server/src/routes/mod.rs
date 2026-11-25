@@ -803,7 +803,7 @@ mod tests {
             ),
             (
                 ClientError::LogEventNotFound {
-                    archive_id: "3f1c1a5e-5b6e-4a43-9d6b-0f2b2f5a8c11".parse()?,
+                    archive_uuid: "3f1c1a5e-5b6e-4a43-9d6b-0f2b2f5a8c11".parse()?,
                     log_event_idx: 42,
                 },
                 StatusCode::NOT_FOUND,

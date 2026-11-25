@@ -9,7 +9,7 @@ use std::time::Duration;
 
 use clp_rust_utils::clp_config::package::config::Database;
 use clp_rust_utils::dataset::DatasetName;
-use clp_rust_utils::types::ArchiveId;
+use clp_rust_utils::types::ArchiveUuid;
 use sqlx::MySqlPool;
 
 pub use self::query::QueryJobHandle;
@@ -17,8 +17,8 @@ pub use self::query::QueryJobHandle;
 /// Metadata for an archive in a dataset.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ArchiveMetadata {
-    /// The archive's ID.
-    pub id: ArchiveId,
+    /// The archive's UUID.
+    pub uuid: ArchiveUuid,
 
     /// The archive's dataset.
     pub dataset: DatasetName,

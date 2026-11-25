@@ -212,7 +212,7 @@ fn build_query_task_graph(
             }
         };
         inputs.append_shared_task_input(dataset_input)?;
-        inputs.append_task_input(&archive.id)?;
+        inputs.append_task_input(&archive.uuid)?;
         inputs.append_shared_task_input(output_input)?;
     }
 
@@ -281,7 +281,7 @@ mod tests {
                 &output,
                 vec![(
                     ArchiveMetadata {
-                        id: "00000000-0000-0000-0000-000000000001".parse()?,
+                        uuid: "00000000-0000-0000-0000-000000000001".parse()?,
                         dataset: DatasetName::default(),
                         uncompressed_size: 1,
                         end_timestamp: 0,
