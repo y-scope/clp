@@ -115,7 +115,7 @@ const _: () = assert!(
 );
 
 /// An extracted file and its validated bounds in the archive's event stream.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, PartialEq)]
 struct Chunk {
     filename: String,
     begin_msg_ix: i64,
