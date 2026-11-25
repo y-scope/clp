@@ -9,7 +9,9 @@ use spider_tdl::TaskContext;
 use spider_tdl::TdlError;
 use spider_tdl::task;
 
+mod archive_input;
 mod commit;
+mod extract;
 mod results_cache;
 mod search;
 

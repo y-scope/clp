@@ -10,7 +10,7 @@ use crate::types::ArchiveId;
 
 /// Defines the request configuration for submitting a query job whose results are streamed instead
 /// of buffered.
-#[derive(Debug, Deserialize, ToSchema)]
+#[derive(Debug, Deserialize, Serialize, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct StreamingQueryConfig {
     /// The query to run.
@@ -28,7 +28,7 @@ pub enum StreamingQueryEventData {
 }
 
 /// The data of a streaming query's `job` event.
-#[derive(Serialize, ToSchema)]
+#[derive(Deserialize, Serialize, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct StreamingQueryJobEvent {
     /// The ID of the query's job.
@@ -51,7 +51,7 @@ pub struct StreamingQueryResultEvent {
 }
 
 /// The data of a streaming query's `end` event.
-#[derive(Serialize, ToSchema)]
+#[derive(Deserialize, Serialize, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct StreamingQueryEndEvent {
     /// The terminal status of the query's job.
@@ -62,7 +62,7 @@ pub struct StreamingQueryEndEvent {
 }
 
 /// The data of a streaming query's `error` event.
-#[derive(Serialize, ToSchema)]
+#[derive(Deserialize, Serialize, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct StreamingQueryErrorEvent {
     /// A generic description of the error.
