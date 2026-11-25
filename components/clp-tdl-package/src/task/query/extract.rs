@@ -58,8 +58,7 @@ pub(super) fn extract(
     task_instance_id: TaskInstanceId,
     input: &ExtractTaskInput,
 ) -> anyhow::Result<()> {
-    let local_directory = config.abs_stream_output_staging(clp_home);
-    let staging_root = local_directory.join(".staging");
+    let staging_root = config.abs_stream_output_staging(clp_home).join(".staging");
     fs::create_dir_all(&staging_root).with_context(|| {
         format!(
             "failed to create the extraction staging root {}",
@@ -82,13 +81,7 @@ pub(super) fn extract(
             return Ok(());
         }
         let collection = runtime.block_on(prepare_metadata_collection(&config.results_cache))?;
-        publish_files(
-            runtime,
-            staging_path,
-            &local_directory,
-            &config.stream_output.storage,
-            &batch.chunks,
-        )?;
+        publish_files(runtime, clp_home, config, staging_path, &batch.chunks)?;
         runtime.block_on(upsert_metadata(&collection, &batch))
     })();
     if let Err(error) = staging_directory.close() {
@@ -266,9 +259,9 @@ fn parse_chunk_index(index: &str, filename: &str) -> anyhow::Result<i64> {
 /// * Forwards [`upload_file_to_s3`]'s return values on failure.
 fn publish_files(
     runtime: &tokio::runtime::Handle,
+    clp_home: &Path,
+    config: &SpiderTaskExecutorConfig,
     staging_path: &Path,
-    local_directory: &Path,
-    storage: &StreamOutputStorage,
     chunks: &[Chunk],
 ) -> anyhow::Result<()> {
     for chunk in chunks {
@@ -285,8 +278,9 @@ fn publish_files(
             path.display()
         );
     }
-    match storage {
+    match &config.stream_output.storage {
         StreamOutputStorage::Fs { .. } => {
+            let local_directory = config.abs_stream_output_staging(clp_home);
             for chunk in chunks {
                 let source = staging_path.join(&chunk.filename);
                 let destination = local_directory.join(&chunk.filename);
@@ -869,33 +863,40 @@ esac"#;
 
     #[test]
     fn publish_files_renames_regular_chunks_over_previous_outputs() -> anyhow::Result<()> {
-        let destination = tempfile::tempdir()?;
-        let staging = tempfile::tempdir_in(destination.path())?;
+        let clp_home = tempfile::tempdir()?;
+        let config = SpiderTaskExecutorConfig {
+            stream_output: StreamOutput {
+                storage: StreamOutputStorage::Fs {
+                    directory: "streams".to_owned(),
+                },
+                ..StreamOutput::default()
+            },
+            ..SpiderTaskExecutorConfig::default()
+        };
+        let destination = clp_home.path().join("streams");
+        fs::create_dir(&destination)?;
+        let staging = tempfile::tempdir_in(&destination)?;
         let filenames = [
             format!("{ARCHIVE_ID}_0_2.jsonl"),
             format!("{ARCHIVE_ID}_2_5.jsonl"),
         ];
         let paths = filenames.each_ref().map(|name| staging.path().join(name));
-        fs::write(destination.path().join(&filenames[0]), "previous attempt")?;
+        fs::write(destination.join(&filenames[0]), "previous attempt")?;
         for (path, filename) in paths.iter().zip(&filenames) {
             fs::write(path, filename)?;
         }
         let batch = ChunkBatch::parse(staging.path(), ARCHIVE_ID.parse()?, &paths)?;
         let runtime = tokio::runtime::Builder::new_current_thread().build()?;
-        let storage = StreamOutputStorage::default();
         publish_files(
             runtime.handle(),
+            clp_home.path(),
+            &config,
             staging.path(),
-            destination.path(),
-            &storage,
             &batch.chunks,
         )?;
 
         for (path, filename) in paths.iter().zip(&filenames) {
-            assert_eq!(
-                fs::read_to_string(destination.path().join(filename))?,
-                *filename
-            );
+            assert_eq!(fs::read_to_string(destination.join(filename))?, *filename);
             assert_eq!(
                 fs::symlink_metadata(path)
                     .expect_err("the chunk should be moved")
