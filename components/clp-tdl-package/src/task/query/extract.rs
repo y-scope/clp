@@ -624,6 +624,7 @@ mod tests {
     use std::io::Read;
     use std::num::NonZeroU64;
     use std::os::unix::fs::PermissionsExt;
+    use std::os::unix::fs::symlink;
     use std::path::Path;
     use std::path::PathBuf;
     use std::process::Command;
@@ -906,6 +907,56 @@ esac"#;
             assert_eq!(
                 fs::symlink_metadata(path)
                     .expect_err("the chunk should be moved")
+                    .kind(),
+                io::ErrorKind::NotFound
+            );
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn publish_files_rejects_a_late_symlink_before_moving_any_chunk() -> anyhow::Result<()> {
+        let clp_home = tempfile::tempdir()?;
+        let config = SpiderTaskExecutorConfig {
+            stream_output: StreamOutput {
+                storage: StreamOutputStorage::Fs {
+                    directory: "streams".to_owned(),
+                },
+                ..StreamOutput::default()
+            },
+            ..SpiderTaskExecutorConfig::default()
+        };
+        let destination = clp_home.path().join("streams");
+        fs::create_dir(&destination)?;
+        let staging = tempfile::tempdir_in(&destination)?;
+        let filenames = [
+            format!("{ARCHIVE_ID}_0_2.jsonl"),
+            format!("{ARCHIVE_ID}_2_5.jsonl"),
+        ];
+        let paths = filenames.each_ref().map(|name| staging.path().join(name));
+        fs::write(&paths[0], "first chunk")?;
+        symlink(&paths[0], &paths[1])?;
+
+        let batch = ChunkBatch::parse(staging.path(), ARCHIVE_ID.parse()?, &paths)?;
+        let runtime = tokio::runtime::Builder::new_current_thread().build()?;
+        let error = publish_files(
+            runtime.handle(),
+            clp_home.path(),
+            &config,
+            staging.path(),
+            &batch.chunks,
+        )
+        .expect_err("a symlink is not a regular staged chunk");
+
+        assert_eq!(
+            error.to_string(),
+            format!("staged chunk {} is not a regular file", paths[1].display())
+        );
+        assert_eq!(fs::read_to_string(&paths[0])?, "first chunk");
+        for name in &filenames {
+            assert_eq!(
+                fs::symlink_metadata(destination.join(name))
+                    .expect_err("no chunk should be published")
                     .kind(),
                 io::ErrorKind::NotFound
             );
