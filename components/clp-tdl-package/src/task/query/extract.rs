@@ -21,8 +21,10 @@ use clp_rust_utils::clp_config::package::config::SpiderTaskExecutorConfig;
 use clp_rust_utils::clp_config::package::config::StorageEngine;
 use clp_rust_utils::clp_config::package::config::StreamOutputStorage;
 use clp_rust_utils::task_io::extraction::ExtractTaskInput;
+use clp_rust_utils::types::ArchiveId;
 use mongodb::Client;
 use mongodb::Collection;
+use mongodb::Namespace;
 use mongodb::bson::Document;
 use mongodb::bson::doc;
 use mongodb::options::ReplaceOneModel;
@@ -45,7 +47,7 @@ use crate::task::utils::upload_file_to_s3;
 /// * Forwards [`tempfile::Builder::tempdir_in`]'s return values on failure.
 /// * Forwards [`run_clp_s_extract`]'s return values on failure.
 /// * Forwards [`reject_unordered_output`]'s return values on failure.
-/// * Forwards [`Chunk::parse_all`]'s return values on failure.
+/// * Forwards [`ChunkBatch::parse`]'s return values on failure.
 /// * Forwards [`prepare_metadata_collection`]'s return values on failure.
 /// * Forwards [`publish_files`]'s return values on failure.
 /// * Forwards [`upsert_metadata`]'s return values on failure.
@@ -71,13 +73,12 @@ pub(super) fn extract(
         .context("failed to create an extraction staging directory")?;
     let result = (|| {
         let staging_path = staging_directory.path();
-        let archive_id = input.archive_id.to_string();
-        let chunks = {
+        let batch = {
             let paths = run_clp_s_extract(runtime, clp_home, config, input, staging_path)?;
             reject_unordered_output(staging_path)?;
-            Chunk::parse_all(staging_path, &archive_id, &paths)?
+            ChunkBatch::parse(staging_path, input.archive_id, &paths)?
         };
-        if chunks.is_empty() {
+        if batch.chunks.is_empty() {
             return Ok(());
         }
         let collection = runtime.block_on(prepare_metadata_collection(&config.results_cache))?;
@@ -86,9 +87,9 @@ pub(super) fn extract(
             staging_path,
             &local_directory,
             &config.stream_output.storage,
-            &chunks,
+            &batch.chunks,
         )?;
-        runtime.block_on(upsert_metadata(&collection, &archive_id, &chunks))
+        runtime.block_on(upsert_metadata(&collection, &batch))
     })();
     if let Err(error) = staging_directory.close() {
         tracing::warn!(
@@ -123,12 +124,19 @@ struct Chunk {
     is_last: bool,
 }
 
-impl Chunk {
+/// An archive and its validated chunks.
+#[derive(Debug)]
+struct ChunkBatch {
+    archive_id: ArchiveId,
+    chunks: Vec<Chunk>,
+}
+
+impl ChunkBatch {
     /// Validates the filenames and contiguous ranges of a sequence of ordered chunks.
     ///
     /// # Returns
     ///
-    /// The chunks in emission order on success.
+    /// The archive ID and its validated chunks in emission order on success.
     ///
     /// # Errors
     ///
@@ -139,11 +147,11 @@ impl Chunk {
     ///   * A filename does not match the archive ID and chunk naming format.
     ///   * The ranges do not form a contiguous sequence of positive-length ranges from index zero.
     /// * Forwards [`parse_chunk_index`]'s return values on failure.
-    fn parse_all(
+    fn parse(
         staging_path: &Path,
-        archive_id: &str,
+        archive_id: ArchiveId,
         paths: &[PathBuf],
-    ) -> anyhow::Result<Vec<Self>> {
+    ) -> anyhow::Result<Self> {
         let prefix = format!("{archive_id}_");
         let mut chunks = Vec::with_capacity(paths.len());
         let mut expected_begin = 0;
@@ -170,7 +178,7 @@ impl Chunk {
                 begin_msg_ix == expected_begin && end_msg_ix > begin_msg_ix,
                 "invalid range in {filename}: expected start {expected_begin} and a larger end"
             );
-            chunks.push(Self {
+            chunks.push(Chunk {
                 filename: filename.to_owned(),
                 begin_msg_ix,
                 end_msg_ix,
@@ -178,21 +186,32 @@ impl Chunk {
             });
             expected_begin = end_msg_ix;
         }
-        Ok(chunks)
+        Ok(Self { archive_id, chunks })
     }
 
     /// # Returns
     ///
-    /// The results-cache document for this chunk.
-    fn metadata(&self, archive_id: &str) -> Document {
-        doc! {
-            "_id": &self.filename,
-            "path": &self.filename,
-            "stream_id": archive_id,
-            "begin_msg_ix": self.begin_msg_ix,
-            "end_msg_ix": self.end_msg_ix,
-            "is_last_chunk": self.is_last,
-        }
+    /// The results-cache upserts for the archive's chunks in emission order.
+    fn replacement_models(
+        &self,
+        namespace: Namespace,
+    ) -> impl Iterator<Item = ReplaceOneModel> + '_ {
+        let archive_id = self.archive_id.to_string();
+        self.chunks.iter().map(move |chunk| {
+            ReplaceOneModel::builder()
+                .namespace(namespace.clone())
+                .filter(doc! { "_id": &chunk.filename })
+                .replacement(doc! {
+                    "_id": &chunk.filename,
+                    "path": &chunk.filename,
+                    "stream_id": &archive_id,
+                    "begin_msg_ix": chunk.begin_msg_ix,
+                    "end_msg_ix": chunk.end_msg_ix,
+                    "is_last_chunk": chunk.is_last,
+                })
+                .upsert(true)
+                .build()
+        })
     }
 }
 
@@ -331,24 +350,15 @@ async fn prepare_metadata_collection(
 /// * Forwards [`Client::bulk_write`]'s return values on failure.
 async fn upsert_metadata(
     collection: &Collection<Document>,
-    archive_id: &str,
-    chunks: &[Chunk],
+    batch: &ChunkBatch,
 ) -> anyhow::Result<()> {
     const BATCH_SIZE: usize = 1_000;
 
-    let namespace = collection.namespace();
-    for batch in chunks.chunks(BATCH_SIZE) {
-        let operations = batch.iter().map(|chunk| {
-            ReplaceOneModel::builder()
-                .namespace(namespace.clone())
-                .filter(doc! { "_id": &chunk.filename })
-                .replacement(chunk.metadata(archive_id))
-                .upsert(true)
-                .build()
-        });
+    let mut operations = batch.replacement_models(collection.namespace()).peekable();
+    while operations.peek().is_some() {
         collection
             .client()
-            .bulk_write(operations)
+            .bulk_write(operations.by_ref().take(BATCH_SIZE))
             .await
             .context("failed to upsert ordered chunk metadata")?;
     }
@@ -637,9 +647,10 @@ mod tests {
     use clp_rust_utils::dataset::DatasetName;
     use clp_rust_utils::task_io::extraction::ExtractTaskInput;
     use clp_rust_utils::types::ArchiveId;
+    use mongodb::Namespace;
     use mongodb::bson::doc;
 
-    use super::Chunk;
+    use super::ChunkBatch;
     use super::MAX_CHUNKS;
     use super::MAX_STATS_LINE_SIZE;
     use super::MAX_STATS_OUTPUT_SIZE;
@@ -689,16 +700,16 @@ mod tests {
         let staging_path = Path::new("/staging");
         let first = format!("{ARCHIVE_ID}_0_2.jsonl");
         let last = format!("{ARCHIVE_ID}_2_42.jsonl");
-        let chunks = Chunk::parse_all(
+        let batch = ChunkBatch::parse(
             staging_path,
-            ARCHIVE_ID,
+            ARCHIVE_ID.parse()?,
             &[staging_path.join(&first), staging_path.join(&last)],
         )?;
 
         assert_eq!(
-            chunks
-                .iter()
-                .map(|chunk| chunk.metadata(ARCHIVE_ID))
+            batch
+                .replacement_models(Namespace::new("db", "streams"))
+                .map(|operation| operation.replacement)
                 .collect::<Vec<_>>(),
             [
                 doc! {
@@ -725,6 +736,9 @@ mod tests {
     #[test]
     fn parse_all_rejects_malformed_chunk_paths() {
         let staging_path = Path::new("/staging");
+        let archive_id = ARCHIVE_ID
+            .parse()
+            .expect("the fixture has a valid archive ID");
         let filename = format!("{ARCHIVE_ID}_0_1.jsonl");
         for path in [
             PathBuf::from(&filename),
@@ -742,7 +756,7 @@ mod tests {
             staging_path.join(format!("{ARCHIVE_ID}_0_9223372036854775808.jsonl")),
         ] {
             assert!(
-                Chunk::parse_all(staging_path, ARCHIVE_ID, std::slice::from_ref(&path)).is_err(),
+                ChunkBatch::parse(staging_path, archive_id, std::slice::from_ref(&path)).is_err(),
                 "accepted malformed chunk path {path:?}"
             );
         }
@@ -751,6 +765,9 @@ mod tests {
     #[test]
     fn parse_all_rejects_noncontiguous_or_nonpositive_ranges() {
         let staging_path = Path::new("/staging");
+        let archive_id = ARCHIVE_ID
+            .parse()
+            .expect("the fixture has a valid archive ID");
         for ranges in [
             ["1_2", "2_3"],
             ["0_2", "3_5"],
@@ -761,7 +778,7 @@ mod tests {
         ] {
             let paths =
                 ranges.map(|range| staging_path.join(format!("{ARCHIVE_ID}_{range}.jsonl")));
-            let error = Chunk::parse_all(staging_path, ARCHIVE_ID, &paths)
+            let error = ChunkBatch::parse(staging_path, archive_id, &paths)
                 .expect_err("invalid chunk ranges should be rejected");
             assert!(error.to_string().starts_with("invalid range"), "{error:#}");
         }
@@ -770,7 +787,7 @@ mod tests {
     #[test]
     fn parse_all_accepts_an_empty_ordered_stream() -> anyhow::Result<()> {
         assert_eq!(
-            Chunk::parse_all(Path::new("/staging"), ARCHIVE_ID, &[])?,
+            ChunkBatch::parse(Path::new("/staging"), ARCHIVE_ID.parse()?, &[])?.chunks,
             []
         );
         Ok(())
@@ -863,7 +880,7 @@ esac"#;
         for (path, filename) in paths.iter().zip(&filenames) {
             fs::write(path, filename)?;
         }
-        let chunks = Chunk::parse_all(staging.path(), ARCHIVE_ID, &paths)?;
+        let batch = ChunkBatch::parse(staging.path(), ARCHIVE_ID.parse()?, &paths)?;
         let runtime = tokio::runtime::Builder::new_current_thread().build()?;
         let storage = StreamOutputStorage::default();
         publish_files(
@@ -871,7 +888,7 @@ esac"#;
             staging.path(),
             destination.path(),
             &storage,
-            &chunks,
+            &batch.chunks,
         )?;
 
         for (path, filename) in paths.iter().zip(&filenames) {
