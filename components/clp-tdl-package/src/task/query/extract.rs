@@ -699,13 +699,21 @@ mod tests {
 
     #[test]
     fn parse_all_builds_metadata_for_contiguous_chunks() -> anyhow::Result<()> {
+        use ChunkPosition::Intermediate;
+        use ChunkPosition::Last;
+
+        enum ChunkPosition {
+            Intermediate,
+            Last,
+        }
+
         let staging_path = Path::new("/staging");
         let archive_id = ARCHIVE_ID.parse()?;
         let namespace = Namespace::new("db", "streams");
-        let cases: &[&[(i64, i64, bool)]] = &[
-            &[(0, 7, true)],
-            &[(0, 2, false), (2, 42, true)],
-            &[(0, 3, false), (3, 8, false), (8, 17, true)],
+        let cases: &[&[(i64, i64, ChunkPosition)]] = &[
+            &[(0, 7, Last)],
+            &[(0, 2, Intermediate), (2, 42, Last)],
+            &[(0, 3, Intermediate), (3, 8, Intermediate), (8, 17, Last)],
         ];
         for &expected in cases {
             let filenames: Vec<_> = expected
@@ -719,7 +727,7 @@ mod tests {
             let batch = ChunkBatch::parse(staging_path, archive_id, &paths)?;
             let operations: Vec<_> = batch.replacement_models(namespace.clone()).collect();
             assert_eq!(operations.len(), expected.len());
-            for ((filename, (begin, end, is_last)), operation) in
+            for ((filename, (begin, end, position)), operation) in
                 filenames.iter().zip(expected).zip(operations)
             {
                 assert_eq!(operation.namespace, namespace);
@@ -733,7 +741,7 @@ mod tests {
                         "stream_id": ARCHIVE_ID,
                         "begin_msg_ix": *begin,
                         "end_msg_ix": *end,
-                        "is_last_chunk": *is_last,
+                        "is_last_chunk": matches!(position, Last),
                     }
                 );
             }
