@@ -9,9 +9,7 @@ use std::process::Command;
 use std::process::Stdio;
 
 use anyhow::Context;
-use clp_rust_utils::aws::AWS_DEFAULT_REGION;
 use clp_rust_utils::clp_config::S3Config;
-use clp_rust_utils::clp_config::package::config::ArchiveOutputStorage;
 use clp_rust_utils::clp_config::package::config::ResultsCache;
 use clp_rust_utils::clp_config::package::config::SpiderTaskExecutorConfig;
 use clp_rust_utils::clp_config::package::config::StorageEngine;
@@ -22,18 +20,16 @@ use clp_rust_utils::job_config::NetworkOutput;
 use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::job_config::QueryOutput;
 use clp_rust_utils::job_config::SearchQuery;
-use clp_rust_utils::s3::generate_s3_url;
 use clp_rust_utils::timeline;
 use clp_rust_utils::types::ArchiveId;
-use non_empty_string::NonEmptyString;
 use spider_core::task::TaskIndex;
 use spider_core::types::id::TaskId;
 
 use crate::common::clp_home;
 use crate::common::runtime;
+use crate::task::query::archive_input::ArchiveDescriptor;
 use crate::task::utils::build_s3_client;
 use crate::task::utils::clp_binary_path;
-use crate::task::utils::s3_credential_env;
 use crate::task::utils::upload_file_to_s3;
 
 /// Searches one archive with clp-s and publishes normal and optional timeline results.
@@ -45,9 +41,10 @@ use crate::task::utils::upload_file_to_s3;
 ///
 /// Returns an error if:
 ///
-/// * The configured storage engine is not [`StorageEngine::ClpS`].
-/// * `ctx.task_id` isn't a [`TaskId::Index`].
-/// * Forwards [`resolve_archive_input`]'s return values on failure.
+/// * [`anyhow::Error`] if:
+///   * The configured storage engine is not [`StorageEngine::ClpS`].
+///   * `ctx.task_id` isn't a [`TaskId::Index`].
+/// * Forwards [`ArchiveDescriptor::resolve`]'s return values on failure.
 /// * Forwards [`ResultsFile::create`]'s return values on failure.
 /// * Forwards [`run_clp_s_search`]'s return values on failure.
 /// * Forwards [`ResultsFile::publish`]'s return values on failure.
@@ -82,7 +79,7 @@ pub(super) fn search(
 
     let clp_home = clp_home();
     let runtime = runtime();
-    let (archive_descriptor, credential_env) = resolve_archive_input(
+    let archive_descriptor = ArchiveDescriptor::resolve(
         &runtime, clp_home, config, dataset, archive_id,
     )
     .inspect_err(|e| {
@@ -110,8 +107,9 @@ pub(super) fn search(
         ),
         QueryOutput::ResultsCache(_) | QueryOutput::Network(_) => None,
     };
-    let arg_lists = build_clp_s_arg_lists(
-        build_clp_s_query_args(&archive_descriptor, query),
+    let clp_s_bin = clp_binary_path(clp_home, "clp-s");
+    let commands = build_clp_s_commands(
+        || build_clp_s_query_command(&clp_s_bin, &archive_descriptor, query),
         output,
         &config.results_cache,
         results_file
@@ -121,9 +119,8 @@ pub(super) fn search(
         dataset.as_str(),
         task_index,
     );
-    let clp_s_bin = clp_binary_path(clp_home, "clp-s");
-    for args in arg_lists {
-        run_clp_s_search(&clp_s_bin, args, &credential_env)?;
+    for mut command in commands {
+        run_clp_s_search(&mut command)?;
     }
     if let Some(results_file) = results_file {
         results_file.publish(&runtime).inspect_err(|e| {
@@ -146,18 +143,6 @@ pub(super) fn search(
         "clp-s query task completed successfully.",
     );
     Ok(())
-}
-
-/// The archive to search, in the form clp-s addresses it.
-enum ArchiveDescriptor {
-    /// A local dataset archives directory plus the `--archive-id` selecting one archive in it.
-    Directory {
-        path: PathBuf,
-        archive_id: ArchiveId,
-    },
-
-    /// The URL of an S3-hosted archive, read with `--auth s3`.
-    ObjectUrl(String),
 }
 
 /// The file that clp-s's `file` output handler writes one archive's query results to, staged under
@@ -315,120 +300,63 @@ enum ResultsFileDestination<'config> {
     },
 }
 
-/// Builds arguments for normal results and optional timeline aggregation, each starting with
-/// `query_args`.
+/// Builds commands for normal results and optional timeline aggregation from fresh query commands.
 ///
 /// # Returns
 ///
-/// Ordered argument lists, each corresponding to an individual `clp-s` invocation.
+/// The normal results command followed by the timeline aggregation command, if requested.
 ///
 /// # Panics
 ///
 /// Panics if `output` is [`QueryOutput::File`] but `results_file_path` is `None`.
-fn build_clp_s_arg_lists(
-    mut query_args: Vec<OsString>,
+fn build_clp_s_commands(
+    create_query_command: impl Fn() -> Command,
     output: &QueryOutput,
     results_cache: &ResultsCache,
     results_file_path: Option<&Path>,
     query_job_id: QueryJobId,
     dataset: &str,
     task_index: TaskIndex,
-) -> Vec<Vec<OsString>> {
+) -> Vec<Command> {
+    let mut command = create_query_command();
     match output {
         QueryOutput::ResultsCache(output) => {
-            let mut normal_args = query_args.clone();
-            normal_args.extend(build_clp_s_results_cache_output_args(
+            command.args(build_clp_s_results_cache_output_args(
                 results_cache,
                 output.max_num_results,
                 &query_job_id.to_string(),
                 dataset,
             ));
-            let mut arg_lists = vec![normal_args];
+            let mut commands = vec![command];
             if let Some(Aggregation::CountByTime {
                 bucket_size_millisecs,
             }) = output.aggregation
             {
-                let mut timeline_args = query_args;
-                timeline_args.extend([
-                    OsString::from("--count-by-time"),
-                    OsString::from(bucket_size_millisecs.get().to_string()),
-                ]);
-                timeline_args.extend(build_clp_s_results_cache_output_args(
-                    results_cache,
-                    None,
-                    &timeline::collection_name(query_job_id),
-                    dataset,
-                ));
-                arg_lists.push(timeline_args);
+                let mut timeline_command = create_query_command();
+                timeline_command
+                    .arg("--count-by-time")
+                    .arg(bucket_size_millisecs.get().to_string())
+                    .args(build_clp_s_results_cache_output_args(
+                        results_cache,
+                        None,
+                        &timeline::collection_name(query_job_id),
+                        dataset,
+                    ));
+                commands.push(timeline_command);
             }
-            arg_lists
+            commands
         }
         QueryOutput::Network(network_output) => {
-            query_args.extend(build_clp_s_network_output_args(network_output, task_index));
-            vec![query_args]
+            command.args(build_clp_s_network_output_args(network_output, task_index));
+            vec![command]
         }
         QueryOutput::File {} => {
             let results_file_path =
                 results_file_path.expect("file output requires a results file path");
-            query_args.extend(build_clp_s_file_output_args(results_file_path));
-            vec![query_args]
+            command.args(build_clp_s_file_output_args(results_file_path));
+            vec![command]
         }
     }
-}
-
-/// Resolves how clp-s addresses the archive, and the credential env vars it needs to read it.
-///
-/// # Returns
-///
-/// A tuple on success, containing:
-///
-/// * The archive descriptor.
-/// * The credential env vars clp-s should run with, which are empty for filesystem-backed archive
-///   output.
-///
-/// # Errors
-///
-/// Returns an error if:
-///
-/// * Forwards [`generate_s3_url`]'s return values on failure.
-/// * Forwards [`s3_credential_env`]'s return values on failure.
-fn resolve_archive_input(
-    runtime: &tokio::runtime::Handle,
-    clp_home: &Path,
-    config: &SpiderTaskExecutorConfig,
-    dataset: &DatasetName,
-    archive_id: ArchiveId,
-) -> anyhow::Result<(ArchiveDescriptor, Vec<(&'static str, String)>)> {
-    let s3_config = match &config.archive_output.storage {
-        ArchiveOutputStorage::Fs { .. } => {
-            return Ok((
-                ArchiveDescriptor::Directory {
-                    path: config
-                        .abs_archive_output_staging(clp_home)
-                        .join(dataset.as_str()),
-                    archive_id,
-                },
-                Vec::new(),
-            ));
-        }
-        ArchiveOutputStorage::S3 { s3_config, .. } => s3_config,
-    };
-
-    let object_key = config
-        .archive_output
-        .dataset_archive_object_key(dataset, &archive_id);
-    let url = generate_s3_url(
-        s3_config.endpoint_url.as_ref().map(NonEmptyString::as_str),
-        s3_config.region_code.as_ref().map(NonEmptyString::as_str),
-        &s3_config.bucket,
-        &object_key,
-    )?;
-    let region = s3_config
-        .region_code
-        .as_ref()
-        .map_or(AWS_DEFAULT_REGION, NonEmptyString::as_str);
-    let credential_env = s3_credential_env(runtime, region, &s3_config.aws_authentication)?;
-    Ok((ArchiveDescriptor::ObjectUrl(url), credential_env))
 }
 
 /// Builds the clp-s command-line arguments of the `results-cache` output handler.
@@ -492,46 +420,35 @@ fn build_clp_s_file_output_args(results_file_path: &Path) -> Vec<OsString> {
     ]
 }
 
-/// Builds the clp-s command-line arguments that select the archive and the query to run on it,
-/// shared by every output handler.
+/// Builds a clp-s command that selects the archive and the query to run on it.
 ///
 /// # Returns
 ///
-/// The ordered clp-s arguments, which the output handler's arguments follow.
-fn build_clp_s_query_args(
+/// The query command, ready for the output handler's arguments.
+fn build_clp_s_query_command(
+    clp_s_bin: &Path,
     archive_descriptor: &ArchiveDescriptor,
     query: &SearchQuery,
-) -> Vec<OsString> {
-    let mut args = vec![OsString::from("s")];
-    match archive_descriptor {
-        ArchiveDescriptor::Directory { path, archive_id } => {
-            args.push(path.as_os_str().to_os_string());
-            args.push(OsString::from("--archive-id"));
-            args.push(OsString::from(archive_id.to_string()));
-        }
-        ArchiveDescriptor::ObjectUrl(url) => {
-            args.push(OsString::from(url));
-            args.push(OsString::from("--auth"));
-            args.push(OsString::from("s3"));
-        }
-    }
-
-    args.push(OsString::from(query.query_string.as_str()));
+) -> Command {
+    let mut command = archive_descriptor.clp_s_command(clp_s_bin, "s");
+    command.arg(query.query_string.as_str());
     if let Some(begin_timestamp_millisecs) = query.time_range.begin_timestamp_millisecs() {
-        args.push(OsString::from("--tge"));
-        args.push(OsString::from(begin_timestamp_millisecs.to_string()));
+        command
+            .arg("--tge")
+            .arg(begin_timestamp_millisecs.to_string());
     }
     if let Some(end_timestamp_millisecs) = query.time_range.end_timestamp_millisecs() {
-        args.push(OsString::from("--tle"));
-        args.push(OsString::from(end_timestamp_millisecs.to_string()));
+        command
+            .arg("--tle")
+            .arg(end_timestamp_millisecs.to_string());
     }
     if query.ignore_case {
-        args.push(OsString::from("--ignore-case"));
+        command.arg("--ignore-case");
     }
-    args
+    command
 }
 
-/// Runs clp-s with the given search arguments, blocking until it exits.
+/// Runs the clp-s search command, blocking until it exits.
 ///
 /// # Observability
 ///
@@ -542,29 +459,28 @@ fn build_clp_s_query_args(
 ///
 /// Returns an error if:
 ///
-/// * clp-s exits with a non-zero status.
+/// * [`anyhow::Error`] if `clp-s` exits with a non-zero status.
 /// * Forwards [`Command::spawn`]'s return values on failure.
 /// * Forwards [`std::process::Child::wait`]'s return values on failure.
 ///
 /// # Panics
 ///
 /// Panics if clp-s's piped stderr is unexpectedly absent (should be unreachable).
-fn run_clp_s_search(
-    clp_s_bin: &Path,
-    args: Vec<OsString>,
-    credential_env: &[(&'static str, String)],
-) -> anyhow::Result<()> {
-    let mut child = Command::new(clp_s_bin)
-        .args(args)
-        .envs(credential_env.iter().cloned())
+fn run_clp_s_search(command: &mut Command) -> anyhow::Result<()> {
+    let mut child = command
         .stdout(Stdio::null())
         .stderr(Stdio::piped())
         .spawn()
-        .with_context(|| format!("failed to spawn clp-s at {}", clp_s_bin.display()))
+        .with_context(|| {
+            format!(
+                "failed to spawn clp-s at {}",
+                Path::new(command.get_program()).display()
+            )
+        })
         .inspect_err(|e| {
             tracing::error!(
                 error = % e,
-                clp_s_bin = % clp_s_bin.display(),
+                clp_s_bin = % Path::new(command.get_program()).display(),
                 "Failed to spawn clp-s.",
             );
         })?;
@@ -602,17 +518,15 @@ fn run_clp_s_search(
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
+    use std::ffi::OsStr;
     use std::ffi::OsString;
     use std::num::NonZeroU16;
     use std::num::NonZeroU32;
     use std::path::Path;
     use std::path::PathBuf;
 
-    use clp_rust_utils::clp_config::AwsAuthentication;
-    use clp_rust_utils::clp_config::AwsCredentials;
     use clp_rust_utils::clp_config::S3Config;
-    use clp_rust_utils::clp_config::package::config::ArchiveOutput;
-    use clp_rust_utils::clp_config::package::config::ArchiveOutputStorage;
     use clp_rust_utils::clp_config::package::config::Package;
     use clp_rust_utils::clp_config::package::config::ResultsCache;
     use clp_rust_utils::clp_config::package::config::SpiderTaskExecutorConfig;
@@ -637,15 +551,14 @@ mod tests {
     use spider_core::types::id::TaskId;
     use spider_tdl::TaskContext;
 
-    use super::ArchiveDescriptor;
     use super::ResultsFile;
     use super::ResultsFileDestination;
-    use super::build_clp_s_arg_lists;
-    use super::build_clp_s_network_output_args;
-    use super::build_clp_s_query_args;
+    use super::build_clp_s_commands;
+    use super::build_clp_s_query_command;
     use super::build_clp_s_results_cache_output_args;
-    use super::resolve_archive_input;
     use super::search;
+    use crate::task::query::archive_input::ArchiveDescriptor;
+    use crate::task::query::archive_input::base_s3_config;
 
     const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
     const SESSION_TOKEN: &str = "6f1d3b52-8a4e-4c1b-9f6e-2d7a5c0b9e13";
@@ -679,57 +592,11 @@ mod tests {
 
     /// # Returns
     ///
-    /// An [`S3Config`] for the bucket `bucket` with the key prefix `LIB1/` and no endpoint URL,
-    /// which authenticates with static AWS credentials.
-    fn base_s3_config() -> S3Config {
-        S3Config {
-            bucket: NonEmptyString::from_static_str("bucket"),
-            region_code: None,
-            key_prefix: NonEmptyString::from_static_str("LIB1/"),
-            endpoint_url: None,
-            aws_authentication: AwsAuthentication::Credentials {
-                credentials: AwsCredentials {
-                    access_key_id: "the-access-key".to_string(),
-                    secret_access_key: "the-secret-key".to_string(),
-                    session_token: None,
-                },
-            },
-        }
-    }
-
-    /// # Returns
-    ///
     /// An [`ArchiveDescriptor`] addressing [`ARCHIVE_ID`] under `/archives/ds1`.
     fn directory_descriptor() -> ArchiveDescriptor {
         ArchiveDescriptor::Directory {
             path: PathBuf::from("/archives/ds1"),
             archive_id: ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
-        }
-    }
-
-    /// # Returns
-    ///
-    /// A [`SpiderTaskExecutorConfig`] whose archive output is S3-backed with the given staging
-    /// directory and endpoint URL.
-    fn s3_backed_config(
-        staging_directory: &str,
-        endpoint_url: Option<&'static str>,
-    ) -> SpiderTaskExecutorConfig {
-        SpiderTaskExecutorConfig {
-            package: Package {
-                storage_engine: StorageEngine::ClpS,
-            },
-            archive_output: ArchiveOutput {
-                storage: ArchiveOutputStorage::S3 {
-                    staging_directory: staging_directory.to_owned(),
-                    s3_config: S3Config {
-                        endpoint_url: endpoint_url.map(NonEmptyString::from_static_str),
-                        ..base_s3_config()
-                    },
-                },
-                ..ArchiveOutput::default()
-            },
-            ..SpiderTaskExecutorConfig::default()
         }
     }
 
@@ -815,7 +682,7 @@ mod tests {
     }
 
     #[test]
-    fn build_clp_s_query_args_fs_with_timestamps_and_ignore_case() {
+    fn build_clp_s_query_command_fs_with_timestamps_and_ignore_case() {
         let query = SearchQuery {
             time_range: TimeRange::new(Some(1_310_138_944_000), Some(1_311_208_074_120))
                 .expect("range is ordered"),
@@ -823,39 +690,38 @@ mod tests {
             ..unbounded_query()
         };
 
+        let command =
+            build_clp_s_query_command(Path::new("clp-s"), &directory_descriptor(), &query);
         assert_eq!(
-            build_clp_s_query_args(&directory_descriptor(), &query),
-            vec![
-                OsString::from("s"),
-                OsString::from("/archives/ds1"),
-                OsString::from("--archive-id"),
-                OsString::from(ARCHIVE_ID),
-                OsString::from("level: \"ERROR\""),
-                OsString::from("--tge"),
-                OsString::from("1310138944000"),
-                OsString::from("--tle"),
-                OsString::from("1311208074120"),
-                OsString::from("--ignore-case"),
+            command.get_args().collect::<Vec<_>>(),
+            [
+                "s",
+                "/archives/ds1",
+                "--archive-id",
+                ARCHIVE_ID,
+                "level: \"ERROR\"",
+                "--tge",
+                "1310138944000",
+                "--tle",
+                "1311208074120",
+                "--ignore-case",
             ]
+            .map(OsStr::new)
         );
     }
 
     #[test]
-    fn build_clp_s_query_args_s3_uses_object_url_and_no_archive_id() {
+    fn build_clp_s_query_command_s3_uses_object_url_and_no_archive_id() {
         let url = format!("https://bucket.s3.amazonaws.com/LIB1/ds1/{ARCHIVE_ID}");
-
+        let archive_descriptor = ArchiveDescriptor::S3 {
+            url: url.clone(),
+            credential_env: Vec::new(),
+        };
+        let command =
+            build_clp_s_query_command(Path::new("clp-s"), &archive_descriptor, &unbounded_query());
         assert_eq!(
-            build_clp_s_query_args(
-                &ArchiveDescriptor::ObjectUrl(url.clone()),
-                &unbounded_query()
-            ),
-            vec![
-                OsString::from("s"),
-                OsString::from(url),
-                OsString::from("--auth"),
-                OsString::from("s3"),
-                OsString::from("level: \"ERROR\""),
-            ]
+            command.get_args().collect::<Vec<_>>(),
+            ["s", &url, "--auth", "s3", "level: \"ERROR\""].map(OsStr::new)
         );
     }
 
@@ -899,155 +765,70 @@ mod tests {
     }
 
     #[test]
-    fn build_clp_s_network_output_args_names_the_listener_and_the_task() {
-        assert_eq!(
-            build_clp_s_network_output_args(&network_output(), 5),
-            vec![
-                OsString::from("network"),
-                OsString::from("--host"),
-                OsString::from("10.0.0.7"),
-                OsString::from("--port"),
-                OsString::from("40123"),
-                OsString::from("--session-token"),
-                OsString::from(SESSION_TOKEN),
-                OsString::from("--task-index"),
-                OsString::from("5"),
-            ]
-        );
-    }
-
-    #[test]
-    fn resolve_archive_input_fs_joins_dataset_and_returns_no_credentials() -> anyhow::Result<()> {
-        let runtime = tokio::runtime::Runtime::new().expect("failed to create Tokio runtime");
-        let config = SpiderTaskExecutorConfig {
-            package: Package {
-                storage_engine: StorageEngine::ClpS,
+    fn build_clp_s_commands_network_output_includes_the_listener_and_task_index() {
+        let commands = build_clp_s_commands(
+            || {
+                build_clp_s_query_command(
+                    Path::new("clp-s"),
+                    &directory_descriptor(),
+                    &unbounded_query(),
+                )
             },
-            archive_output: ArchiveOutput {
-                storage: ArchiveOutputStorage::Fs {
-                    directory: "var/data/archives".to_owned(),
-                },
-                ..ArchiveOutput::default()
-            },
-            ..SpiderTaskExecutorConfig::default()
-        };
-
-        let (descriptor, credential_env) = resolve_archive_input(
-            runtime.handle(),
-            Path::new("/clp"),
-            &config,
-            &"ds1".parse::<DatasetName>()?,
-            ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
-        )?;
-
-        let ArchiveDescriptor::Directory { path, archive_id } = descriptor else {
-            panic!("expected a directory descriptor");
-        };
-        assert_eq!(path, PathBuf::from("/clp/var/data/archives/ds1"));
-        assert_eq!(
-            archive_id,
-            ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID")
+            &QueryOutput::Network(network_output()),
+            &results_cache(),
+            None,
+            42,
+            "ds1",
+            5,
         );
-        assert_eq!(credential_env, &[]);
-
-        Ok(())
-    }
-
-    #[test]
-    fn resolve_archive_input_s3_builds_object_url_and_credentials() -> anyhow::Result<()> {
-        let runtime = tokio::runtime::Runtime::new().expect("failed to create Tokio runtime");
-        let config = s3_backed_config("var/data/staged-archives", None);
-
-        let (descriptor, credential_env) = resolve_archive_input(
-            runtime.handle(),
-            Path::new("/clp"),
-            &config,
-            &"ds1".parse::<DatasetName>()?,
-            ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
-        )?;
-
-        let ArchiveDescriptor::ObjectUrl(url) = descriptor else {
-            panic!("expected an object-URL descriptor");
-        };
+        assert_eq!(commands.len(), 1);
         assert_eq!(
-            url,
-            format!("https://bucket.s3.amazonaws.com/LIB1/ds1/{ARCHIVE_ID}")
-        );
-        assert_eq!(
-            credential_env,
-            vec![
-                ("AWS_ACCESS_KEY_ID", "the-access-key".to_string()),
-                ("AWS_SECRET_ACCESS_KEY", "the-secret-key".to_string()),
+            commands[0].get_args().collect::<Vec<_>>(),
+            [
+                "s",
+                "/archives/ds1",
+                "--archive-id",
+                ARCHIVE_ID,
+                "level: \"ERROR\"",
+                "network",
+                "--host",
+                "10.0.0.7",
+                "--port",
+                "40123",
+                "--session-token",
+                SESSION_TOKEN,
+                "--task-index",
+                "5",
             ]
+            .map(OsStr::new)
         );
-
-        Ok(())
     }
 
     #[test]
-    fn resolve_archive_input_s3_ignores_staging_directory() -> anyhow::Result<()> {
-        const STAGING_DIRECTORY: &str = "/wrong-staging-directory";
-
-        let runtime = tokio::runtime::Runtime::new().expect("failed to create Tokio runtime");
-        let config = s3_backed_config(STAGING_DIRECTORY, None);
-
-        let (descriptor, _) = resolve_archive_input(
-            runtime.handle(),
-            Path::new("/clp"),
-            &config,
-            &"ds1".parse::<DatasetName>()?,
-            ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
-        )?;
-        let args = build_clp_s_query_args(&descriptor, &unbounded_query());
-
-        assert!(
-            !args
-                .iter()
-                .any(|arg| arg.to_string_lossy().contains(STAGING_DIRECTORY))
-        );
-
-        Ok(())
-    }
-
-    #[test]
-    fn resolve_archive_input_s3_custom_endpoint_uses_path_style_url() -> anyhow::Result<()> {
-        let runtime = tokio::runtime::Runtime::new().expect("failed to create Tokio runtime");
-        let config = s3_backed_config("var/data/staged-archives", Some("http://minio:9000"));
-
-        let (descriptor, _) = resolve_archive_input(
-            runtime.handle(),
-            Path::new("/clp"),
-            &config,
-            &"ds1".parse::<DatasetName>()?,
-            ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
-        )?;
-
-        let ArchiveDescriptor::ObjectUrl(url) = descriptor else {
-            panic!("expected an object-URL descriptor");
-        };
-        assert_eq!(
-            url,
-            format!("http://minio:9000/bucket/LIB1/ds1/{ARCHIVE_ID}")
-        );
-
-        Ok(())
-    }
-
-    #[test]
-    fn build_clp_s_arg_lists_file_output_writes_to_the_results_file_path() {
+    fn build_clp_s_commands_file_output_writes_to_the_results_file_path() {
         let results_file_path = PathBuf::from("/results");
-
+        let commands = build_clp_s_commands(
+            || {
+                build_clp_s_query_command(
+                    Path::new("clp-s"),
+                    &directory_descriptor(),
+                    &unbounded_query(),
+                )
+            },
+            &QueryOutput::File {},
+            &results_cache(),
+            Some(&results_file_path),
+            42,
+            "ds1",
+            0,
+        );
+        assert_eq!(commands.len(), 1);
         assert_eq!(
-            build_clp_s_arg_lists(
-                build_clp_s_query_args(&directory_descriptor(), &unbounded_query()),
-                &QueryOutput::File {},
-                &results_cache(),
-                Some(&results_file_path),
-                42,
-                "ds1",
-                0,
-            ),
-            vec![vec![
+            commands[0]
+                .get_args()
+                .map(OsString::from)
+                .collect::<Vec<_>>(),
+            vec![
                 OsString::from("s"),
                 OsString::from("/archives/ds1"),
                 OsString::from("--archive-id"),
@@ -1056,7 +837,7 @@ mod tests {
                 OsString::from("file"),
                 OsString::from("--path"),
                 OsString::from(results_file_path),
-            ]]
+            ]
         );
     }
 
@@ -1291,6 +1072,7 @@ mod tests {
             ignore_case: true,
             ..unbounded_query()
         };
+        let archive_descriptor = directory_descriptor();
         for max_num_results in [None, NonZeroU32::new(7)] {
             let output = QueryOutput::ResultsCache(ResultsCacheOutput {
                 max_num_results,
@@ -1298,8 +1080,8 @@ mod tests {
                     bucket_size_millisecs: PositiveI64::new(60_000).expect("60,000 is positive"),
                 }),
             });
-            let arg_lists = build_clp_s_arg_lists(
-                build_clp_s_query_args(&directory_descriptor(), &query),
+            let commands = build_clp_s_commands(
+                || build_clp_s_query_command(Path::new("clp-s"), &archive_descriptor, &query),
                 &output,
                 &results_cache(),
                 None,
@@ -1307,8 +1089,8 @@ mod tests {
                 "ds1",
                 0,
             );
-            assert_eq!(arg_lists.len(), 2);
-            let args = &arg_lists[1];
+            assert_eq!(commands.len(), 2);
+            let timeline_args = commands[1].get_args().collect::<Vec<_>>();
             let mut expected_normal = [
                 "s",
                 "/archives/ds1",
@@ -1326,13 +1108,13 @@ mod tests {
                 "--collection",
                 "42",
             ]
-            .map(OsString::from)
+            .map(OsStr::new)
             .to_vec();
             if max_num_results.is_some() {
-                expected_normal.extend(["--max-num-results", "7"].map(OsString::from));
+                expected_normal.extend(["--max-num-results", "7"].map(OsStr::new));
             }
-            expected_normal.extend(["--dataset", "ds1"].map(OsString::from));
-            assert_eq!(arg_lists[0], expected_normal);
+            expected_normal.extend(["--dataset", "ds1"].map(OsStr::new));
+            assert_eq!(commands[0].get_args().collect::<Vec<_>>(), expected_normal);
             let expected = [
                 "s",
                 "/archives/ds1",
@@ -1355,8 +1137,8 @@ mod tests {
                 "ds1",
             ];
             anyhow::ensure!(
-                *args == expected.map(OsString::from),
-                "unexpected timeline arguments: {args:?}"
+                timeline_args == expected.map(OsStr::new),
+                "unexpected timeline arguments: {timeline_args:?}"
             );
         }
         Ok(())
@@ -1364,17 +1146,27 @@ mod tests {
 
     #[test]
     fn timeline_search_preserves_s3_authentication_and_large_bucket_width() -> anyhow::Result<()> {
+        let credential_env = [
+            ("AWS_ACCESS_KEY_ID", "the-access-key"),
+            ("AWS_SECRET_ACCESS_KEY", "the-secret-key"),
+            ("AWS_SESSION_TOKEN", "the-session-token"),
+        ];
+        let archive_descriptor = ArchiveDescriptor::S3 {
+            url: "https://bucket.s3.amazonaws.com/archive".to_owned(),
+            credential_env: credential_env
+                .into_iter()
+                .map(|(name, value)| (name, value.to_owned()))
+                .collect(),
+        };
+        let query = unbounded_query();
         let output = QueryOutput::ResultsCache(ResultsCacheOutput {
             max_num_results: NonZeroU32::new(7),
             aggregation: Some(Aggregation::CountByTime {
                 bucket_size_millisecs: PositiveI64::new(i64::MAX).expect("i64::MAX is positive"),
             }),
         });
-        let arg_lists = build_clp_s_arg_lists(
-            build_clp_s_query_args(
-                &ArchiveDescriptor::ObjectUrl("https://bucket.s3.amazonaws.com/archive".to_owned()),
-                &unbounded_query(),
-            ),
+        let commands = build_clp_s_commands(
+            || build_clp_s_query_command(Path::new("clp-s"), &archive_descriptor, &query),
             &output,
             &results_cache(),
             None,
@@ -1382,7 +1174,14 @@ mod tests {
             "ds1",
             0,
         );
-        let args = &arg_lists[1];
+        assert_eq!(commands.len(), 2);
+        let expected_env = BTreeMap::from(
+            credential_env.map(|(name, value)| (OsStr::new(name), Some(OsStr::new(value)))),
+        );
+        for command in &commands {
+            assert_eq!(command.get_envs().collect::<BTreeMap<_, _>>(), expected_env);
+        }
+        let timeline_args = commands[1].get_args().collect::<Vec<_>>();
         let expected = [
             "s",
             "https://bucket.s3.amazonaws.com/archive",
@@ -1400,8 +1199,8 @@ mod tests {
             "ds1",
         ];
         anyhow::ensure!(
-            *args == expected.map(OsString::from),
-            "unexpected timeline arguments: {args:?}"
+            timeline_args == expected.map(OsStr::new),
+            "unexpected timeline arguments: {timeline_args:?}"
         );
         Ok(())
     }
