@@ -701,6 +701,7 @@ mod tests {
     fn parse_all_builds_metadata_for_contiguous_chunks() -> anyhow::Result<()> {
         let staging_path = Path::new("/staging");
         let archive_id = ARCHIVE_ID.parse()?;
+        let namespace = Namespace::new("db", "streams");
         let cases: &[&[(i64, i64, bool)]] = &[
             &[(0, 7, true)],
             &[(0, 2, false), (2, 42, true)],
@@ -716,27 +717,26 @@ mod tests {
                 .map(|filename| staging_path.join(filename))
                 .collect();
             let batch = ChunkBatch::parse(staging_path, archive_id, &paths)?;
-            let expected_documents: Vec<_> = filenames
-                .iter()
-                .zip(expected)
-                .map(|(filename, &(begin, end, is_last))| {
+            let operations: Vec<_> = batch.replacement_models(namespace.clone()).collect();
+            assert_eq!(operations.len(), expected.len());
+            for ((filename, (begin, end, is_last)), operation) in
+                filenames.iter().zip(expected).zip(operations)
+            {
+                assert_eq!(operation.namespace, namespace);
+                assert_eq!(operation.filter, doc! { "_id": filename });
+                assert_eq!(operation.upsert, Some(true));
+                assert_eq!(
+                    operation.replacement,
                     doc! {
                         "_id": filename,
                         "path": filename,
                         "stream_id": ARCHIVE_ID,
-                        "begin_msg_ix": begin,
-                        "end_msg_ix": end,
-                        "is_last_chunk": is_last,
+                        "begin_msg_ix": *begin,
+                        "end_msg_ix": *end,
+                        "is_last_chunk": *is_last,
                     }
-                })
-                .collect();
-            assert_eq!(
-                batch
-                    .replacement_models(Namespace::new("db", "streams"))
-                    .map(|operation| operation.replacement)
-                    .collect::<Vec<_>>(),
-                expected_documents
-            );
+                );
+            }
         }
         Ok(())
     }
