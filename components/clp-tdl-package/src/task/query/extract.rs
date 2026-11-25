@@ -208,6 +208,59 @@ impl ChunkBatch {
     }
 }
 
+/// A subprocess that is killed and reaped on drop unless already reaped.
+#[must_use = "dropping the guard before waiting kills and reaps the subprocess"]
+struct ChildGuard {
+    child: Option<Child>,
+}
+
+impl ChildGuard {
+    /// Waits for the subprocess and reaps it.
+    ///
+    /// # Returns
+    ///
+    /// The child's exit status on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`Child::wait`]'s return values on failure.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the guard no longer holds a child. Only this consuming method releases the child.
+    fn wait(mut self) -> std::io::Result<ExitStatus> {
+        let status = self
+            .child
+            .as_mut()
+            .expect("the guard holds the child until it is reaped")
+            .wait()?;
+        self.child = None;
+        Ok(status)
+    }
+}
+
+impl Drop for ChildGuard {
+    fn drop(&mut self) {
+        let Some(mut child) = self.child.take() else {
+            return;
+        };
+        if let Err(error) = child.kill() {
+            tracing::warn!(error = % error, pid = child.id(), "Failed to kill clp-s.");
+        }
+        if let Err(error) = child.wait() {
+            tracing::warn!(error = % error, pid = child.id(), "Failed to reap clp-s.");
+        }
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ChunkStatsLine {
+    path: PathBuf,
+}
+
 /// Rejects the `original` file clp-s writes when it falls back to unordered extraction.
 ///
 /// # Errors
@@ -438,59 +491,6 @@ fn run_clp_s_extract(
         let stderr_tail = describe_stderr_tail(stderr_reader);
         result.with_context(|| format!("failed to extract with clp-s; stderr tail: {stderr_tail}"))
     })
-}
-
-/// A subprocess that is killed and reaped on drop unless already reaped.
-#[must_use = "dropping the guard before waiting kills and reaps the subprocess"]
-struct ChildGuard {
-    child: Option<Child>,
-}
-
-impl ChildGuard {
-    /// Waits for the subprocess and reaps it.
-    ///
-    /// # Returns
-    ///
-    /// The child's exit status on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * Forwards [`Child::wait`]'s return values on failure.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the guard no longer holds a child. Only this consuming method releases the child.
-    fn wait(mut self) -> std::io::Result<ExitStatus> {
-        let status = self
-            .child
-            .as_mut()
-            .expect("the guard holds the child until it is reaped")
-            .wait()?;
-        self.child = None;
-        Ok(status)
-    }
-}
-
-impl Drop for ChildGuard {
-    fn drop(&mut self) {
-        let Some(mut child) = self.child.take() else {
-            return;
-        };
-        if let Err(error) = child.kill() {
-            tracing::warn!(error = % error, pid = child.id(), "Failed to kill clp-s.");
-        }
-        if let Err(error) = child.wait() {
-            tracing::warn!(error = % error, pid = child.id(), "Failed to reap clp-s.");
-        }
-    }
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct ChunkStatsLine {
-    path: PathBuf,
 }
 
 /// Builds a command for extracting one archive with `clp-s x`.
