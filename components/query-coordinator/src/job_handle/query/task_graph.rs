@@ -29,7 +29,7 @@ use crate::job_handle::ArchiveMetadata;
 ///
 /// # Returns
 ///
-/// On success, a tuple containing:
+/// A tuple on success, containing:
 ///
 /// * The constructed task graph.
 /// * The task graph's positional input.
