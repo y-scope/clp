@@ -56,6 +56,16 @@ pub(crate) fn clp_s_extract_json_task(
         ctx.task_instance_id,
         &input,
     )
+    .inspect_err(|error| {
+        tracing::error!(
+            job_id = % ctx.job_id,
+            task_id = % ctx.task_id,
+            task_instance_id = ctx.task_instance_id,
+            query_job_id = input.job_id,
+            error = ? error,
+            "CLP extraction task failed."
+        );
+    })
     .map_err(|error| TdlError::ExecutionError(format!("{error:#}")))
 }
 
