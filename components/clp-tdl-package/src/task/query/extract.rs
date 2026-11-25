@@ -22,6 +22,7 @@ use clp_rust_utils::clp_config::package::config::StorageEngine;
 use clp_rust_utils::clp_config::package::config::StreamOutputStorage;
 use clp_rust_utils::task_io::extraction::ExtractTaskInput;
 use mongodb::Client;
+use mongodb::Collection;
 use mongodb::bson::Document;
 use mongodb::bson::doc;
 use mongodb::options::ReplaceOneModel;
@@ -45,6 +46,7 @@ use crate::task::utils::upload_file_to_s3;
 /// * Forwards [`run_clp_s_extract`]'s return values on failure.
 /// * Forwards [`reject_unordered_output`]'s return values on failure.
 /// * Forwards [`Chunk::parse_all`]'s return values on failure.
+/// * Forwards [`prepare_metadata_collection`]'s return values on failure.
 /// * Forwards [`publish_files`]'s return values on failure.
 /// * Forwards [`upsert_metadata`]'s return values on failure.
 pub(super) fn extract(
@@ -78,6 +80,7 @@ pub(super) fn extract(
         if chunks.is_empty() {
             return Ok(());
         }
+        let collection = runtime.block_on(prepare_metadata_collection(&config.results_cache))?;
         publish_files(
             runtime,
             staging_path,
@@ -85,7 +88,7 @@ pub(super) fn extract(
             &config.stream_output.storage,
             &chunks,
         )?;
-        runtime.block_on(upsert_metadata(&config.results_cache, &archive_id, &chunks))
+        runtime.block_on(upsert_metadata(&collection, &archive_id, &chunks))
     })();
     if let Err(error) = staging_directory.close() {
         tracing::warn!(
@@ -297,7 +300,11 @@ fn publish_files(
     Ok(())
 }
 
-/// Upserts stream metadata in bounded batches.
+/// Prepares the stream metadata collection using the configured results cache.
+///
+/// # Returns
+///
+/// The collection for stream metadata on success.
 ///
 /// # Errors
 ///
@@ -305,20 +312,31 @@ fn publish_files(
 ///
 /// * Forwards [`parse_results_cache_uri`]'s return values on failure.
 /// * Forwards [`Client::with_options`]'s return values on failure.
+async fn prepare_metadata_collection(
+    config: &ResultsCache,
+) -> anyhow::Result<Collection<Document>> {
+    let options = parse_results_cache_uri(config.uri().as_str()).await?;
+    let client = Client::with_options(options)?;
+    Ok(client
+        .database(&config.db_name)
+        .collection(&config.stream_collection_name))
+}
+
+/// Upserts stream metadata in bounded batches.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
 /// * Forwards [`Client::bulk_write`]'s return values on failure.
 async fn upsert_metadata(
-    config: &ResultsCache,
+    collection: &Collection<Document>,
     archive_id: &str,
     chunks: &[Chunk],
 ) -> anyhow::Result<()> {
     const BATCH_SIZE: usize = 1_000;
 
-    let options = parse_results_cache_uri(config.uri().as_str()).await?;
-    let client = Client::with_options(options)?;
-    let namespace = client
-        .database(&config.db_name)
-        .collection::<Document>(&config.stream_collection_name)
-        .namespace();
+    let namespace = collection.namespace();
     for batch in chunks.chunks(BATCH_SIZE) {
         let operations = batch.iter().map(|chunk| {
             ReplaceOneModel::builder()
@@ -328,7 +346,8 @@ async fn upsert_metadata(
                 .upsert(true)
                 .build()
         });
-        client
+        collection
+            .client()
             .bulk_write(operations)
             .await
             .context("failed to upsert ordered chunk metadata")?;
@@ -610,6 +629,7 @@ mod tests {
     use clp_rust_utils::clp_config::package::config::ArchiveOutput;
     use clp_rust_utils::clp_config::package::config::ArchiveOutputStorage;
     use clp_rust_utils::clp_config::package::config::Package;
+    use clp_rust_utils::clp_config::package::config::ResultsCache;
     use clp_rust_utils::clp_config::package::config::SpiderTaskExecutorConfig;
     use clp_rust_utils::clp_config::package::config::StorageEngine;
     use clp_rust_utils::clp_config::package::config::StreamOutput;
@@ -757,9 +777,22 @@ mod tests {
     }
 
     #[test]
-    fn extract_distinguishes_an_empty_ordered_stream_from_unordered_fallback() -> anyhow::Result<()>
-    {
-        for unordered in [false, true] {
+    fn extract_validates_the_results_cache_only_when_ordered_chunks_exist() -> anyhow::Result<()> {
+        let filename = format!("{ARCHIVE_ID}_0_1.jsonl");
+        for (body, expected_error) in [
+            (":".to_owned(), None),
+            (
+                r#"touch "$5/original""#.to_owned(),
+                Some("clp-s produced unordered output; the archive lacks log ordering"),
+            ),
+            (
+                format!(
+                    r#"touch "$5/{filename}"
+printf '{{"path":"%s"}}\n' "$5/{filename}""#
+                ),
+                Some("results-cache URI must name a database"),
+            ),
+        ] {
             let clp_home = tempfile::tempdir()?;
             let config = SpiderTaskExecutorConfig {
                 package: Package {
@@ -771,6 +804,10 @@ mod tests {
                     },
                     ..StreamOutput::default()
                 },
+                results_cache: ResultsCache {
+                    db_name: String::new(),
+                    ..ResultsCache::default()
+                },
                 ..SpiderTaskExecutorConfig::default()
             };
             let check_path = r#"test -d "$5"
@@ -778,11 +815,6 @@ case "$5" in
     */streams/.staging/42.19) ;;
     *) exit 1 ;;
 esac"#;
-            let body = if unordered {
-                r#"touch "$5/original""#
-            } else {
-                ":"
-            };
             install_stand_in(clp_home.path(), &format!("{check_path}\n{body}"))?;
 
             let runtime = tokio::runtime::Builder::new_current_thread().build()?;
@@ -793,18 +825,23 @@ esac"#;
                 target_chunk_size: None,
             };
             let result = extract(runtime.handle(), clp_home.path(), &config, 19, &input);
-            if unordered {
-                let error = result.expect_err("unordered decompression must not appear empty");
+            if let Some(expected_error) = expected_error {
                 assert_eq!(
-                    error.to_string(),
-                    "clp-s produced unordered output; the archive lacks log ordering"
+                    result.expect_err("extraction should fail").to_string(),
+                    expected_error
                 );
             } else {
                 result?;
             }
-            let root = clp_home.path().join("streams/.staging");
+            let streams_directory = clp_home.path().join("streams");
             assert_eq!(
-                fs::read_dir(root)?
+                fs::symlink_metadata(streams_directory.join(&filename))
+                    .expect_err("no chunk should be published")
+                    .kind(),
+                io::ErrorKind::NotFound
+            );
+            assert_eq!(
+                fs::read_dir(streams_directory.join(".staging"))?
                     .map(|entry| entry.map(|entry| entry.path()))
                     .collect::<io::Result<Vec<_>>>()?,
                 Vec::<PathBuf>::new()
