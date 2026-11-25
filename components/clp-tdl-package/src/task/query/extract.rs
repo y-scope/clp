@@ -692,38 +692,44 @@ mod tests {
     #[test]
     fn parse_all_builds_metadata_for_contiguous_chunks() -> anyhow::Result<()> {
         let staging_path = Path::new("/staging");
-        let first = format!("{ARCHIVE_ID}_0_2.jsonl");
-        let last = format!("{ARCHIVE_ID}_2_42.jsonl");
-        let batch = ChunkBatch::parse(
-            staging_path,
-            ARCHIVE_ID.parse()?,
-            &[staging_path.join(&first), staging_path.join(&last)],
-        )?;
-
-        assert_eq!(
-            batch
-                .replacement_models(Namespace::new("db", "streams"))
-                .map(|operation| operation.replacement)
-                .collect::<Vec<_>>(),
-            [
-                doc! {
-                    "_id": &first,
-                    "path": &first,
-                    "stream_id": ARCHIVE_ID,
-                    "begin_msg_ix": 0_i64,
-                    "end_msg_ix": 2_i64,
-                    "is_last_chunk": false,
-                },
-                doc! {
-                    "_id": &last,
-                    "path": &last,
-                    "stream_id": ARCHIVE_ID,
-                    "begin_msg_ix": 2_i64,
-                    "end_msg_ix": 42_i64,
-                    "is_last_chunk": true,
-                },
-            ]
-        );
+        let archive_id = ARCHIVE_ID.parse()?;
+        let cases: &[&[(i64, i64, bool)]] = &[
+            &[(0, 7, true)],
+            &[(0, 2, false), (2, 42, true)],
+            &[(0, 3, false), (3, 8, false), (8, 17, true)],
+        ];
+        for &expected in cases {
+            let filenames: Vec<_> = expected
+                .iter()
+                .map(|(begin, end, _)| format!("{ARCHIVE_ID}_{begin}_{end}.jsonl"))
+                .collect();
+            let paths: Vec<_> = filenames
+                .iter()
+                .map(|filename| staging_path.join(filename))
+                .collect();
+            let batch = ChunkBatch::parse(staging_path, archive_id, &paths)?;
+            let expected_documents: Vec<_> = filenames
+                .iter()
+                .zip(expected)
+                .map(|(filename, &(begin, end, is_last))| {
+                    doc! {
+                        "_id": filename,
+                        "path": filename,
+                        "stream_id": ARCHIVE_ID,
+                        "begin_msg_ix": begin,
+                        "end_msg_ix": end,
+                        "is_last_chunk": is_last,
+                    }
+                })
+                .collect();
+            assert_eq!(
+                batch
+                    .replacement_models(Namespace::new("db", "streams"))
+                    .map(|operation| operation.replacement)
+                    .collect::<Vec<_>>(),
+                expected_documents
+            );
+        }
         Ok(())
     }
 
