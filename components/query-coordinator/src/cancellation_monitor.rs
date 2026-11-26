@@ -13,20 +13,20 @@ use sqlx::MySqlPool;
 use tokio_util::sync::CancellationToken;
 
 use crate::Error;
-use crate::query_job_submitter::QueryJobSubmitter;
+use crate::spider_job_submitter::SpiderJobSubmitter;
 
 /// Processes the cancellation requests of query jobs in [`QueryJobStatus::CancelRequested`].
 ///
 /// # Type Parameters
 ///
 /// * `SubmitterType` - The type of the job submitter used to cancel Spider jobs.
-pub struct CancellationMonitor<SubmitterType: QueryJobSubmitter> {
+pub struct CancellationMonitor<SubmitterType: SpiderJobSubmitter> {
     db_pool: MySqlPool,
     job_submitter: SubmitterType,
     polling_interval: Duration,
 }
 
-impl<SubmitterType: QueryJobSubmitter> CancellationMonitor<SubmitterType> {
+impl<SubmitterType: SpiderJobSubmitter> CancellationMonitor<SubmitterType> {
     /// Factory function.
     ///
     /// # Returns
@@ -182,7 +182,7 @@ impl<SubmitterType: QueryJobSubmitter> CancellationMonitor<SubmitterType> {
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`QueryJobSubmitter::cancel_query_job`]'s return values on failure, except
+    /// * Forwards [`SpiderJobSubmitter::cancel_job`]'s return values on failure, except
     ///   [`Error::SpiderClient`] with [`ClientError::JobNotFound`], which indicates the Spider job
     ///   doesn't exist and fails the query job instead.
     /// * Forwards [`Self::transition_from_cancel_requested`]'s return values on failure.
@@ -193,7 +193,7 @@ impl<SubmitterType: QueryJobSubmitter> CancellationMonitor<SubmitterType> {
     ) -> Result<(), Error> {
         const SPIDER_JOB_NOT_FOUND_MESSAGE: &str = "The query job's Spider job was not found.";
 
-        match self.job_submitter.cancel_query_job(spider_job_id).await {
+        match self.job_submitter.cancel_job(spider_job_id).await {
             Ok(()) => {}
             Err(Error::SpiderClient(ClientError::JobNotFound)) => {
                 tracing::error!(

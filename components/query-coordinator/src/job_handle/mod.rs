@@ -14,22 +14,6 @@ use sqlx::MySqlPool;
 
 pub use self::query::QueryJobHandle;
 
-/// Metadata for an archive in a dataset.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ArchiveMetadata {
-    /// The archive's ID.
-    pub id: ArchiveId,
-
-    /// The archive's dataset.
-    pub dataset: DatasetName,
-
-    /// The archive's uncompressed size in bytes.
-    pub uncompressed_size: u64,
-
-    /// The archive's end timestamp in Unix epoch milliseconds.
-    pub end_timestamp: i64,
-}
-
 /// Options for a query job running in Spider.
 pub struct SpiderOption {
     pub poll_interval: Duration,
@@ -48,4 +32,20 @@ pub struct QueryJobHandleContext {
     pub db_config: Database,
     pub archive_selection_options: ArchiveSelectionOptions,
     pub spider_option: SpiderOption,
+}
+
+/// Metadata for an archive in a dataset.
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct ArchiveMetadata {
+    /// The archive's ID.
+    id: ArchiveId,
+
+    /// The archive's dataset.
+    dataset: DatasetName,
+
+    /// The archive's uncompressed size in bytes.
+    uncompressed_size: u64,
+
+    /// The archive's end timestamp in Unix epoch milliseconds.
+    end_timestamp: i64,
 }

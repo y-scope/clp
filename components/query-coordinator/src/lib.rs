@@ -1,9 +1,9 @@
 //! Coordination for CLP query jobs.
 
-pub mod cancellation_monitor;
+mod cancellation_monitor;
 pub mod coordination;
 mod error;
-pub mod job_handle;
-pub mod query_job_submitter;
+mod job_handle;
+mod spider_job_submitter;
 
 pub use error::Error;
