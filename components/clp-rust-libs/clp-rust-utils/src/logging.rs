@@ -6,6 +6,7 @@ use tracing_subscriber::fmt::writer::MakeWriterExt;
 use tracing_subscriber::{self};
 
 /// Opaque struct to hold the worker guards for the background log writers.
+///
 /// These guards must be held for the lifetime of the program to ensure logs are flushed.
 pub struct LoggerGuards {
     _stdout_guard: WorkerGuard,

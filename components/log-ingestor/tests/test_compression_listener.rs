@@ -117,7 +117,7 @@ async fn test_compression_listener() -> Result<()> {
     // Inspect submitted results and verify total count
     let mut submitted_buffers = shared.lock().await;
 
-    // There should be 3 submissions: The first two triggered by buffer size limit, the last one by
+    // There should be 3 submissions: the first two triggered by buffer size limit, the last one by
     // timeout.
     assert_eq!(submitted_buffers.len(), 3);
 

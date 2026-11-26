@@ -46,7 +46,7 @@ pub struct LogIngestorRecoveryContext {
     pub unfinished_compression_jobs: Vec<ClpCompressionJobContext>,
 
     /// A vector of contexts for all recoverable ingestion jobs in CLP DB. These ingestion jobs are
-    /// in either [`ClpIngestionJobStatus::Requested`] or [`ClpIngestionJobStatus::Running`]
+    /// in either the [`ClpIngestionJobStatus::Requested`] or [`ClpIngestionJobStatus::Running`]
     /// status, and can be resumed by creating an ingestion job instance with the context.
     pub recoverable_ingestion_jobs: Vec<ClpIngestionJobContext>,
 

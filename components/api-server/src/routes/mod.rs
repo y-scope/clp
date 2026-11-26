@@ -320,8 +320,8 @@ struct QueryResultsParams {
     raw_docs: bool,
 
     /// When `true`, results buffered in `MongoDB` are streamed sorted by timestamp descending;
-    /// otherwise, they're streamed in insertion order. Only applies to query jobs whose results
-    /// are buffered in `MongoDB`.
+    /// otherwise, they're streamed in insertion order. Only applies to query jobs with results
+    /// buffered in `MongoDB`.
     #[serde(default)]
     sorted: bool,
 }
