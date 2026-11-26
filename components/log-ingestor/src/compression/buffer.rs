@@ -15,6 +15,10 @@ pub struct CompressionBufferEntry {
 pub trait BufferSubmitter {
     /// Submits the buffered object metadata for processing.
     ///
+    /// # Parameters
+    ///
+    /// * `buffer` - The IDs of the buffered object metadata to submit.
+    ///
     /// # Returns:
     ///
     /// `Ok(())` on success.

@@ -24,6 +24,10 @@ pub trait Source {
 
     /// Checks an entry and extracts its path and size for partitioning.
     ///
+    /// # Parameters
+    ///
+    /// * `entry` - The discovered file or S3 object to check.
+    ///
     /// # Returns
     ///
     /// The entry's path or object key and its size in bytes on success.
