@@ -85,7 +85,7 @@ pub(super) fn extract(
         return Ok(());
     }
     let collection = runtime.block_on(prepare_metadata_collection(&config.results_cache))?;
-    publish_files(runtime, clp_home, config, &staging_path, &batch.chunks)?;
+    publish_files(runtime, clp_home, config, &batch)?;
     runtime.block_on(upsert_metadata(&collection, &batch))
 }
 
@@ -111,19 +111,20 @@ struct Chunk {
     is_last: bool,
 }
 
-/// An archive and its validated chunks.
+/// An archive's validated chunks and the staging directory they belong to.
 #[derive(Debug)]
-struct ChunkBatch {
+struct ChunkBatch<'staging_path> {
     archive_id: ArchiveId,
     chunks: Vec<Chunk>,
+    staging_path: &'staging_path Path,
 }
 
-impl ChunkBatch {
+impl<'staging_path> ChunkBatch<'staging_path> {
     /// Validates the filenames and contiguous ranges of a sequence of ordered chunks.
     ///
     /// # Returns
     ///
-    /// The archive ID and its validated chunks in emission order on success.
+    /// The archive's staging path and validated chunks in emission order on success.
     ///
     /// # Errors
     ///
@@ -135,7 +136,7 @@ impl ChunkBatch {
     ///   * The ranges do not form a contiguous sequence of positive-length ranges from index zero.
     /// * Forwards [`parse_chunk_index`]'s return values on failure.
     fn parse(
-        staging_path: &Path,
+        staging_path: &'staging_path Path,
         archive_id: ArchiveId,
         paths: &[PathBuf],
     ) -> anyhow::Result<Self> {
@@ -173,7 +174,11 @@ impl ChunkBatch {
             });
             expected_begin = end_msg_ix;
         }
-        Ok(Self { archive_id, chunks })
+        Ok(Self {
+            archive_id,
+            chunks,
+            staging_path,
+        })
     }
 
     /// # Returns
@@ -294,7 +299,7 @@ fn parse_chunk_index(index: &str, filename: &str) -> anyhow::Result<i64> {
     })
 }
 
-/// Publishes staged chunks to the filesystem or S3.
+/// Publishes a batch's validated chunks from its staging directory to the filesystem or S3.
 ///
 /// # Errors
 ///
@@ -308,10 +313,10 @@ fn publish_files(
     runtime: &tokio::runtime::Handle,
     clp_home: &Path,
     config: &SpiderTaskExecutorConfig,
-    staging_path: &Path,
-    chunks: &[Chunk],
+    batch: &ChunkBatch<'_>,
 ) -> anyhow::Result<()> {
-    for chunk in chunks {
+    let staging_path = batch.staging_path;
+    for chunk in &batch.chunks {
         let path = staging_path.join(&chunk.filename);
         let metadata = fs::symlink_metadata(&path).with_context(|| {
             format!(
@@ -328,7 +333,7 @@ fn publish_files(
     match &config.stream_output.storage {
         StreamOutputStorage::Fs { .. } => {
             let local_directory = config.abs_stream_output_staging(clp_home);
-            for chunk in chunks {
+            for chunk in &batch.chunks {
                 let source = staging_path.join(&chunk.filename);
                 let destination = local_directory.join(&chunk.filename);
                 fs::rename(&source, &destination).with_context(|| {
@@ -343,7 +348,7 @@ fn publish_files(
         StreamOutputStorage::S3 { s3_config, .. } => {
             let client = build_s3_client(runtime, s3_config);
             runtime.block_on(async {
-                for chunk in chunks {
+                for chunk in &batch.chunks {
                     let key = format!("{}{}", s3_config.key_prefix, chunk.filename);
                     upload_file_to_s3(
                         &client,
@@ -391,7 +396,7 @@ async fn prepare_metadata_collection(
 /// * Forwards [`Client::bulk_write`]'s return values on failure.
 async fn upsert_metadata(
     collection: &Collection<Document>,
-    batch: &ChunkBatch,
+    batch: &ChunkBatch<'_>,
 ) -> anyhow::Result<()> {
     const BATCH_SIZE: usize = 1_000;
 
@@ -963,13 +968,7 @@ esac"#;
         }
         let batch = ChunkBatch::parse(staging.path(), ARCHIVE_ID.parse()?, &paths)?;
         let runtime = tokio::runtime::Builder::new_current_thread().build()?;
-        publish_files(
-            runtime.handle(),
-            clp_home.path(),
-            &config,
-            staging.path(),
-            &batch.chunks,
-        )?;
+        publish_files(runtime.handle(), clp_home.path(), &config, &batch)?;
 
         for (path, filename) in paths.iter().zip(&filenames) {
             assert_eq!(fs::read_to_string(destination.join(filename))?, *filename);
@@ -1008,14 +1007,8 @@ esac"#;
 
         let batch = ChunkBatch::parse(staging.path(), ARCHIVE_ID.parse()?, &paths)?;
         let runtime = tokio::runtime::Builder::new_current_thread().build()?;
-        let error = publish_files(
-            runtime.handle(),
-            clp_home.path(),
-            &config,
-            staging.path(),
-            &batch.chunks,
-        )
-        .expect_err("a symlink is not a regular staged chunk");
+        let error = publish_files(runtime.handle(), clp_home.path(), &config, &batch)
+            .expect_err("a symlink is not a regular staged chunk");
 
         assert_eq!(
             error.to_string(),
