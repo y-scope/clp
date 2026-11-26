@@ -284,7 +284,7 @@ impl ClpDbIngestionConnector {
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`sqlx::query::Query::fetch_optional`]'s return values on failure.
+    /// * Forwards [`sqlx::query::QueryScalar::fetch_optional`]'s return values on failure.
     pub async fn get_job_status(
         &self,
         job_id: IngestionJobId,
@@ -339,8 +339,7 @@ impl ClpDbIngestionConnector {
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`sqlx::query::Query::fetch_all`]'s return values on failure when failing to
-    ///   fetch already-submitted compression jobs.
+    /// * Forwards [`sqlx::query::QueryAs::fetch_all`]'s return values on failure.
     async fn get_unfinished_compression_jobs(
         &self,
     ) -> anyhow::Result<Vec<ClpCompressionJobContext>> {
@@ -470,8 +469,7 @@ impl ClpDbIngestionConnector {
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`sqlx::query::Query::fetch_all`]'s return values on failure when fetching job
-    ///   metadata.
+    /// * Forwards [`sqlx::query::QueryAs::fetch_all`]'s return values on failure.
     async fn load_ingestion_jobs(
         &self,
     ) -> anyhow::Result<(Vec<ClpIngestionJobContext>, Vec<ClpIngestionJobContext>)> {
@@ -708,7 +706,7 @@ impl ClpIngestionState {
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`sqlx::query::Query::fetch_one`]'s return values on failure.
+    /// * Forwards [`sqlx::query::QueryScalar::fetch_one`]'s return values on failure.
     pub async fn get_job_status(&self) -> anyhow::Result<ClpIngestionJobStatus> {
         const QUERY: &str = formatcp!(
             r"SELECT `status` FROM `{table}` WHERE `id` = ?;",
@@ -735,7 +733,7 @@ impl ClpIngestionState {
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`sqlx::query::Query::fetch_all`]'s return values on failure.
+    /// * Forwards [`sqlx::query::QueryAs::fetch_all`]'s return values on failure.
     pub async fn get_buffered_object_metadata(
         &self,
     ) -> anyhow::Result<Vec<CompressionBufferEntry>> {
@@ -841,7 +839,7 @@ impl ClpIngestionState {
     /// Returns an error if:
     ///
     /// * [`anyhow::Error`] if the job is not in the running state.
-    /// * Forwards [`sqlx::query::Query::fetch_one`]'s return values on failure.
+    /// * Forwards [`sqlx::query::QueryScalar::fetch_one`]'s return values on failure.
     /// * Forwards [`sqlx::Transaction::commit`]'s return values on failure.
     async fn check_job_status_and_commit(
         &self,
@@ -921,6 +919,8 @@ impl IngestionJobState for ClpIngestionState {
     ///
     /// # Errors
     ///
+    /// Returns an error if:
+    ///
     /// * Forwards [`update_job_status`]'s return values on failure.
     async fn start(&self) -> anyhow::Result<()> {
         update_job_status(
@@ -939,6 +939,8 @@ impl IngestionJobState for ClpIngestionState {
     ///
     /// # Errors
     ///
+    /// Returns an error if:
+    ///
     /// * Forwards [`update_job_status`]'s return values on failure.
     async fn end(&self) -> anyhow::Result<()> {
         update_job_status(
@@ -954,10 +956,6 @@ impl IngestionJobState for ClpIngestionState {
     ///
     /// This method is idempotent. It returns success if the underlying job is already in the failed
     /// state. The previous error message will not be overwritten.
-    ///
-    /// # Errors
-    ///
-    /// * Forwards [`update_job_status`]'s return values on failure.
     async fn fail(&self, msg: String) {
         match update_job_status(
             self.db_pool.clone(),
@@ -986,9 +984,10 @@ impl S3ScannerState for ClpIngestionState {
     ///
     /// Returns an error if:
     ///
+    /// * [`anyhow::Error`] if updating the last ingested key affects no row of the S3 scanner
+    ///   state.
     /// * Forwards [`sqlx::Pool::begin`]'s return values on failure.
-    /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure when updating the last
-    ///   ingested key for the S3 scanner state.
+    /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     /// * Forwards [`Self::ingest_and_send`]'s return values on failure.
     async fn ingest(
         &self,
@@ -1166,7 +1165,7 @@ impl ClpCompressionState {
     /// Returns an error if:
     ///
     /// * [`anyhow::Error`] if one or more object metadata rows fail to be updated in the DB.
-    /// * Forwards [`Self::wait_for_compression_result`]'s return values.
+    /// * Forwards [`Self::wait_for_compression_result`]'s return values on failure.
     /// * Forwards [`sqlx::Pool::begin`]'s return values on failure.
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     /// * Forwards [`sqlx::Transaction::commit`]'s return values on failure.
@@ -1251,7 +1250,7 @@ impl ClpCompressionState {
     /// Returns an error if:
     ///
     /// * [`anyhow::Error`] if the fetched status is unknown.
-    /// * Forwards [`sqlx::query::Query::fetch_one`]'s return values on failure.
+    /// * Forwards [`sqlx::query::QueryAs::fetch_one`]'s return values on failure.
     async fn wait_for_compression_result(
         &self,
         id: CompressionJobId,
@@ -1453,7 +1452,7 @@ CREATE TABLE IF NOT EXISTS `{table}` (
 /// * [`anyhow::Error`] if the status transition is invalid (as indicated by
 ///   [`ClpIngestionJobStatus::is_valid_transition`]).
 /// * Forwards [`sqlx::Pool::begin`]'s return values on failure.
-/// * Forwards [`sqlx::query::Query::fetch_one`]'s return values on failure.
+/// * Forwards [`sqlx::query::QueryScalar::fetch_one`]'s return values on failure.
 /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
 /// * Forwards [`sqlx::Transaction::commit`]'s return values on failure.
 async fn update_job_status(

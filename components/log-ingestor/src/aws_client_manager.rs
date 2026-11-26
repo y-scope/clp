@@ -27,7 +27,7 @@ pub trait AwsClientManagerType<Client: AwsClientType>: Send + Sync + Clone + 'st
     ///
     /// A [`Client`] instance ready for use on success.
     ///
-    /// # Errors:
+    /// # Errors
     ///
     /// Returns an [`anyhow::Error`] on failure.
     async fn get(&self) -> Result<Client>;

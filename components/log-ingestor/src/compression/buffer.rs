@@ -19,7 +19,7 @@ pub trait BufferSubmitter {
     ///
     /// `Ok(())` on success.
     ///
-    /// # Errors:
+    /// # Errors
     ///
     /// Returns an [`anyhow::Error`] on failure.
     async fn submit(&self, buffer: &[S3ObjectMetadataId]) -> Result<()>;

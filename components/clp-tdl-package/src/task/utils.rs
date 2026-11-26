@@ -37,7 +37,8 @@ pub(super) fn clp_binary_path(clp_home: &Path, binary: &str) -> PathBuf {
 ///
 /// Returns an error if:
 ///
-/// * `auth` relies on the default AWS SDK credential provider chain, but the chain has no provider.
+/// * [`anyhow::Error`] if `auth` relies on the default AWS SDK credential provider chain, but the
+///   chain has no provider.
 /// * Forwards [`ProvideCredentials::provide_credentials`]'s return values on failure.
 pub(super) fn s3_credential_env(
     runtime: &tokio::runtime::Handle,
@@ -144,7 +145,7 @@ pub(super) async fn upload_file_to_s3(
 ///
 /// Returns an error if:
 ///
-/// * Forwards [`std::env::var`]'s return values if either variable is unset or not valid Unicode.
+/// * Forwards [`std::env::var`]'s return values on failure.
 pub(super) fn db_credentials_from_env() -> anyhow::Result<credentials::Database> {
     const CLP_DB_USER_ENV_VAR: &str = "CLP_DB_USER";
     const CLP_DB_PASS_ENV_VAR: &str = "CLP_DB_PASS";

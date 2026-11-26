@@ -197,9 +197,9 @@ impl WebuiClient {
     ///
     /// * [`ClientError::DatasetNotFound`] if, for CLP-S, any of `datasets` doesn't exist. The first
     ///   missing dataset in `datasets` is reported.
-    /// * Forwards [`sqlx::query::QueryAs::fetch_one`]'s return values on any other failure.
-    /// * Forwards [`sqlx::query::QueryScalar::fetch_all`]'s return values if looking up the missing
-    ///   dataset fails.
+    /// * Forwards [`sqlx::query::QueryAs::fetch_one`]'s return values on failure, except when the
+    ///   failure is caused by a missing dataset.
+    /// * Forwards [`sqlx::query::QueryScalar::fetch_all`]'s return values on failure.
     pub async fn get_time_range(
         &self,
         datasets: &[DatasetName],
@@ -370,9 +370,9 @@ impl WebuiClient {
     ///
     /// * [`ClientError::DatasetNotFound`] if, for CLP-S, any of `datasets` doesn't exist. The first
     ///   missing dataset in `datasets` is reported.
-    /// * Forwards [`sqlx::query::QueryAs::fetch_optional`]'s return values on any other failure.
-    /// * Forwards [`sqlx::query::QueryScalar::fetch_all`]'s return values if looking up the missing
-    ///   dataset fails.
+    /// * Forwards [`sqlx::query::QueryAs::fetch_optional`]'s return values on failure, except when
+    ///   the failure is caused by a missing dataset.
+    /// * Forwards [`sqlx::query::QueryScalar::fetch_all`]'s return values on failure.
     pub async fn get_query_speed(
         &self,
         datasets: &[DatasetName],

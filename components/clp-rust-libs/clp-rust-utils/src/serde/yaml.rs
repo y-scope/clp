@@ -11,7 +11,7 @@ use crate::Error;
 ///
 /// # Errors
 ///
-/// Returns an [`Error`] if:
+/// Returns an error if:
 ///
 /// * Forwards [`std::fs::File::open`]'s return values on failure.
 /// * Forwards [`yaml_serde::from_reader`]'s return values on failure.

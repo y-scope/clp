@@ -24,11 +24,13 @@ use non_empty_string::NonEmptyString;
 ///
 /// # Errors
 ///
+/// Returns an error if:
+///
 /// * [`anyhow::Error`] if the request returns an empty object key.
 /// * Forwards
 ///   [`aws_sdk_s3::operation::list_objects_v2::builders::ListObjectsV2FluentBuilder::send`]'s
 ///   return values on failure.
-/// * Forwards [`i64::try_into`]'s return values when failing to convert object size to [`u64`].
+/// * Forwards [`i64::try_into`]'s return values on failure.
 /// * Forwards `page_callback`'s return values on failure.
 pub async fn scan_prefix<
     CallbackType: AsyncFnMut(Vec<ObjectMetadata>) -> Result<(bool, NonEmptyString)>,

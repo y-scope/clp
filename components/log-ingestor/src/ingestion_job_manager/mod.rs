@@ -171,7 +171,7 @@ impl IngestionJobManagerState {
     ///
     /// * [`Error::JobNotFound`] if the given job ID does not exist.
     /// * Forwards [`ClpIngestionJobContext::shutdown`]'s return values on failure.
-    /// * Forwards [`ClpDbIngestionConnector::get_job_status`]' return values on failure.
+    /// * Forwards [`ClpDbIngestionConnector::get_job_status`]'s return values on failure.
     /// * Forwards [`ClpDbIngestionConnector::try_fail`]'s return values on failure.
     pub async fn shutdown_and_remove_job_instance(
         &self,

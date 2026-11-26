@@ -16,7 +16,7 @@ use clp_rust_utils::clp_config::package::config::SpiderTaskExecutorConfig;
 ///
 /// Returns an error if:
 ///
-/// * Forward [`tokio::runtime::Builder::build`]'s return values on failure.
+/// * Forwards [`tokio::runtime::Builder::build`]'s return values on failure.
 pub fn init_runtime() -> anyhow::Result<()> {
     if TOKIO_RUNTIME.get().is_some() {
         return Ok(());
@@ -160,9 +160,8 @@ static SPIDER_TASK_EXECUTOR_CONFIG: OnceLock<SpiderTaskExecutorConfig> = OnceLoc
 ///
 /// Returns an error if:
 ///
-/// * Forwards [`std::env::var`]'s return values on failure if failed to read the env var.
-/// * Forwards [`clp_rust_utils::serde::yaml::from_path`]'s return values on failure if failed to
-///   load the executor config.
+/// * Forwards [`std::env::var`]'s return values on failure.
+/// * Forwards [`clp_rust_utils::serde::yaml::from_path`]'s return values on failure.
 fn load_spider_task_executor_config_from_env() -> anyhow::Result<SpiderTaskExecutorConfig> {
     let path = std::env::var(CLP_CONFIG_PATH_ENV_VAR).with_context(|| {
         format!("failed to read the `{CLP_CONFIG_PATH_ENV_VAR}` environment variable")

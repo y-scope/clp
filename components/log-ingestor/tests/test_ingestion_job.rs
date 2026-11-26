@@ -122,6 +122,8 @@ impl S3ScannerState for S3ScannerTestState {
 ///
 /// # Errors
 ///
+/// Returns an error if:
+///
 /// * Forwards [`test_utils::create_s3_objects`]'s return values on failure.
 pub async fn upload_noise_objects(
     s3_client: aws_sdk_s3::Client,

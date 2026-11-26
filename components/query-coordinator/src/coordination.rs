@@ -84,7 +84,7 @@ impl Coordinator {
     ///
     /// * [`Error::InvalidConfiguration`] if the query coordinator configuration is invalid.
     /// * [`Error::InvalidEndpoint`] if the Spider host and port do not form a valid endpoint.
-    /// * Forwards [`SpiderClient::builder`]'s connection return values on failure.
+    /// * Forwards [`spider_client::SpiderClientBuilder::connect`]'s return values on failure.
     /// * Forwards [`ExternalResourceGroupCredentials::from_env`]'s return values on failure.
     /// * Forwards [`SpiderClient::add_or_verify_resource_group`]'s return values on failure.
     /// * Forwards [`CancellationMonitor::sweep_unsubmitted_jobs`]'s return values on failure.

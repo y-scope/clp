@@ -16,7 +16,11 @@ use serde_json::Value;
 ///
 /// # Errors
 ///
-/// Returns an error if Zstandard compression or `MessagePack` conversion fails.
+/// Returns an error if:
+///
+/// * Forwards [`str::parse`]'s return values on failure.
+/// * Forwards [`ZstdMsgpack::serialize`]'s return values on failure.
+/// * Forwards [`ZstdMsgpack::deserialize`]'s return values on failure.
 #[test]
 fn test_clp_io_config_serialization() -> Result<(), Box<dyn Error>> {
     let s3_config = S3Config {
