@@ -14,110 +14,6 @@ use crate::ingestion_job::IngestionJobState;
 use crate::ingestion_job::S3ScannerState;
 use crate::ingestion_job::scan_prefix;
 
-/// Represents a S3 scanner task that periodically scans a given prefix under the bucket to fetch
-/// object metadata for newly created objects.
-///
-/// # Type Parameters
-///
-/// * [`S3ClientManager`]: The type of the AWS S3 client manager.
-/// * [`State`]: The type that implements [`IngestionJobState`] + [`S3ScannerState`] for managing S3
-///   scanner states.
-struct Task<
-    S3ClientManager: AwsClientManagerType<Client>,
-    State: IngestionJobState + S3ScannerState,
-> {
-    s3_client_manager: S3ClientManager,
-    scanning_interval: Duration,
-    config: S3ScannerConfig,
-    start_after: Option<NonEmptyString>,
-    state: State,
-}
-
-impl<S3ClientManager: AwsClientManagerType<Client>, State: IngestionJobState + S3ScannerState>
-    Task<S3ClientManager, State>
-{
-    /// Runs the S3 scanner task to scan the given bucket.
-    ///
-    /// This is a wrapper of [`Self::scan_until_exhausted`] that supports cancellation via the
-    /// provided cancellation token.
-    ///
-    /// # Returns
-    ///
-    /// `Ok(())` on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * Forwards [`Self::scan_until_exhausted`]'s return values on failure.
-    pub async fn run(mut self, cancel_token: CancellationToken) -> Result<()> {
-        loop {
-            select! {
-                // Cancellation requested.
-                () = cancel_token.cancelled() => {
-                    return Ok(());
-                }
-
-                // Scanner execution
-                result = self.scan_until_exhausted() => {
-                    result?;
-                }
-            }
-
-            // Sleep for the configured interval or until cancellation is requested.
-            select! {
-                () = cancel_token.cancelled() => {
-                    return Ok(());
-                }
-                () = self.sleep() => {}
-            }
-        }
-    }
-
-    /// Scans the configured S3 bucket and prefix until all pages are exhausted.
-    ///
-    /// # Note
-    ///
-    /// The scanner uses the `start_after` parameter to keep track of the last scanned object key,
-    /// meaning that it requires the keys of newly inserted objects to be lexicographically larger
-    /// than the last successfully ingested key.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * Forwards [`AwsClientManagerType::get`]'s return values on failure.
-    /// * Forwards [`scan_prefix`]'s return values on failure.
-    pub async fn scan_until_exhausted(&mut self) -> Result<()> {
-        let client = self.s3_client_manager.get().await?;
-        let state = self.state.clone();
-        let last_scanned_key = scan_prefix(
-            &client,
-            &self.config.base.bucket_name,
-            &self.config.base.key_prefix,
-            &self.start_after,
-            async move |page: Vec<ObjectMetadata>| -> Result<(bool, NonEmptyString)> {
-                let last_ingested_key =
-                    page.last().expect("`page` should not be empty").key.clone();
-                state.ingest(page, last_ingested_key.as_str()).await?;
-                Ok((true, last_ingested_key))
-            },
-        )
-        .await?;
-        if last_scanned_key.is_some() {
-            // NOTE: We should only update the last scanned key if the current scan results in new
-            // objects ingested.
-            self.start_after = last_scanned_key;
-        }
-        Ok(())
-    }
-
-    /// Sleeps for the configured scanning interval.
-    pub async fn sleep(&self) {
-        tokio::time::sleep(self.scanning_interval).await;
-    }
-}
-
 /// Represents a S3 scanner job that manages the lifecycle of a S3 scanner task.
 ///
 /// # Type Parameters
@@ -225,5 +121,109 @@ impl<State: IngestionJobState + S3ScannerState> S3Scanner<State> {
     #[must_use]
     pub const fn get_id(&self) -> IngestionJobId {
         self.id
+    }
+}
+
+/// Represents a S3 scanner task that periodically scans a given prefix under the bucket to fetch
+/// object metadata for newly created objects.
+///
+/// # Type Parameters
+///
+/// * [`S3ClientManager`]: The type of the AWS S3 client manager.
+/// * [`State`]: The type that implements [`IngestionJobState`] + [`S3ScannerState`] for managing S3
+///   scanner states.
+struct Task<
+    S3ClientManager: AwsClientManagerType<Client>,
+    State: IngestionJobState + S3ScannerState,
+> {
+    s3_client_manager: S3ClientManager,
+    scanning_interval: Duration,
+    config: S3ScannerConfig,
+    start_after: Option<NonEmptyString>,
+    state: State,
+}
+
+impl<S3ClientManager: AwsClientManagerType<Client>, State: IngestionJobState + S3ScannerState>
+    Task<S3ClientManager, State>
+{
+    /// Runs the S3 scanner task to scan the given bucket.
+    ///
+    /// This is a wrapper of [`Self::scan_until_exhausted`] that supports cancellation via the
+    /// provided cancellation token.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`Self::scan_until_exhausted`]'s return values on failure.
+    pub async fn run(mut self, cancel_token: CancellationToken) -> Result<()> {
+        loop {
+            select! {
+                // Cancellation requested.
+                () = cancel_token.cancelled() => {
+                    return Ok(());
+                }
+
+                // Scanner execution
+                result = self.scan_until_exhausted() => {
+                    result?;
+                }
+            }
+
+            // Sleep for the configured interval or until cancellation is requested.
+            select! {
+                () = cancel_token.cancelled() => {
+                    return Ok(());
+                }
+                () = self.sleep() => {}
+            }
+        }
+    }
+
+    /// Scans the configured S3 bucket and prefix until all pages are exhausted.
+    ///
+    /// # Note
+    ///
+    /// The scanner uses the `start_after` parameter to keep track of the last scanned object key,
+    /// meaning that it requires the keys of newly inserted objects to be lexicographically larger
+    /// than the last successfully ingested key.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`AwsClientManagerType::get`]'s return values on failure.
+    /// * Forwards [`scan_prefix`]'s return values on failure.
+    pub async fn scan_until_exhausted(&mut self) -> Result<()> {
+        let client = self.s3_client_manager.get().await?;
+        let state = self.state.clone();
+        let last_scanned_key = scan_prefix(
+            &client,
+            &self.config.base.bucket_name,
+            &self.config.base.key_prefix,
+            &self.start_after,
+            async move |page: Vec<ObjectMetadata>| -> Result<(bool, NonEmptyString)> {
+                let last_ingested_key =
+                    page.last().expect("`page` should not be empty").key.clone();
+                state.ingest(page, last_ingested_key.as_str()).await?;
+                Ok((true, last_ingested_key))
+            },
+        )
+        .await?;
+        if last_scanned_key.is_some() {
+            // NOTE: We should only update the last scanned key if the current scan results in new
+            // objects ingested.
+            self.start_after = last_scanned_key;
+        }
+        Ok(())
+    }
+
+    /// Sleeps for the configured scanning interval.
+    pub async fn sleep(&self) {
+        tokio::time::sleep(self.scanning_interval).await;
     }
 }

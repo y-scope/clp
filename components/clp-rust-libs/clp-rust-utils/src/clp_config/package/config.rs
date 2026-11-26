@@ -209,17 +209,6 @@ pub struct Database {
     pub table_prefix: String,
 }
 
-impl Default for Database {
-    fn default() -> Self {
-        Self {
-            host: "localhost".to_owned(),
-            port: 3306,
-            names: ClpDbNames::default(),
-            table_prefix: CLP_METADATA_TABLE_PREFIX.to_owned(),
-        }
-    }
-}
-
 impl Database {
     /// # Returns
     ///
@@ -268,6 +257,17 @@ impl Database {
     #[must_use]
     pub fn unscoped_files_table_name(&self) -> String {
         format!("{}files", self.table_prefix)
+    }
+}
+
+impl Default for Database {
+    fn default() -> Self {
+        Self {
+            host: "localhost".to_owned(),
+            port: 3306,
+            names: ClpDbNames::default(),
+            table_prefix: CLP_METADATA_TABLE_PREFIX.to_owned(),
+        }
     }
 }
 

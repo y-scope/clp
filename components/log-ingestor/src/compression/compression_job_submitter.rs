@@ -20,26 +20,6 @@ pub struct CompressionJobSubmitter {
     state: ClpCompressionState,
 }
 
-#[async_trait]
-impl BufferSubmitter for CompressionJobSubmitter {
-    async fn submit(&self, buffer: &[S3ObjectMetadataId]) -> Result<()> {
-        let mut io_config = self.io_config_template.clone();
-        match &mut io_config.input {
-            InputConfig::S3ObjectMetadataInputConfig { config } => {
-                config.s3_object_metadata_ids = buffer.to_vec();
-            }
-            InputConfig::FsInputConfig { .. } | InputConfig::S3InputConfig { .. } => {
-                unreachable!("log-ingestor compression only supports `S3ObjectMetadataInputConfig`")
-            }
-        }
-        let state = self.state.clone();
-        tokio::spawn(submit_clp_compression_job_and_wait_for_completion(
-            state, io_config,
-        ));
-        Ok(())
-    }
-}
-
 impl CompressionJobSubmitter {
     /// Factory function.
     ///
@@ -79,6 +59,26 @@ impl CompressionJobSubmitter {
             state: clp_compression_state,
             io_config_template,
         }
+    }
+}
+
+#[async_trait]
+impl BufferSubmitter for CompressionJobSubmitter {
+    async fn submit(&self, buffer: &[S3ObjectMetadataId]) -> Result<()> {
+        let mut io_config = self.io_config_template.clone();
+        match &mut io_config.input {
+            InputConfig::S3ObjectMetadataInputConfig { config } => {
+                config.s3_object_metadata_ids = buffer.to_vec();
+            }
+            InputConfig::FsInputConfig { .. } | InputConfig::S3InputConfig { .. } => {
+                unreachable!("log-ingestor compression only supports `S3ObjectMetadataInputConfig`")
+            }
+        }
+        let state = self.state.clone();
+        tokio::spawn(submit_clp_compression_job_and_wait_for_completion(
+            state, io_config,
+        ));
+        Ok(())
     }
 }
 

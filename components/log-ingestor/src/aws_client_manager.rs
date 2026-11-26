@@ -39,13 +39,6 @@ pub struct SqsClientWrapper {
     client: SqsClient,
 }
 
-#[async_trait]
-impl AwsClientManagerType<SqsClient> for SqsClientWrapper {
-    async fn get(&self) -> Result<SqsClient> {
-        Ok(self.client.clone())
-    }
-}
-
 impl SqsClientWrapper {
     #[must_use]
     pub const fn from(client: SqsClient) -> Self {
@@ -59,17 +52,17 @@ impl SqsClientWrapper {
     }
 }
 
+#[async_trait]
+impl AwsClientManagerType<SqsClient> for SqsClientWrapper {
+    async fn get(&self) -> Result<SqsClient> {
+        Ok(self.client.clone())
+    }
+}
+
 /// A simple wrapper around an `S3Client` that implements the `AwsClientManagerType` trait.
 #[derive(Clone)]
 pub struct S3ClientWrapper {
     client: S3Client,
-}
-
-#[async_trait]
-impl AwsClientManagerType<S3Client> for S3ClientWrapper {
-    async fn get(&self) -> Result<S3Client> {
-        Ok(self.client.clone())
-    }
 }
 
 impl S3ClientWrapper {
@@ -87,5 +80,12 @@ impl S3ClientWrapper {
         let s3_client =
             clp_rust_utils::s3::create_new_client(region_str, endpoint_url, aws_auth).await;
         Self::from(s3_client)
+    }
+}
+
+#[async_trait]
+impl AwsClientManagerType<S3Client> for S3ClientWrapper {
+    async fn get(&self) -> Result<S3Client> {
+        Ok(self.client.clone())
     }
 }

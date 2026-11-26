@@ -17,6 +17,117 @@ use crate::ingestion_job::IngestionJobId;
 use crate::ingestion_job::IngestionJobState;
 use crate::ingestion_job::SqsListenerState;
 
+/// Represents a SQS listener job that manages the lifecycle of a SQS listener task.
+///
+/// # Type Parameters
+///
+/// * [`State`]: The type that implements [`IngestionJobState`] and [`SqsListenerState`] for
+///   managing SQS listener states.
+pub struct SqsListener<State: IngestionJobState + SqsListenerState> {
+    id: IngestionJobId,
+    task_handles: Vec<TaskHandle>,
+    state: State,
+}
+
+impl<State: IngestionJobState + SqsListenerState> SqsListener<State> {
+    /// Creates and spawns a new [`SqsListener`] backed by a [`Task`].
+    ///
+    /// This function spawns a series of [`Task`]. Each spawned task will listen to SQS messages,
+    /// extract relevant S3 object metadata, and ingest the metadata into the provided state.
+    ///
+    /// # Type parameters
+    ///
+    /// * [`SqsClientManager`]: The type of the AWS SQS client manager.
+    ///
+    /// # Returns
+    ///
+    /// A newly created instance of [`SqsListener`].
+    ///
+    /// # Panics
+    ///
+    /// Panics if the number of concurrent listener tasks is not a positive integer.
+    ///
+    /// This method does not perform full configuration validation. It assumes the provided
+    /// configuration has already been validated by an upper-layer caller. In particular, enforcing
+    /// domain constraints—such as upper bounds on the number of concurrent listener tasks—is the
+    /// responsibility of the caller.
+    pub fn spawn<SqsClientManager: AwsClientManagerType<Client>>(
+        id: IngestionJobId,
+        sqs_client_manager: &SqsClientManager,
+        config: &ValidatedSqsListenerConfig,
+        state: State,
+    ) -> Self {
+        let num_tasks = usize::from(config.get().num_concurrent_listener_tasks);
+        let mut task_handles = Vec::with_capacity(num_tasks);
+        for task_id in 0..num_tasks {
+            let task = Task {
+                sqs_client_manager: sqs_client_manager.clone(),
+                config: config.clone(),
+                job_id: id,
+                id: TaskId::from(task_id),
+                state: state.clone(),
+            };
+            let task_handle = TaskHandle::spawn(task, id, state.clone());
+            task_handles.push(task_handle);
+            tracing::info!(job_id = ? id, task_id = ? task_id, "Spawned SQS listener task.");
+        }
+
+        Self {
+            id,
+            task_handles,
+            state,
+        }
+    }
+
+    /// Shuts down and waits for the underlying tasks to complete.
+    pub async fn shutdown_and_join(self) {
+        for task_handle in &self.task_handles {
+            task_handle.cancel_token.cancel();
+        }
+
+        for task_handle in self.task_handles {
+            let task_id = task_handle.task_id;
+            match task_handle.join_handle.await {
+                Ok(Ok(())) => {
+                    tracing::info!(
+                        job_id = ? self.id,
+                        task_id = ? task_id,
+                        "SQS listener task completed successfully."
+                    );
+                }
+                Ok(Err(_)) => {
+                    // We don't need to log the error here because the underlying task will log it.
+                    tracing::warn!(
+                        job_id = ? self.id,
+                        task_id = ? task_id,
+                        "SQS listener task completed with an error."
+                    );
+                }
+                Err(err) => {
+                    tracing::warn!(
+                        error = ? err,
+                        job_id = ? self.id,
+                        task_id = ? task_id,
+                        "SQS listener task panicked."
+                    );
+                    self.state
+                        .fail(format!("SQS listener task (ID={task_id}) panicked: {err}"))
+                        .await;
+                }
+            }
+        }
+        tracing::info!(job_id = ? self.id, "SQS listener job shutdown complete.");
+    }
+
+    /// # Returns
+    ///
+    /// The ID of this listener.
+    #[must_use]
+    pub const fn get_id(&self) -> IngestionJobId {
+        self.id
+    }
+}
+
 type TaskId = usize;
 
 /// Represents a SQS listener task that listens to SQS messages and extracts S3 object metadata.
@@ -277,116 +388,5 @@ impl TaskHandle {
             cancel_token,
             join_handle,
         }
-    }
-}
-
-/// Represents a SQS listener job that manages the lifecycle of a SQS listener task.
-///
-/// # Type Parameters
-///
-/// * [`State`]: The type that implements [`IngestionJobState`] and [`SqsListenerState`] for
-///   managing SQS listener states.
-pub struct SqsListener<State: IngestionJobState + SqsListenerState> {
-    id: IngestionJobId,
-    task_handles: Vec<TaskHandle>,
-    state: State,
-}
-
-impl<State: IngestionJobState + SqsListenerState> SqsListener<State> {
-    /// Creates and spawns a new [`SqsListener`] backed by a [`Task`].
-    ///
-    /// This function spawns a series of [`Task`]. Each spawned task will listen to SQS messages,
-    /// extract relevant S3 object metadata, and ingest the metadata into the provided state.
-    ///
-    /// # Type parameters
-    ///
-    /// * [`SqsClientManager`]: The type of the AWS SQS client manager.
-    ///
-    /// # Returns
-    ///
-    /// A newly created instance of [`SqsListener`].
-    ///
-    /// # Panics
-    ///
-    /// Panics if the number of concurrent listener tasks is not a positive integer.
-    ///
-    /// This method does not perform full configuration validation. It assumes the provided
-    /// configuration has already been validated by an upper-layer caller. In particular, enforcing
-    /// domain constraints—such as upper bounds on the number of concurrent listener tasks—is the
-    /// responsibility of the caller.
-    pub fn spawn<SqsClientManager: AwsClientManagerType<Client>>(
-        id: IngestionJobId,
-        sqs_client_manager: &SqsClientManager,
-        config: &ValidatedSqsListenerConfig,
-        state: State,
-    ) -> Self {
-        let num_tasks = usize::from(config.get().num_concurrent_listener_tasks);
-        let mut task_handles = Vec::with_capacity(num_tasks);
-        for task_id in 0..num_tasks {
-            let task = Task {
-                sqs_client_manager: sqs_client_manager.clone(),
-                config: config.clone(),
-                job_id: id,
-                id: TaskId::from(task_id),
-                state: state.clone(),
-            };
-            let task_handle = TaskHandle::spawn(task, id, state.clone());
-            task_handles.push(task_handle);
-            tracing::info!(job_id = ? id, task_id = ? task_id, "Spawned SQS listener task.");
-        }
-
-        Self {
-            id,
-            task_handles,
-            state,
-        }
-    }
-
-    /// Shuts down and waits for the underlying tasks to complete.
-    pub async fn shutdown_and_join(self) {
-        for task_handle in &self.task_handles {
-            task_handle.cancel_token.cancel();
-        }
-
-        for task_handle in self.task_handles {
-            let task_id = task_handle.task_id;
-            match task_handle.join_handle.await {
-                Ok(Ok(())) => {
-                    tracing::info!(
-                        job_id = ? self.id,
-                        task_id = ? task_id,
-                        "SQS listener task completed successfully."
-                    );
-                }
-                Ok(Err(_)) => {
-                    // We don't need to log the error here because the underlying task will log it.
-                    tracing::warn!(
-                        job_id = ? self.id,
-                        task_id = ? task_id,
-                        "SQS listener task completed with an error."
-                    );
-                }
-                Err(err) => {
-                    tracing::warn!(
-                        error = ? err,
-                        job_id = ? self.id,
-                        task_id = ? task_id,
-                        "SQS listener task panicked."
-                    );
-                    self.state
-                        .fail(format!("SQS listener task (ID={task_id}) panicked: {err}"))
-                        .await;
-                }
-            }
-        }
-        tracing::info!(job_id = ? self.id, "SQS listener job shutdown complete.");
-    }
-
-    /// # Returns
-    ///
-    /// The ID of this listener.
-    #[must_use]
-    pub const fn get_id(&self) -> IngestionJobId {
-        self.id
     }
 }
