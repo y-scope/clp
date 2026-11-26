@@ -333,6 +333,10 @@ mod tests {
     const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
 
     /// A stream of repeated records backed by one borrowed record.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `'record` - The lifetime of the borrowed record.
     struct RepeatedRecords<'record> {
         record: &'record [u8],
         unread: &'record [u8],

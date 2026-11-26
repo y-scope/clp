@@ -23,9 +23,9 @@ type TaskId = usize;
 ///
 /// # Type Parameters
 ///
-/// * [`SqsClientManager`]: The type of the AWS SQS client manager.
-/// * [`State`]: The type that implements [`IngestionJobState`] and [`SqsListenerState`] for
-///   managing SQS listener states.
+/// * `SqsClientManager` - The type of the AWS SQS client manager.
+/// * `State` - The type that implements [`IngestionJobState`] and [`SqsListenerState`] for managing
+///   SQS listener states.
 struct Task<
     SqsClientManager: AwsClientManagerType<Client>,
     State: IngestionJobState + SqsListenerState,
@@ -238,6 +238,12 @@ struct TaskHandle {
 impl TaskHandle {
     /// Spawns the given task and returns a handle to manage its lifecycle.
     ///
+    /// # Type Parameters
+    ///
+    /// * `SqsClientManager` - The type of the AWS SQS client manager.
+    /// * `State` - The type that implements [`IngestionJobState`] and [`SqsListenerState`] for
+    ///   managing SQS listener states.
+    ///
     /// # Returns
     ///
     /// A handle to the spawned task.
@@ -284,8 +290,8 @@ impl TaskHandle {
 ///
 /// # Type Parameters
 ///
-/// * [`State`]: The type that implements [`IngestionJobState`] and [`SqsListenerState`] for
-///   managing SQS listener states.
+/// * `State` - The type that implements [`IngestionJobState`] and [`SqsListenerState`] for managing
+///   SQS listener states.
 pub struct SqsListener<State: IngestionJobState + SqsListenerState> {
     id: IngestionJobId,
     task_handles: Vec<TaskHandle>,
@@ -298,9 +304,9 @@ impl<State: IngestionJobState + SqsListenerState> SqsListener<State> {
     /// This function spawns a series of [`Task`]. Each spawned task will listen to SQS messages,
     /// extract relevant S3 object metadata, and ingest the metadata into the provided state.
     ///
-    /// # Type parameters
+    /// # Type Parameters
     ///
-    /// * [`SqsClientManager`]: The type of the AWS SQS client manager.
+    /// * `SqsClientManager` - The type of the AWS SQS client manager.
     ///
     /// # Returns
     ///

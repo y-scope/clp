@@ -19,8 +19,8 @@ use crate::ingestion_job::scan_prefix;
 ///
 /// # Type Parameters
 ///
-/// * [`S3ClientManager`]: The type of the AWS S3 client manager.
-/// * [`State`]: The type that implements [`IngestionJobState`] + [`S3ScannerState`] for managing S3
+/// * `S3ClientManager` - The type of the AWS S3 client manager.
+/// * `State` - The type that implements [`IngestionJobState`] + [`S3ScannerState`] for managing S3
 ///   scanner states.
 struct Task<
     S3ClientManager: AwsClientManagerType<Client>,
@@ -122,7 +122,7 @@ impl<S3ClientManager: AwsClientManagerType<Client>, State: IngestionJobState + S
 ///
 /// # Type Parameters
 ///
-/// * [`State`]: The type that implements [`IngestionJobState`] + [`S3ScannerState`] for managing S3
+/// * `State` - The type that implements [`IngestionJobState`] + [`S3ScannerState`] for managing S3
 ///   scanner states.
 pub struct S3Scanner<State: IngestionJobState + S3ScannerState> {
     id: IngestionJobId,
@@ -137,9 +137,9 @@ impl<State: IngestionJobState + S3ScannerState> S3Scanner<State> {
     /// This function spawns a [`Task`]. The spawned task will periodically scan the configured S3
     /// bucket and prefix for new objects and ingest their metadata into the provided state.
     ///
-    /// # Type parameters
+    /// # Type Parameters
     ///
-    /// * [`S3ClientManager`]: The type of the AWS S3 client manager.
+    /// * `S3ClientManager` - The type of the AWS S3 client manager.
     ///
     /// # Returns
     ///

@@ -260,6 +260,7 @@ async fn compression_metadata(
 ///
 /// # Type Parameters
 ///
+/// * `'de` - The lifetime of the input data that the deserializer borrows from.
 /// * `DeserializerType` - The type of the deserializer to read the list from.
 ///
 /// # Returns

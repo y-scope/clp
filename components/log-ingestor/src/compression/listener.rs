@@ -15,7 +15,8 @@ use crate::compression::CompressionBufferEntry;
 /// when a certain size threshold is reached or on timeout.
 ///
 /// # Type Parameters
-/// * `Submitter`: A type that implements the [`BufferSubmitter`] trait.
+///
+/// * `Submitter` - A type that implements the [`BufferSubmitter`] trait.
 struct ListenerTask<Submitter: BufferSubmitter> {
     buffer: Buffer<Submitter>,
     timeout: Duration,
@@ -114,9 +115,9 @@ impl Listener {
     /// [`CompressionBufferEntry`] values and call the supplied `Submitter` when either the
     /// buffer's threshold is reached or the configured `timeout` fires.
     ///
-    /// # Type parameters
+    /// # Type Parameters
     ///
-    /// * [`Submitter`]: A type that implements the [`BufferSubmitter`] trait to submit buffered
+    /// * `Submitter` - A type that implements the [`BufferSubmitter`] trait to submit buffered
     ///   object metadata.
     ///
     /// # Returns

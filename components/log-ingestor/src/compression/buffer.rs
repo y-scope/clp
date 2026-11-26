@@ -27,9 +27,9 @@ pub trait BufferSubmitter {
 
 /// A buffer that accumulates object metadata IDs and submits when the size threshold is reached.
 ///
-/// # Type Parameters:
+/// # Type Parameters
 ///
-/// * [`Submitter`]: A type that implements the [`BufferSubmitter`] trait for submitting buffered
+/// * `Submitter` - A type that implements the [`BufferSubmitter`] trait for submitting buffered
 ///   data.
 pub struct Buffer<Submitter: BufferSubmitter> {
     submitter: Submitter,
@@ -43,7 +43,7 @@ impl<Submitter: BufferSubmitter> Buffer<Submitter> {
     ///
     /// # Returns
     ///
-    /// A newly created [`Buffer`] with the given submitter of type `T` and size threshold.
+    /// A newly created [`Buffer`] with the given submitter of type `Submitter` and size threshold.
     pub const fn new(submitter: Submitter, size_threshold: u64) -> Self {
         Self {
             submitter,
