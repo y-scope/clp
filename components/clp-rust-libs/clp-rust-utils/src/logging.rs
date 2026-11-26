@@ -14,9 +14,9 @@ pub struct LoggerGuards {
 
 /// Initializes the global tracing subscriber with JSON-formatted output to stdout.
 ///
-/// If the `CLP_LOGS_DIR` environment variable is set, logs are also written to a
-/// rolling file (`{log_filename}`) in that directory. The returned [`LoggerGuards`]
-/// must be held for the lifetime of the program to ensure logs are flushed.
+/// If the `CLP_LOGS_DIR` environment variable is set, logs are also written to a rolling file
+/// (`{log_filename}`) in that directory. The returned [`LoggerGuards`] must be held for the
+/// lifetime of the program to ensure logs are flushed.
 #[must_use]
 pub fn set_up_logging(log_filename: &str) -> LoggerGuards {
     let subscriber = tracing_subscriber::fmt()

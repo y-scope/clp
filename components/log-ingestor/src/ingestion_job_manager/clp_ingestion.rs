@@ -869,8 +869,8 @@ impl ClpIngestionState {
     ///
     /// # NOTE
     ///
-    /// All database operations are executed within the given transaction and are committed
-    /// before the metadata is sent to the channel.
+    /// All database operations are executed within the given transaction and are committed before
+    /// the metadata is sent to the channel.
     ///
     /// # Returns
     ///

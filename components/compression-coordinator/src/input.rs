@@ -13,13 +13,13 @@ use crate::partition::FsEntry;
 /// Recursively discovers regular files selected by container paths under the logs-input mount.
 ///
 /// Traversal follows symlinks within the mount. Canonical paths deduplicate overlapping selections
-/// and prevent revisiting directories through symlink cycles.
-/// Directories are omitted, while zero-byte regular files are retained.
+/// and prevent revisiting directories through symlink cycles. Directories are omitted, while
+/// zero-byte regular files are retained.
 ///
 /// # Returns
 ///
-/// The files' canonical mount-relative paths and sizes on success, in no particular order. The
-/// list is empty if the valid selection contains no files.
+/// The files' canonical mount-relative paths and sizes on success, in no particular order. The list
+/// is empty if the valid selection contains no files.
 ///
 /// # Errors
 ///

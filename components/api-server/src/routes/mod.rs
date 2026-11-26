@@ -654,8 +654,8 @@ mod tests {
     }
 
     /// Builds a minimal Axum app that validates compression usage params via
-    /// [`TryFrom<CompressionUsageParams>`] and returns the resolved
-    /// status integer codes on success. No real database is needed.
+    /// [`TryFrom<CompressionUsageParams>`] and returns the resolved status integer codes on
+    /// success. No real database is needed.
     fn compression_usage_test_app() -> axum::Router {
         axum::Router::new().route(
             "/usage/compression",

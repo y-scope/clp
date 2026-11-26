@@ -21,8 +21,8 @@ impl Client {
     ///
     /// # Returns
     ///
-    /// A stream of the job's results on success. The stream variant indicates where the results
-    /// are stored:
+    /// A stream of the job's results on success. The stream variant indicates where the results are
+    /// stored:
     ///
     /// * [`SearchResultStream::File`] if the job's results are stored in files.
     /// * [`SearchResultStream::Mongo`] if the job's results are stored in `MongoDB`.
@@ -223,11 +223,11 @@ impl Client {
     ///
     /// When `max_num_results` is set, the query is limited to at most that many documents.
     ///
-    /// When `raw_docs` is `true`, each search document is serialized to JSON whole; otherwise
-    /// the document's "message" field is extracted. Timeline records are excluded.
+    /// When `raw_docs` is `true`, each search document is serialized to JSON whole; otherwise the
+    /// document's "message" field is extracted. Timeline records are excluded.
     ///
-    /// When `sorted` is `true`, documents are returned sorted by `timestamp` descending (then
-    /// `_id` ascending); otherwise, they're returned in insertion order.
+    /// When `sorted` is `true`, documents are returned sorted by `timestamp` descending (then `_id`
+    /// ascending); otherwise, they're returned in insertion order.
     ///
     /// # Returns
     ///
