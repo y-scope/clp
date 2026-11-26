@@ -57,14 +57,20 @@ class ClpConnector:
             err_msg = f"end_ts {end_ts} is smaller than begin_ts {begin_ts}."
             raise ValueError(err_msg)
 
+        # The `QueryJobConfig` format (`clp_rust_utils::job_config::QueryJobConfig`) that the query
+        # coordinator deserializes, denying unknown fields; the API server stores the same format.
         job_config = msgpack.packb(
             {
-                "begin_timestamp": begin_ts,
                 "datasets": [CLP_DEFAULT_DATASET_NAME],
-                "end_timestamp": end_ts,
-                "ignore_case": True,
-                "max_num_results": SEARCH_MAX_NUM_RESULTS,
-                "query_string": query,
+                "query": {
+                    "query_string": query,
+                    "time_range": {
+                        "begin_timestamp_millisecs": begin_ts,
+                        "end_timestamp_millisecs": end_ts,
+                    },
+                    "ignore_case": True,
+                },
+                "output": {"type": "results_cache", "max_num_results": SEARCH_MAX_NUM_RESULTS},
             }
         )
 
