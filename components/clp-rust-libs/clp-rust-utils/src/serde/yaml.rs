@@ -5,6 +5,11 @@ use crate::Error;
 /// Reads a YAML file from a specified path and deserializes its contents into the requested type
 /// `T`.
 ///
+/// # Type Parameters
+///
+/// * `T` - The type to deserialize the file's contents into.
+/// * `P` - The type of the path to the YAML file.
+///
 /// # Returns
 ///
 /// The deserialized value of type `T` on success.

@@ -11,10 +11,9 @@ pub use state::*;
 
 /// Enum for different types of ingestion jobs.
 ///
-/// # Type Parameters:
+/// # Type Parameters
 ///
-/// * [`State`]: A type that implements all required ingestion job state traits for state
-///   management.
+/// * `State` - A type that implements all required ingestion job state traits for state management.
 pub enum IngestionJob<State: IngestionJobState + S3ScannerState + SqsListenerState> {
     S3Scanner(S3Scanner<State>),
     SqsListener(SqsListener<State>),

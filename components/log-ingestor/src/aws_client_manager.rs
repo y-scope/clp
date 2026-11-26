@@ -16,9 +16,9 @@ impl AwsClientType for S3Client {}
 /// Trait to provide an abstraction for retrieving AWS SDK clients with capabilities to support
 /// different management strategies (e.g., singleton, auto-renew).
 ///
-/// # Type Parameters:
+/// # Type Parameters
 ///
-/// * [`Client`]: The AWS SKD client type. Must implement the [`AwsClientType`].
+/// * `Client` - The AWS SDK client type. Must implement the [`AwsClientType`].
 #[async_trait]
 pub trait AwsClientManagerType<Client: AwsClientType>: Send + Sync + Clone + 'static {
     /// Retrieves an AWS client instance. The specific behavior depends on the implementation.

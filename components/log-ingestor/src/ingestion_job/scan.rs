@@ -13,7 +13,7 @@ use non_empty_string::NonEmptyString;
 ///
 /// # Type Parameters
 ///
-/// * [`CallbackType`]: The type of the async callback invoked once per non-empty scanned page of
+/// * `CallbackType` - The type of the async callback invoked once per non-empty scanned page of
 ///   object metadata. It must return (`should_continue_scanning`, `last_processed_key`), where:
 ///   * `should_continue_scanning` indicates whether the scanning should proceed.
 ///   * `last_processed_key` is the last key processed by the callback.

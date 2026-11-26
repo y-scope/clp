@@ -284,6 +284,11 @@ fn check_num_fields(num_fields: u32, expected: u32) -> Result<(), DecodeError> {
 /// Reads a msgpack string of at most `max_len` bytes, replacing each invalid UTF-8 sequence with
 /// U+FFFD.
 ///
+/// # Type Parameters
+///
+/// * `'buffer` - The lifetime of the buffer that `reader` reads from and the returned string may
+///   borrow.
+///
 /// # Returns
 ///
 /// The string on success.
