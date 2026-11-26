@@ -742,6 +742,12 @@ mod tests {
         let archive_id = ARCHIVE_ID
             .parse()
             .expect("the fixture has a valid archive ID");
+        let assert_rejected = |path, expected_error| {
+            let error = ChunkBatch::parse(staging_path, archive_id, &[path])
+                .expect_err("a malformed chunk path should be rejected");
+            assert_eq!(error.to_string(), expected_error);
+        };
+
         let filename = format!("{ARCHIVE_ID}_0_1.jsonl");
         for path in [
             PathBuf::from(&filename),
@@ -749,41 +755,102 @@ mod tests {
             staging_path.join("nested").join(&filename),
             staging_path.join("nested/..").join(&filename),
             staging_path.join(format!("{filename}/")),
-            staging_path.join("68243977-37d6-46e1-a02d-7d0f08b04f70_0_1.jsonl"),
-            staging_path.join(format!("{ARCHIVE_ID}_0_1.json")),
-            staging_path.join(format!("{ARCHIVE_ID}_0_1_2.jsonl")),
-            staging_path.join(format!("{ARCHIVE_ID}__1.jsonl")),
-            staging_path.join(format!("{ARCHIVE_ID}_-0_1.jsonl")),
-            staging_path.join(format!("{ARCHIVE_ID}_0_+1.jsonl")),
-            staging_path.join(format!("{ARCHIVE_ID}_0_01.jsonl")),
-            staging_path.join(format!("{ARCHIVE_ID}_0_9223372036854775808.jsonl")),
         ] {
-            assert!(
-                ChunkBatch::parse(staging_path, archive_id, std::slice::from_ref(&path)).is_err(),
-                "accepted malformed chunk path {path:?}"
+            let expected_error = format!(
+                "reported chunk path {} is not a UTF-8 filename directly under {}",
+                path.display(),
+                staging_path.display()
+            );
+            assert_rejected(path, expected_error);
+        }
+
+        for filename in [
+            "68243977-37d6-46e1-a02d-7d0f08b04f70_0_1.jsonl".to_owned(),
+            format!("{ARCHIVE_ID}_0_1.json"),
+        ] {
+            assert_rejected(
+                staging_path.join(&filename),
+                format!("invalid ordered chunk filename {filename}"),
+            );
+        }
+
+        for (range, invalid_index) in [
+            ("0_1_2", "1_2"),
+            ("_1", ""),
+            ("-0_1", "-0"),
+            ("0_+1", "+1"),
+            ("0_01", "01"),
+            ("0_9223372036854775808", "9223372036854775808"),
+        ] {
+            let filename = format!("{ARCHIVE_ID}_{range}.jsonl");
+            assert_rejected(
+                staging_path.join(&filename),
+                format!(
+                    "invalid event index {invalid_index:?} in ordered chunk filename {filename}"
+                ),
             );
         }
     }
 
     #[test]
     fn parse_all_rejects_noncontiguous_or_nonpositive_ranges() {
+        struct Case {
+            ranges: [&'static str; 2],
+            invalid_chunk: usize,
+            expected_start: i64,
+        }
+
         let staging_path = Path::new("/staging");
         let archive_id = ARCHIVE_ID
             .parse()
             .expect("the fixture has a valid archive ID");
-        for ranges in [
-            ["1_2", "2_3"],
-            ["0_2", "3_5"],
-            ["0_2", "1_3"],
-            ["0_2", "0_2"],
-            ["0_2", "2_2"],
-            ["0_2", "2_1"],
+        for case in [
+            Case {
+                ranges: ["1_2", "2_3"],
+                invalid_chunk: 0,
+                expected_start: 0,
+            },
+            Case {
+                ranges: ["0_2", "3_5"],
+                invalid_chunk: 1,
+                expected_start: 2,
+            },
+            Case {
+                ranges: ["0_2", "1_3"],
+                invalid_chunk: 1,
+                expected_start: 2,
+            },
+            Case {
+                ranges: ["0_2", "0_2"],
+                invalid_chunk: 1,
+                expected_start: 2,
+            },
+            Case {
+                ranges: ["0_2", "2_2"],
+                invalid_chunk: 1,
+                expected_start: 2,
+            },
+            Case {
+                ranges: ["0_2", "2_1"],
+                invalid_chunk: 1,
+                expected_start: 2,
+            },
         ] {
-            let paths =
-                ranges.map(|range| staging_path.join(format!("{ARCHIVE_ID}_{range}.jsonl")));
+            let filenames = case
+                .ranges
+                .map(|range| format!("{ARCHIVE_ID}_{range}.jsonl"));
+            let paths = filenames
+                .each_ref()
+                .map(|filename| staging_path.join(filename));
             let error = ChunkBatch::parse(staging_path, archive_id, &paths)
                 .expect_err("invalid chunk ranges should be rejected");
-            assert!(error.to_string().starts_with("invalid range"), "{error:#}");
+            assert_eq!(
+                error.to_string(),
+                format!(
+                    "invalid range in {}: expected start {} and a larger end",
+                    filenames[case.invalid_chunk], case.expected_start
+                )
+            );
         }
     }
 
