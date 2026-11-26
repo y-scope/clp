@@ -1511,8 +1511,8 @@ async fn update_job_status(
     Ok(())
 }
 
-/// Runs `tx` on a freshly acquired pooled connection whose next transaction uses the `READ
-/// COMMITTED` isolation level.
+/// Runs `tx` on a freshly acquired pooled connection whose next transaction uses the
+/// `READ COMMITTED` isolation level.
 ///
 /// A `SET TRANSACTION ISOLATION LEVEL READ COMMITTED` statement is issued on the connection before
 /// `tx` runs. Because it omits `SESSION`/`GLOBAL`, it applies only to the next transaction started
