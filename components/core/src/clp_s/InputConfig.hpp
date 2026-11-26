@@ -1,6 +1,7 @@
 #ifndef CLP_S_INPUTCONFIG_HPP
 #define CLP_S_INPUTCONFIG_HPP
 
+#include <chrono>
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -11,6 +12,7 @@
 #include <variant>
 #include <vector>
 
+#include "../clp/aws/AwsAuthenticationSigner.hpp"
 #include "../clp/ReaderInterface.hpp"
 
 namespace clp_s {
@@ -92,6 +94,15 @@ struct NetworkAuthOption {
      * `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_SESSION_TOKEN` environment variables.
      */
     AwsCredentialsProvider aws_credentials_provider;
+
+    /**
+     * How long presigned URLs remain valid when `method` is `AuthMethod::S3PresignedUrlV4`.
+     * Requests fail if this is outside the range that AWS Signature Version 4 allows (see
+     * `clp::aws::AwsAuthenticationSigner`).
+     */
+    std::chrono::seconds presigned_url_expire_time{
+            clp::aws::AwsAuthenticationSigner::cDefaultExpireTime
+    };
 };
 
 /**
