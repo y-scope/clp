@@ -86,6 +86,25 @@ pub struct CompressionMetadata {
     pub clp_config: CompressionMetadataDisplayConfig,
 }
 
+impl TryFrom<CompressionMetadataRowProjection> for CompressionMetadata {
+    type Error = ClientError;
+
+    fn try_from(row: CompressionMetadataRowProjection) -> Result<Self, Self::Error> {
+        let clp_config = ZstdMsgpack::deserialize(&row.clp_config)?;
+        Ok(Self {
+            id: row.id,
+            status: row.status,
+            status_msg: row.status_msg,
+            start_time: row.start_time,
+            update_time: row.update_time,
+            duration: row.duration,
+            uncompressed_size: row.uncompressed_size,
+            compressed_size: row.compressed_size,
+            clp_config,
+        })
+    }
+}
+
 /// The display subset of a stored compression job config, as returned in
 /// [`CompressionMetadata::clp_config`].
 ///
@@ -625,25 +644,6 @@ struct CompressionMetadataRowProjection {
     uncompressed_size: i64,
     compressed_size: i64,
     clp_config: Vec<u8>,
-}
-
-impl TryFrom<CompressionMetadataRowProjection> for CompressionMetadata {
-    type Error = ClientError;
-
-    fn try_from(row: CompressionMetadataRowProjection) -> Result<Self, Self::Error> {
-        let clp_config = ZstdMsgpack::deserialize(&row.clp_config)?;
-        Ok(Self {
-            id: row.id,
-            status: row.status,
-            status_msg: row.status_msg,
-            start_time: row.start_time,
-            update_time: row.update_time,
-            duration: row.duration,
-            uncompressed_size: row.uncompressed_size,
-            compressed_size: row.compressed_size,
-            clp_config,
-        })
-    }
 }
 
 #[cfg(test)]

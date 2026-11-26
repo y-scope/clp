@@ -11,94 +11,6 @@ use crate::compression::Buffer;
 use crate::compression::BufferSubmitter;
 use crate::compression::CompressionBufferEntry;
 
-/// Represents a listener task that buffers incoming [`CompressionBufferEntry`] values and submits
-/// when a certain size threshold is reached or on timeout.
-///
-/// # Type Parameters
-/// * `Submitter`: A type that implements the [`BufferSubmitter`] trait.
-struct ListenerTask<Submitter: BufferSubmitter> {
-    buffer: Buffer<Submitter>,
-    timeout: Duration,
-    receiver: mpsc::Receiver<Vec<CompressionBufferEntry>>,
-}
-
-impl<Submitter: BufferSubmitter + Send + 'static> ListenerTask<Submitter> {
-    /// Runs the listener task to buffer and submit [`CompressionBufferEntry`] values. Submission
-    /// can be triggered if:
-    ///
-    /// * Receiving a cancellation signal via the provided [`cancel_token`].
-    /// * All senders are closed.
-    /// * The buffer's size threshold is reached after receiving new entries.
-    /// * The oldest buffered entry has remained in the buffer for at least the configured timeout
-    ///   duration. The timer starts when entries are first added to an empty buffer and is not
-    ///   reset by subsequent entries.
-    ///
-    /// # Returns
-    ///
-    /// `Ok(())` on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * Forwards [`Buffer::add`]'s return values on failure.
-    /// * Forwards [`Buffer::submit`]'s return values on failure.
-    pub async fn run(mut self, cancel_token: CancellationToken) -> Result<()> {
-        // To avoid reallocating the timer on every reset, we preallocate and pin it. A boolean flag
-        // is used to track whether the timer is active, which defaults to false since the buffer is
-        // initially empty.
-        let timer = sleep_until(Instant::now() + self.timeout);
-        tokio::pin!(timer);
-        let mut timer_active = false;
-
-        loop {
-            select! {
-                // Cancellation requested.
-                () = cancel_token.cancelled() => {
-                    tracing::info!("Listener task cancelled.");
-                    self.buffer.submit().await?;
-                    return Ok(());
-                }
-
-                // New object metadata entries received.
-                optional_entries = self.receiver.recv() => {
-                    match optional_entries {
-                        None => {
-                            self.buffer.submit().await?;
-                            tracing::info!(
-                                "All senders have been dropped. The channel will be closed."
-                            );
-                            return Ok(());
-                        }
-                        Some(entries) => {
-                            let was_empty = self.buffer.is_empty();
-                            let flushed = self.buffer.add(entries).await?;
-                            let is_empty = self.buffer.is_empty();
-
-                            if is_empty {
-                                timer_active = false;
-                            } else if was_empty || flushed {
-                                // Enable the timer if new objects are added to an empty buffer, or
-                                // a flush is triggered but the buffer is not empty after flushing.
-                                // In both cases, the timer should be reset.
-                                timer.as_mut().reset(Instant::now() + self.timeout);
-                                timer_active = true;
-                            }
-                        }
-                    }
-                }
-
-                // Timer fired.
-                () = &mut timer, if timer_active => {
-                    self.buffer.submit().await?;
-                    // The timer will be re-enabled when new entries are received.
-                    timer_active = false;
-                }
-            }
-        }
-    }
-}
-
 /// Represents a listener that accepts [`CompressionBufferEntry`] values from multiple senders and
 /// buffers them for submission.
 pub struct Listener {
@@ -186,5 +98,93 @@ impl Listener {
     #[must_use]
     pub fn get_new_sender(&self) -> mpsc::Sender<Vec<CompressionBufferEntry>> {
         self.sender.clone()
+    }
+}
+
+/// Represents a listener task that buffers incoming [`CompressionBufferEntry`] values and submits
+/// when a certain size threshold is reached or on timeout.
+///
+/// # Type Parameters
+/// * `Submitter`: A type that implements the [`BufferSubmitter`] trait.
+struct ListenerTask<Submitter: BufferSubmitter> {
+    buffer: Buffer<Submitter>,
+    timeout: Duration,
+    receiver: mpsc::Receiver<Vec<CompressionBufferEntry>>,
+}
+
+impl<Submitter: BufferSubmitter + Send + 'static> ListenerTask<Submitter> {
+    /// Runs the listener task to buffer and submit [`CompressionBufferEntry`] values. Submission
+    /// can be triggered if:
+    ///
+    /// * Receiving a cancellation signal via the provided [`cancel_token`].
+    /// * All senders are closed.
+    /// * The buffer's size threshold is reached after receiving new entries.
+    /// * The oldest buffered entry has remained in the buffer for at least the configured timeout
+    ///   duration. The timer starts when entries are first added to an empty buffer and is not
+    ///   reset by subsequent entries.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`Buffer::add`]'s return values on failure.
+    /// * Forwards [`Buffer::submit`]'s return values on failure.
+    pub async fn run(mut self, cancel_token: CancellationToken) -> Result<()> {
+        // To avoid reallocating the timer on every reset, we preallocate and pin it. A boolean flag
+        // is used to track whether the timer is active, which defaults to false since the buffer is
+        // initially empty.
+        let timer = sleep_until(Instant::now() + self.timeout);
+        tokio::pin!(timer);
+        let mut timer_active = false;
+
+        loop {
+            select! {
+                // Cancellation requested.
+                () = cancel_token.cancelled() => {
+                    tracing::info!("Listener task cancelled.");
+                    self.buffer.submit().await?;
+                    return Ok(());
+                }
+
+                // New object metadata entries received.
+                optional_entries = self.receiver.recv() => {
+                    match optional_entries {
+                        None => {
+                            self.buffer.submit().await?;
+                            tracing::info!(
+                                "All senders have been dropped. The channel will be closed."
+                            );
+                            return Ok(());
+                        }
+                        Some(entries) => {
+                            let was_empty = self.buffer.is_empty();
+                            let flushed = self.buffer.add(entries).await?;
+                            let is_empty = self.buffer.is_empty();
+
+                            if is_empty {
+                                timer_active = false;
+                            } else if was_empty || flushed {
+                                // Enable the timer if new objects are added to an empty buffer, or
+                                // a flush is triggered but the buffer is not empty after flushing.
+                                // In both cases, the timer should be reset.
+                                timer.as_mut().reset(Instant::now() + self.timeout);
+                                timer_active = true;
+                            }
+                        }
+                    }
+                }
+
+                // Timer fired.
+                () = &mut timer, if timer_active => {
+                    self.buffer.submit().await?;
+                    // The timer will be re-enabled when new entries are received.
+                    timer_active = false;
+                }
+            }
+        }
     }
 }

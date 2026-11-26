@@ -83,17 +83,6 @@ pub enum ClientError {
     Telemetry(#[from] opentelemetry_otlp::ExporterBuildError),
 }
 
-/// Empty trait to mark errors that indicate malformed data.
-trait IsMalformedData {}
-
-impl IsMalformedData for serde_json::Error {}
-
-impl IsMalformedData for rmp_serde::encode::Error {}
-
-impl IsMalformedData for rmp_serde::decode::Error {}
-
-impl<Enum: TryFromPrimitive> IsMalformedData for num_enum::TryFromPrimitiveError<Enum> {}
-
 impl<T: IsMalformedData> From<T> for ClientError {
     fn from(_value: T) -> Self {
         Self::MalformedData
@@ -141,3 +130,14 @@ impl From<clp_rust_utils::timeline::Error> for ClientError {
         }
     }
 }
+
+/// Empty trait to mark errors that indicate malformed data.
+trait IsMalformedData {}
+
+impl IsMalformedData for serde_json::Error {}
+
+impl IsMalformedData for rmp_serde::encode::Error {}
+
+impl IsMalformedData for rmp_serde::decode::Error {}
+
+impl<Enum: TryFromPrimitive> IsMalformedData for num_enum::TryFromPrimitiveError<Enum> {}

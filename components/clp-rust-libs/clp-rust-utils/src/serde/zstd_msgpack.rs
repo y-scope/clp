@@ -5,8 +5,6 @@ use serde::de::DeserializeOwned;
 
 use crate::Error;
 
-const ZSTD_COMPRESSION_LEVEL: i32 = 3;
-
 /// Namespace for Zstandard-compressed `MessagePack` utilities.
 pub enum ZstdMsgpack {}
 
@@ -53,3 +51,5 @@ impl ZstdMsgpack {
         rmp_serde::from_slice(&msgpack_data).map_err(Into::into)
     }
 }
+
+const ZSTD_COMPRESSION_LEVEL: i32 = 3;

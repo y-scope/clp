@@ -31,6 +31,29 @@ use super::test_utils::get_testing_prefix_as_non_empty_string;
 use super::test_utils::upload_test_objects;
 use super::test_utils::{self};
 
+/// Uploads noise S3 objects that do not match any testing prefix.
+///
+/// The keys are formatted as `{uuid}.log`, where `uuid` is a randomly generated v4 UUID.
+///
+/// # Errors
+///
+/// * Forwards [`test_utils::create_s3_objects`]'s return values on failure.
+pub async fn upload_noise_objects(
+    s3_client: aws_sdk_s3::Client,
+    bucket: NonEmptyString,
+    num_objects_to_create: usize,
+) -> Result<()> {
+    let objects_to_create: Vec<_> = (0..num_objects_to_create)
+        .map(|_| ObjectMetadata {
+            bucket: bucket.clone(),
+            key: NonEmptyString::from_string(format!("{}.log", Uuid::new_v4())),
+            size: 16,
+        })
+        .collect();
+
+    test_utils::create_s3_objects(s3_client, objects_to_create).await
+}
+
 const WAIT_FOR_INGESTED_OBJECTS_TIMEOUT_SEC: u64 = 30;
 const INGESTED_OBJECT_POLL_INTERVAL_MS: u64 = 100;
 const NUM_TEST_OBJECTS: usize = 100;
@@ -114,29 +137,6 @@ impl S3ScannerState for S3ScannerTestState {
         self.shared_ingested_buffer.lock().await.extend(objects);
         Ok(())
     }
-}
-
-/// Uploads noise S3 objects that do not match any testing prefix.
-///
-/// The keys are formatted as `{uuid}.log`, where `uuid` is a randomly generated v4 UUID.
-///
-/// # Errors
-///
-/// * Forwards [`test_utils::create_s3_objects`]'s return values on failure.
-pub async fn upload_noise_objects(
-    s3_client: aws_sdk_s3::Client,
-    bucket: NonEmptyString,
-    num_objects_to_create: usize,
-) -> Result<()> {
-    let objects_to_create: Vec<_> = (0..num_objects_to_create)
-        .map(|_| ObjectMetadata {
-            bucket: bucket.clone(),
-            key: NonEmptyString::from_string(format!("{}.log", Uuid::new_v4())),
-            size: 16,
-        })
-        .collect();
-
-    test_utils::create_s3_objects(s3_client, objects_to_create).await
 }
 
 /// Waits until the shared buffer has at least `min_num_objects`.

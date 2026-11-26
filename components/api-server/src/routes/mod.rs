@@ -146,6 +146,104 @@ mod api_doc {
 }
 pub use api_doc::*;
 
+#[derive(Clone, Serialize, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+struct QueryResultsUri {
+    /// The uri to get the query results.
+    query_results_uri: String,
+}
+
+/// Query parameters for the query results endpoint.
+#[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+struct QueryResultsParams {
+    /// When `true`, each SSE event contains the raw result document from the results cache
+    /// serialized as JSON (including metadata such as the timestamp and the original file path);
+    /// otherwise, each event contains only the log message. Only applies to query jobs whose
+    /// results are buffered in `MongoDB`.
+    #[serde(default)]
+    raw_docs: bool,
+
+    /// When `true`, results buffered in `MongoDB` are streamed sorted by timestamp descending;
+    /// otherwise, they're streamed in insertion order. Only applies to query jobs whose results
+    /// are buffered in `MongoDB`.
+    #[serde(default)]
+    sorted: bool,
+}
+
+/// Generic errors for request handlers.
+#[derive(Error, Debug)]
+enum HandlerError {
+    #[error("Internal server error")]
+    InternalServer,
+    #[error("Not found")]
+    NotFound,
+    #[error("Conflict")]
+    Conflict,
+    #[error("Bad request: {0}")]
+    BadRequest(String),
+    #[error("Gateway timeout: {0}")]
+    GatewayTimeout(String),
+}
+
+impl From<axum::Error> for HandlerError {
+    fn from(_: axum::Error) -> Self {
+        Self::InternalServer
+    }
+}
+
+impl From<ClientError> for HandlerError {
+    fn from(err: ClientError) -> Self {
+        match err {
+            ClientError::QueryJobNotFound(_)
+            | ClientError::DatasetNotFound(_)
+            | ClientError::LogEventNotFound { .. }
+            | ClientError::LogsInput(LogsInputError::NotFound(_)) => Self::NotFound,
+            ClientError::QueryJobAlreadyTerminated(_) | ClientError::QueryResultsNotStored(_) => {
+                Self::Conflict
+            }
+            ClientError::InvalidInput(_)
+            | ClientError::LogsInput(LogsInputError::OutsideMountPoint(_)) => {
+                Self::BadRequest(format!("{err}"))
+            }
+            ClientError::StreamExtractionTimeout(_) => Self::GatewayTimeout(format!("{err}")),
+            ClientError::Sql(_)
+            | ClientError::Mongo(_)
+            | ClientError::QueryNotSucceeded
+            | ClientError::Io(_)
+            | ClientError::MalformedData
+            | ClientError::TimelineNotCommitted(_)
+            | ClientError::Timeline(_)
+            | ClientError::QueryResultSession(_)
+            | ClientError::TaskJoin(_)
+            | ClientError::Aws { .. }
+            | ClientError::ExtractionJobFailed { .. }
+            | ClientError::ExtractionJobNotFound(_)
+            | ClientError::LogsInput(
+                LogsInputError::MountPointUnavailable(_)
+                | LogsInputError::RelativeContainerPath(_)
+                | LogsInputError::UnsupportedName(_)
+                | LogsInputError::Unresolvable { .. },
+            )
+            | ClientError::CompressionJobIdOutOfRange(_)
+            | ClientError::Telemetry(_) => Self::InternalServer,
+        }
+    }
+}
+
+/// Converts [`HandlerError`] into an HTTP response.
+impl IntoResponse for HandlerError {
+    fn into_response(self) -> axum::response::Response {
+        match self {
+            Self::NotFound => StatusCode::NOT_FOUND.into_response(),
+            Self::Conflict => StatusCode::CONFLICT.into_response(),
+            Self::InternalServer => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+            Self::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg).into_response(),
+            Self::GatewayTimeout(msg) => (StatusCode::GATEWAY_TIMEOUT, msg).into_response(),
+        }
+    }
+}
+
 #[utoipa::path(
     get,
     path = "/health",
@@ -214,13 +312,6 @@ async fn query(
     Ok(Json(QueryResultsUri {
         query_results_uri: uri,
     }))
-}
-
-#[derive(Clone, Serialize, Deserialize, ToSchema)]
-#[serde(deny_unknown_fields)]
-struct QueryResultsUri {
-    /// The uri to get the query results.
-    query_results_uri: String,
 }
 
 #[utoipa::path(
@@ -306,24 +397,6 @@ async fn stream_query(
         HandlerError::InternalServer
     })??;
     Ok(SseResponse::new(event_stream))
-}
-
-/// Query parameters for the query results endpoint.
-#[derive(Deserialize, IntoParams)]
-#[into_params(parameter_in = Query)]
-struct QueryResultsParams {
-    /// When `true`, each SSE event contains the raw result document from the results cache
-    /// serialized as JSON (including metadata such as the timestamp and the original file path);
-    /// otherwise, each event contains only the log message. Only applies to query jobs whose
-    /// results are buffered in `MongoDB`.
-    #[serde(default)]
-    raw_docs: bool,
-
-    /// When `true`, results buffered in `MongoDB` are streamed sorted by timestamp descending;
-    /// otherwise, they're streamed in insertion order. Only applies to query jobs whose results
-    /// are buffered in `MongoDB`.
-    #[serde(default)]
-    sorted: bool,
 }
 
 #[utoipa::path(
@@ -501,79 +574,6 @@ async fn compression_usage(
                 tracing::error!("Failed to fetch compression usage: {:?}", err);
             })?,
     ))
-}
-
-/// Generic errors for request handlers.
-#[derive(Error, Debug)]
-enum HandlerError {
-    #[error("Internal server error")]
-    InternalServer,
-    #[error("Not found")]
-    NotFound,
-    #[error("Conflict")]
-    Conflict,
-    #[error("Bad request: {0}")]
-    BadRequest(String),
-    #[error("Gateway timeout: {0}")]
-    GatewayTimeout(String),
-}
-
-impl From<axum::Error> for HandlerError {
-    fn from(_: axum::Error) -> Self {
-        Self::InternalServer
-    }
-}
-
-impl From<ClientError> for HandlerError {
-    fn from(err: ClientError) -> Self {
-        match err {
-            ClientError::QueryJobNotFound(_)
-            | ClientError::DatasetNotFound(_)
-            | ClientError::LogEventNotFound { .. }
-            | ClientError::LogsInput(LogsInputError::NotFound(_)) => Self::NotFound,
-            ClientError::QueryJobAlreadyTerminated(_) | ClientError::QueryResultsNotStored(_) => {
-                Self::Conflict
-            }
-            ClientError::InvalidInput(_)
-            | ClientError::LogsInput(LogsInputError::OutsideMountPoint(_)) => {
-                Self::BadRequest(format!("{err}"))
-            }
-            ClientError::StreamExtractionTimeout(_) => Self::GatewayTimeout(format!("{err}")),
-            ClientError::Sql(_)
-            | ClientError::Mongo(_)
-            | ClientError::QueryNotSucceeded
-            | ClientError::Io(_)
-            | ClientError::MalformedData
-            | ClientError::TimelineNotCommitted(_)
-            | ClientError::Timeline(_)
-            | ClientError::QueryResultSession(_)
-            | ClientError::TaskJoin(_)
-            | ClientError::Aws { .. }
-            | ClientError::ExtractionJobFailed { .. }
-            | ClientError::ExtractionJobNotFound(_)
-            | ClientError::LogsInput(
-                LogsInputError::MountPointUnavailable(_)
-                | LogsInputError::RelativeContainerPath(_)
-                | LogsInputError::UnsupportedName(_)
-                | LogsInputError::Unresolvable { .. },
-            )
-            | ClientError::CompressionJobIdOutOfRange(_)
-            | ClientError::Telemetry(_) => Self::InternalServer,
-        }
-    }
-}
-
-/// Converts [`HandlerError`] into an HTTP response.
-impl IntoResponse for HandlerError {
-    fn into_response(self) -> axum::response::Response {
-        match self {
-            Self::NotFound => StatusCode::NOT_FOUND.into_response(),
-            Self::Conflict => StatusCode::CONFLICT.into_response(),
-            Self::InternalServer => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-            Self::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg).into_response(),
-            Self::GatewayTimeout(msg) => (StatusCode::GATEWAY_TIMEOUT, msg).into_response(),
-        }
-    }
 }
 
 #[cfg(test)]
