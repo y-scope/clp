@@ -37,13 +37,6 @@ pub(crate) fn clp_s_search_task(
     .map_err(|e| TdlError::ExecutionError(format!("{e:#}")))
 }
 
-/// Extracts and publishes the archive's ordered JSON stream.
-///
-/// # Errors
-///
-/// Returns an error if:
-///
-/// * [`TdlError::ExecutionError`] if extraction or publication fails.
 #[task(name = "query::clp_s_extract_json")]
 pub(crate) fn clp_s_extract_json_task(
     ctx: TaskContext,
