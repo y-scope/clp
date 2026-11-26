@@ -685,7 +685,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_all_builds_metadata_for_contiguous_chunks() -> anyhow::Result<()> {
+    fn chunk_batch_parse_builds_metadata_for_contiguous_chunks() -> anyhow::Result<()> {
         use ChunkPosition::Intermediate;
         use ChunkPosition::Last;
 
@@ -737,7 +737,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_all_rejects_malformed_chunk_paths() {
+    fn chunk_batch_parse_rejects_malformed_chunk_paths() {
         let staging_path = Path::new("/staging");
         let archive_id = ARCHIVE_ID
             .parse()
@@ -793,7 +793,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_all_rejects_noncontiguous_or_nonpositive_ranges() {
+    fn chunk_batch_parse_rejects_noncontiguous_or_nonpositive_ranges() {
         struct Case {
             ranges: [&'static str; 2],
             invalid_chunk: usize,
@@ -855,7 +855,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_all_accepts_an_empty_ordered_stream() -> anyhow::Result<()> {
+    fn chunk_batch_parse_accepts_an_empty_ordered_stream() -> anyhow::Result<()> {
         assert_eq!(
             ChunkBatch::parse(Path::new("/staging"), ARCHIVE_ID.parse()?, &[])?.chunks,
             []
