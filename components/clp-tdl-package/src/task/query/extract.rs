@@ -112,6 +112,10 @@ struct Chunk {
 }
 
 /// An archive's validated chunks and the staging directory they belong to.
+///
+/// # Type Parameters
+///
+/// * `'staging_path` - The lifetime of the borrowed staging directory path.
 #[derive(Debug)]
 struct ChunkBatch<'staging_path> {
     archive_id: ArchiveId,
