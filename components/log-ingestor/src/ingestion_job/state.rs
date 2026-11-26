@@ -33,7 +33,7 @@ pub trait IngestionJobState: Send + Sync + Clone + 'static {
     ///
     /// # Parameters
     ///
-    /// * `msg`: A message describing the failure reason.
+    /// * `msg` - A message describing the failure reason.
     ///
     /// # NOTE
     ///
@@ -50,7 +50,7 @@ pub trait SqsListenerState: Send + Sync + Clone + 'static {
     ///
     /// # Parameters
     ///
-    /// * `objects`: The object metadata to ingest.
+    /// * `objects` - The object metadata to ingest.
     ///
     /// # Returns
     ///
@@ -70,8 +70,8 @@ pub trait S3ScannerState: Send + Sync + Clone + 'static {
     ///
     /// # Parameters
     ///
-    /// * `objects`: The object metadata to ingest.
-    /// * `last_ingested_key`: The last ingested S3 object key.
+    /// * `objects` - The object metadata to ingest.
+    /// * `last_ingested_key` - The last ingested S3 object key.
     ///
     /// # Returns
     ///

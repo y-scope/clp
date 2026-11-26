@@ -194,6 +194,10 @@ pub mod non_empty_string {
 
     /// Trait for creating [`NonEmptyString`] instances from an expected non-empty string.
     pub trait ExpectedNonEmpty {
+        /// # Parameters
+        ///
+        /// * `str` - The static string slice to wrap.
+        ///
         /// # Returns
         ///
         /// A [`NonEmptyString`] of the provided static string slice.
@@ -206,6 +210,10 @@ pub mod non_empty_string {
             NonEmptyString::new(str.to_owned()).expect("static &str shouldn't be empty")
         }
 
+        /// # Parameters
+        ///
+        /// * `str` - The string to wrap.
+        ///
         /// # Returns
         ///
         /// A [`NonEmptyString`] of the provided string.
