@@ -1,25 +1,20 @@
-//! The query-job submission interface.
+//! The Spider job submission interface.
 
 mod spider;
 
 use std::time::Duration;
 
 use async_trait::async_trait;
-use clp_rust_utils::job_config::QueryJobId;
-use clp_rust_utils::job_config::QueryOutput;
-use clp_rust_utils::job_config::SearchQuery;
-use serde::Deserialize;
-use serde::Serialize;
-use spider_core::task::ExecutionPolicy;
+use spider_core::task::TaskGraph;
 use spider_core::types::id::JobId;
 use spider_core::types::id::ResourceGroupId;
+use spider_core::types::io::TaskGraphInput;
 
 use crate::Error;
-pub use crate::job_handle::ArchiveMetadata;
 
-/// The terminal outcome of a query job.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum QueryJobOutcome {
+/// A job's terminal outcome.
+#[derive(Debug)]
+pub enum JobOutcome {
     /// The job completed successfully.
     Succeeded,
 
@@ -30,20 +25,16 @@ pub enum QueryJobOutcome {
     Cancelled,
 }
 
-/// Drives CLP query jobs on a Spider (Huntsman) cluster.
+/// Drives CLP jobs on a Spider (Huntsman) cluster.
 #[async_trait]
-pub trait QueryJobSubmitter: Clone + Send + Sync {
-    /// Builds the query task graph for `archives_to_search` and registers it with Spider, without
-    /// starting it.
+pub trait SpiderJobSubmitter: Clone + Send + Sync + 'static {
+    /// Registers a job with Spider without starting it.
     ///
     /// # Parameters
     ///
-    /// * `query_job_id` - The unique ID of the CLP query job.
     /// * `resource_group_id` - The Spider resource group to register the job under.
-    /// * `query` - The search query shared by every task in the job.
-    /// * `output` - The destination of the query job's results.
-    /// * `archives_to_search` - The archives to search, each represents a query task paired with
-    ///   its execution policy.
+    /// * `graph` - The job's task graph.
+    /// * `input` - The job's positional task inputs.
     ///
     /// # Returns
     ///
@@ -52,13 +43,11 @@ pub trait QueryJobSubmitter: Clone + Send + Sync {
     /// # Errors
     ///
     /// Implementations must document their error conditions.
-    async fn submit_query_job(
+    async fn submit_job(
         &self,
-        query_job_id: QueryJobId,
         resource_group_id: ResourceGroupId,
-        query: SearchQuery,
-        output: QueryOutput,
-        archives_to_search: Vec<(ArchiveMetadata, ExecutionPolicy)>,
+        graph: &TaskGraph,
+        input: &TaskGraphInput,
     ) -> Result<JobId, Error>;
 
     /// Idempotently starts the job identified by `spider_job_id` (only if it hasn't already been
@@ -79,13 +68,15 @@ pub trait QueryJobSubmitter: Clone + Send + Sync {
     /// # Errors
     ///
     /// Implementations must document their error conditions.
-    async fn run_query_job_to_completion(
+    async fn run_job_to_completion(
         &self,
         spider_job_id: JobId,
         poll_interval: Duration,
-    ) -> Result<QueryJobOutcome, Error>;
+    ) -> Result<JobOutcome, Error>;
 
-    /// Idempotently cancels the job identified by `spider_job_id`.
+    /// Idempotently requests cancellation for the job identified by `spider_job_id`.
+    ///
+    /// Spider can accept a cancellation request before the job finishes running its cleanup task.
     ///
     /// Safe to call regardless of whether the job is not-yet-started, already running, or already
     /// terminal.
@@ -97,5 +88,5 @@ pub trait QueryJobSubmitter: Clone + Send + Sync {
     /// # Errors
     ///
     /// Implementations must document their error conditions.
-    async fn cancel_query_job(&self, spider_job_id: JobId) -> Result<(), Error>;
+    async fn cancel_job(&self, spider_job_id: JobId) -> Result<(), Error>;
 }

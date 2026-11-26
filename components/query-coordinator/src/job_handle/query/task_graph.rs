@@ -1,16 +1,11 @@
-//! [`QueryJobSubmitter`] implementation for [`spider_client::SpiderClient`].
+//! Construction of task graphs and their positional inputs for search queries.
 
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
-use std::time::Duration;
 
-use async_trait::async_trait;
 use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::job_config::QueryOutput;
 use clp_rust_utils::job_config::SearchQuery;
-use spider_client::SpiderClient;
-use spider_client::error::ClientError;
-use spider_core::job::JobState;
 use spider_core::task::DataTypeDescriptor;
 use spider_core::task::ExecutionPolicy;
 use spider_core::task::TaskDescriptor;
@@ -18,106 +13,11 @@ use spider_core::task::TaskGraph;
 use spider_core::task::TdlContext;
 use spider_core::task::TerminationTaskDescriptor;
 use spider_core::task::ValueTypeDescriptor;
-use spider_core::types::id::JobId;
-use spider_core::types::id::ResourceGroupId;
 use spider_core::types::io::TaskGraphInput;
 use spider_core::types::io::TaskGraphInputBuilder;
 
 use crate::Error;
 use crate::job_handle::ArchiveMetadata;
-use crate::query_job_submitter::QueryJobOutcome;
-use crate::query_job_submitter::QueryJobSubmitter;
-
-#[async_trait]
-impl QueryJobSubmitter for SpiderClient {
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * Forwards [`build_query_task_graph`]'s return values on failure.
-    /// * Forwards [`SpiderClient::submit_job`]'s return values on failure.
-    async fn submit_query_job(
-        &self,
-        query_job_id: QueryJobId,
-        resource_group_id: ResourceGroupId,
-        query: SearchQuery,
-        output: QueryOutput,
-        archives_to_search: Vec<(ArchiveMetadata, ExecutionPolicy)>,
-    ) -> Result<JobId, Error> {
-        let (graph, inputs) =
-            build_query_task_graph(query_job_id, &query, &output, archives_to_search)?;
-        let spider_job_id = self.submit_job(resource_group_id, &graph, &inputs).await?;
-
-        tracing::info!(
-            query_job_id = % query_job_id,
-            spider_job_id = % spider_job_id,
-            num_tasks = graph.get_num_tasks(),
-            "Submitted query job to Spider.",
-        );
-
-        Ok(spider_job_id)
-    }
-
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * Forwards [`SpiderClient::start_job`]'s return values on failure, except
-    ///   [`ClientError::InvalidJobState`], which indicates the job has already been started.
-    /// * Forwards [`SpiderClient::get_job_state`]'s return values on failure.
-    async fn run_query_job_to_completion(
-        &self,
-        spider_job_id: JobId,
-        poll_interval: Duration,
-    ) -> Result<QueryJobOutcome, Error> {
-        match self.start_job(spider_job_id).await {
-            Ok(_) | Err(ClientError::InvalidJobState(_)) => {}
-            Err(error) => return Err(error.into()),
-        }
-
-        let terminal_state = loop {
-            let state = self.get_job_state(spider_job_id).await?;
-            if state.is_terminal() {
-                break state;
-            }
-            tokio::time::sleep(poll_interval).await;
-        };
-
-        Ok(match terminal_state {
-            JobState::Succeeded => QueryJobOutcome::Succeeded,
-            JobState::Failed => {
-                let error_message = match self.get_job_error(spider_job_id).await {
-                    Ok(error_message) => error_message,
-                    Err(error) => {
-                        tracing::warn!(
-                            spider_job_id = % spider_job_id,
-                            error = % error,
-                            "Failed to fetch the Spider job error.",
-                        );
-                        format!("<failed to fetch job error: {error}>")
-                    }
-                };
-                QueryJobOutcome::Failed { error_message }
-            }
-            JobState::Cancelled => QueryJobOutcome::Cancelled,
-            _ => unreachable!("a terminal Spider state must have a terminal outcome"),
-        })
-    }
-
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * Forwards [`SpiderClient::cancel_job`]'s return values on failure, except
-    ///   [`ClientError::InvalidJobState`], which indicates the job is already being cancelled or
-    ///   has already terminated.
-    async fn cancel_query_job(&self, spider_job_id: JobId) -> Result<(), Error> {
-        match self.cancel_job(spider_job_id).await {
-            Ok(_) | Err(ClientError::InvalidJobState(_)) => Ok(()),
-            Err(error) => Err(error.into()),
-        }
-    }
-}
 
 /// Builds archive-search tasks and a final publication task for timeline queries.
 ///
@@ -132,7 +32,7 @@ impl QueryJobSubmitter for SpiderClient {
 /// A tuple on success, containing:
 ///
 /// * The constructed task graph.
-/// * The structured form of the task graph's input.
+/// * The task graph's positional input.
 ///
 /// # Errors
 ///
@@ -144,7 +44,7 @@ impl QueryJobSubmitter for SpiderClient {
 /// * Forwards [`TaskGraphInputBuilder::create_shared_input_payload`]'s return values on failure.
 /// * Forwards [`TaskGraphInputBuilder::append_shared_task_input`]'s return values on failure.
 /// * Forwards [`TaskGraphInputBuilder::append_task_input`]'s return values on failure.
-fn build_query_task_graph(
+pub(super) fn build_query_task_graph(
     query_job_id: QueryJobId,
     query: &SearchQuery,
     output: &QueryOutput,

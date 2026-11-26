@@ -3335,7 +3335,6 @@ dependencies = [
  "non-empty-string",
  "rmp-serde",
  "secrecy",
- "serde",
  "spider-client",
  "spider-core",
  "sqlx",
