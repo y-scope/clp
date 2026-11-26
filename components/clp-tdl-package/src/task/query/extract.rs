@@ -33,6 +33,7 @@ use spider_core::types::id::TaskInstanceId;
 
 use crate::task::query::archive_input::ArchiveDescriptor;
 use crate::task::query::results_cache::parse_results_cache_uri;
+use crate::task::utils::TmpFileDeleter;
 use crate::task::utils::build_s3_client;
 use crate::task::utils::clp_binary_path;
 use crate::task::utils::upload_file_to_s3;
@@ -44,7 +45,7 @@ use crate::task::utils::upload_file_to_s3;
 /// Returns an error if:
 ///
 /// * Forwards [`fs::create_dir_all`]'s return values on failure.
-/// * Forwards [`tempfile::Builder::tempdir_in`]'s return values on failure.
+/// * Forwards [`fs::create_dir`]'s return values on failure.
 /// * Forwards [`run_clp_s_extract`]'s return values on failure.
 /// * Forwards [`reject_unordered_output`]'s return values on failure.
 /// * Forwards [`ChunkBatch::parse`]'s return values on failure.
@@ -65,34 +66,27 @@ pub(super) fn extract(
             staging_root.display()
         )
     })?;
-    let staging_directory = tempfile::Builder::new()
-        .prefix(&format!("{}.{task_instance_id}", input.job_id))
-        .rand_bytes(0)
-        .tempdir_in(&staging_root)
-        .context("failed to create an extraction staging directory")?;
-    let result = (|| {
-        let staging_path = staging_directory.path();
-        let batch = {
-            let paths = run_clp_s_extract(runtime, clp_home, config, input, staging_path)?;
-            reject_unordered_output(staging_path)?;
-            ChunkBatch::parse(staging_path, input.archive_id, &paths)?
-        };
-        if batch.chunks.is_empty() {
-            return Ok(());
-        }
-        let collection = runtime.block_on(prepare_metadata_collection(&config.results_cache))?;
-        publish_files(runtime, clp_home, config, staging_path, &batch.chunks)?;
-        runtime.block_on(upsert_metadata(&collection, &batch))
-    })();
-    if let Err(error) = staging_directory.close() {
-        tracing::warn!(
-            error = % error,
-            query_job_id = input.job_id,
-            task_instance_id,
-            "Failed to remove the extraction staging directory."
-        );
+    let staging_path = staging_root.join(format!("{}.{task_instance_id}", input.job_id));
+    fs::create_dir(&staging_path).with_context(|| {
+        format!(
+            "failed to create an extraction staging directory {}",
+            staging_path.display()
+        )
+    })?;
+    let mut tmp_file_deleter = TmpFileDeleter::new();
+    tmp_file_deleter.add(staging_path.clone());
+
+    let batch = {
+        let paths = run_clp_s_extract(runtime, clp_home, config, input, &staging_path)?;
+        reject_unordered_output(&staging_path)?;
+        ChunkBatch::parse(&staging_path, input.archive_id, &paths)?
+    };
+    if batch.chunks.is_empty() {
+        return Ok(());
     }
-    result
+    let collection = runtime.block_on(prepare_metadata_collection(&config.results_cache))?;
+    publish_files(runtime, clp_home, config, &staging_path, &batch.chunks)?;
+    runtime.block_on(upsert_metadata(&collection, &batch))
 }
 
 const MAX_STATS_LINE_SIZE: usize = 64 * 1024;

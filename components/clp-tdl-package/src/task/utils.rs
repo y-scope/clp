@@ -14,6 +14,46 @@ use clp_rust_utils::s3::create_new_client;
 use non_empty_string::NonEmptyString;
 use secrecy::SecretString;
 
+/// Attempts to remove registered temporary paths on drop, logging cleanup failures.
+pub(super) struct TmpFileDeleter {
+    paths: Vec<PathBuf>,
+}
+
+impl TmpFileDeleter {
+    /// Factory function.
+    ///
+    /// # Returns
+    ///
+    /// An empty [`TmpFileDeleter`].
+    pub(super) const fn new() -> Self {
+        Self { paths: Vec::new() }
+    }
+
+    /// Registers `path` for deletion when this deleter is dropped.
+    pub(super) fn add(&mut self, path: PathBuf) {
+        self.paths.push(path);
+    }
+}
+
+impl Drop for TmpFileDeleter {
+    fn drop(&mut self) {
+        for path in &self.paths {
+            let result = if path.is_dir() {
+                std::fs::remove_dir_all(path)
+            } else {
+                std::fs::remove_file(path)
+            };
+            if let Err(e) = result {
+                tracing::warn!(
+                    error = % e,
+                    path = % path.display(),
+                    "Failed to delete tmp path."
+                );
+            }
+        }
+    }
+}
+
 /// Resolves the path of a CLP binary under `clp_home`, joining `bin/{binary}`.
 ///
 /// # Returns
