@@ -1,3 +1,4 @@
+#include <chrono>
 #include <cstddef>
 #include <cstdlib>
 #include <optional>
@@ -281,5 +282,38 @@ TEST_CASE("input_config_authenticate_url", "[clp-s][input-config]") {
                 clp_s::try_create_reader(network_path, network_auth),
                 CredentialsProviderError
         );
+    }
+
+    SECTION("The presigned URL expire time is configurable.") {
+        std::vector<std::pair<std::chrono::seconds, std::optional<std::string_view>>> const
+                expire_times_and_parameters{
+                        {std::chrono::minutes{15}, "900"},
+                        {std::chrono::seconds{0}, std::nullopt},
+                        {std::chrono::days{8}, std::nullopt}
+                };
+        for (auto const& [expire_time, expected_parameter] : expire_times_and_parameters) {
+            CAPTURE(expire_time.count());
+            size_t num_provider_calls{0};
+            clp_s::NetworkAuthOption const provider_auth{
+                    .method = clp_s::AuthMethod::S3PresignedUrlV4,
+                    .aws_credentials_provider
+                    = make_credentials_provider(provider_credentials, num_provider_calls),
+                    .presigned_url_expire_time = expire_time
+            };
+            clp_s::NetworkAuthOption const env_auth{
+                    .method = clp_s::AuthMethod::S3PresignedUrlV4,
+                    .presigned_url_expire_time = expire_time
+            };
+            for (auto const& network_auth : {provider_auth, env_auth}) {
+                auto const url{clp_s::try_authenticate_url(cS3Url, network_auth)};
+                if (expected_parameter.has_value()) {
+                    REQUIRE(url.has_value());
+                    REQUIRE(expected_parameter
+                            == get_query_parameter(url.value(), "X-Amz-Expires"));
+                } else {
+                    REQUIRE(false == url.has_value());
+                }
+            }
+        }
     }
 }

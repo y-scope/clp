@@ -289,7 +289,8 @@ auto try_presign_s3_url(std::string_view url, NetworkAuthOption const& network_a
         clp::aws::AwsAuthenticationSigner const signer{
                 std::move(credentials->access_key_id),
                 std::move(credentials->secret_access_key),
-                std::move(credentials->session_token)
+                std::move(credentials->session_token),
+                network_auth.presigned_url_expire_time
         };
         clp::aws::S3Url const s3_url{std::string{url}};
         std::string presigned_url;
