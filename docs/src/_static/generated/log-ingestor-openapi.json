@@ -32,37 +32,46 @@
         }
       }
     },
-    "/job/{job_id}/terminate": {
+    "/s3/listener": {
       "post": {
         "tags": [
           "IngestionJob"
         ],
-        "description": "Terminates the ingestion job instance identified by the given job ID.\n\nThis operation only terminates the job instance; the job record, including its status and statistics, is preserved and can still be accessible using the same job ID.\n\nThis operation is idempotent.",
-        "operationId": "terminate_ingestion_job",
-        "parameters": [
-          {
-            "name": "job_id",
-            "in": "path",
-            "description": "The ID of the job to terminate.",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/u64"
+        "description": "Creates an ingestion job and starts a job instance that monitors an SQS queue. The queue receives notifications whenever new objects are added to the specified S3 bucket and key prefix.\n\nThe specified SQS queue must be dedicated to this ingestion job. Upon successful ingestion, the job deletes the corresponding message from the queue to ensure objects are not ingested multiple times.\n\nTo maintain correctness and avoid backpressure, the job may also delete messages that are irrelevant to this ingestion job (for example, messages referring to objects outside the configured bucket or key prefix).",
+        "operationId": "create_sqs_listener_job",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SqsListenerConfig"
+              }
             }
-          }
-        ],
+          },
+          "required": true
+        },
         "responses": {
           "200": {
-            "description": "",
+            "description": "The ID of the created job.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TerminateResponse"
+                  "$ref": "#/components/schemas/CreationResponse"
                 }
               }
             }
           },
-          "404": {
-            "description": "The specified job ID does not correspond to an ingestion job.",
+          "400": {
+            "description": "Custom endpoint URLs are not supported for SQS listener jobs, or the specified number of concurrent listener tasks is invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A prefix conflict was detected. For the same bucket and dataset, only one running ingestion job instance may monitor a given S3 prefix or any of its ancestor or descendant prefixes.",
             "content": {
               "application/json": {
                 "schema": {
@@ -84,7 +93,7 @@
         }
       }
     },
-    "/s3_scanner": {
+    "/s3/scanner": {
       "post": {
         "tags": [
           "IngestionJob"
@@ -145,46 +154,37 @@
         }
       }
     },
-    "/sqs_listener": {
+    "/s3/{job_id}/terminate": {
       "post": {
         "tags": [
           "IngestionJob"
         ],
-        "description": "Creates an ingestion job and starts a job instance that monitors an SQS queue. The queue receives notifications whenever new objects are added to the specified S3 bucket and key prefix.\n\nThe specified SQS queue must be dedicated to this ingestion job. Upon successful ingestion, the job deletes the corresponding message from the queue to ensure objects are not ingested multiple times.\n\nTo maintain correctness and avoid backpressure, the job may also delete messages that are irrelevant to this ingestion job (for example, messages referring to objects outside the configured bucket or key prefix).",
-        "operationId": "create_sqs_listener_job",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SqsListenerConfig"
-              }
+        "description": "Terminates the ingestion job instance identified by the given job ID.\n\nThis operation only terminates the job instance; the job record, including its status and statistics, is preserved and can still be accessible using the same job ID.\n\nThis operation is idempotent.",
+        "operationId": "terminate_ingestion_job",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "description": "The ID of the job to terminate.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/u64"
             }
-          },
-          "required": true
-        },
+          }
+        ],
         "responses": {
           "200": {
-            "description": "The ID of the created job.",
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CreationResponse"
+                  "$ref": "#/components/schemas/TerminateResponse"
                 }
               }
             }
           },
-          "400": {
-            "description": "Custom endpoint URLs are not supported for SQS listener jobs, or the specified number of concurrent listener tasks is invalid.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "A prefix conflict was detected. For the same bucket and dataset, only one running ingestion job instance may monitor a given S3 prefix or any of its ancestor or descendant prefixes.",
+          "404": {
+            "description": "The specified job ID does not correspond to an ingestion job.",
             "content": {
               "application/json": {
                 "schema": {
