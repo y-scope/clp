@@ -918,5 +918,23 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
         CAPTURE(evaluation_result);
         REQUIRE((AstEvaluationResult::False == evaluation_result));
     }
+
+    SECTION("Missing string values stay pruned") {
+        // Query node `<5:d:Str>`, whose path is `a.b.d`, against events that have no value for it.
+        // An absent value leaves the filter undefined, so it must not be inverted into a match.
+        auto const check_pruned = [&](std::string const& query) -> void {
+            auto query_handler_impl{create_query_handler(query)};
+            auto const evaluation_result{get_query_evaluation_result(
+                    schema_tree,
+                    schema_tree,
+                    {},
+                    {},
+                    query_handler_impl
+            )};
+            REQUIRE((AstEvaluationResult::Pruned == evaluation_result));
+        };
+        check_pruned("a.b.d: \"two words\"");
+        check_pruned("NOT a.b.d: \"two words\"");
+    }
 }
 }  // namespace clp::ffi::ir_stream::search::test

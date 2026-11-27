@@ -68,7 +68,7 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
         REQUIRE(ColumnDescriptor::Function::None == filter->get_column()->get_function());
         REQUIRE(FilterOperation::EQ == filter->get_operation());
         std::string extracted_value;
-        REQUIRE(filter->get_operand()->as_var_string(extracted_value, filter->get_operation()));
+        REQUIRE(filter->get_operand()->as_string(extracted_value, filter->get_operation()));
         REQUIRE("value" == extracted_value);
     }
 
@@ -89,7 +89,7 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
         auto const key_token = DescriptorToken::create_descriptor_from_escaped_token("key");
         REQUIRE(key_token == *filter->get_column()->descriptor_begin());
         std::string extracted_value;
-        REQUIRE(filter->get_operand()->as_var_string(extracted_value, filter->get_operation()));
+        REQUIRE(filter->get_operand()->as_string(extracted_value, filter->get_operation()));
         REQUIRE("value" == extracted_value);
     }
 
@@ -110,8 +110,7 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
         auto const key_token = DescriptorToken::create_descriptor_from_escaped_token("key");
         REQUIRE(key_token == *not_filter->get_column()->descriptor_begin());
         std::string extracted_value;
-        REQUIRE(not_filter->get_operand()
-                        ->as_var_string(extracted_value, not_filter->get_operation()));
+        REQUIRE(not_filter->get_operand()->as_string(extracted_value, not_filter->get_operation()));
         REQUIRE("value" == extracted_value);
     }
 
@@ -148,8 +147,7 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
             REQUIRE(FilterOperation::EQ == filter->get_operation());
             std::string extracted_value;
             REQUIRE(true
-                    == filter->get_operand()
-                               ->as_var_string(extracted_value, filter->get_operation()));
+                    == filter->get_operand()->as_string(extracted_value, filter->get_operation()));
             std::string key = "key" + std::to_string(suffix_number);
             std::string value = "value" + std::to_string(suffix_number);
             REQUIRE(value == extracted_value);
@@ -201,8 +199,7 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
             REQUIRE(FilterOperation::EQ == filter->get_operation());
             std::string extracted_value;
             REQUIRE(true
-                    == filter->get_operand()
-                               ->as_var_string(extracted_value, filter->get_operation()));
+                    == filter->get_operand()->as_string(extracted_value, filter->get_operation()));
             std::string key = "key" + std::to_string(suffix_number);
             std::string value = "value" + std::to_string(suffix_number);
             REQUIRE(value == extracted_value);
@@ -300,7 +297,7 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
         REQUIRE(false == filter->get_column()->get_subtree_type().has_value());
         REQUIRE(ColumnDescriptor::Function::None == filter->get_column()->get_function());
         std::string literal;
-        REQUIRE(true == filter->get_operand()->as_var_string(literal, FilterOperation::EQ));
+        REQUIRE(true == filter->get_operand()->as_string(literal, FilterOperation::EQ));
         REQUIRE(literal == translated_pair.second);
     }
 
