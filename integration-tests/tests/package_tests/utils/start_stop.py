@@ -9,6 +9,9 @@ from tests.utils.classes import ClpAction, ClpVerificationResult, CmdArgs
 logger = logging.getLogger(__name__)
 
 
+STARTUP_TIMEOUT_SECONDS = 600.0
+
+
 class StartStopArgs(CmdArgs):
     """Command argument model for starting and stopping the CLP package."""
 
@@ -39,7 +42,7 @@ def start_clp_package(
         script_path=clp_package.path_config.start_clp_path,
         config=clp_package.temp_config_file_path,
     )
-    return ClpAction.from_args(args)
+    return ClpAction.from_args(args=args, timeout_seconds=STARTUP_TIMEOUT_SECONDS)
 
 
 def stop_clp_package(
