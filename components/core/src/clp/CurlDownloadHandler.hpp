@@ -105,7 +105,6 @@ private:
      *      variable is set and points to an existing, readable file, that path is returned.
      *   2. Known distribution-specific default bundle locations (checked in order):
      *      - Debian / Ubuntu: `/etc/ssl/certs/ca-certificates.crt`
-     *      - CentOS / RHEL / Fedora: `/etc/pki/tls/certs/ca-bundle.crt`
      *
      * @return Absolute path to the discovered CA bundle file.
      * @return std::nullopt if no CA bundle file could be located. The caller should handle this

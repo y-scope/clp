@@ -25,7 +25,7 @@ detect_ca_bundle() {
     local ca_paths=(
         "${SSL_CERT_FILE:-}"                # User/corporate override
         /etc/ssl/certs/ca-certificates.crt  # Debian/Ubuntu/Alpine
-        /etc/pki/tls/certs/ca-bundle.crt    # RHEL/CentOS/Fedora
+        /etc/pki/tls/certs/ca-bundle.crt    # RHEL/Fedora
         /etc/ssl/cert.pem                   # macOS
     )
 
@@ -61,7 +61,7 @@ prepare_ca_cert_for_build() {
         echo >&2 "ERROR: No CA certificate bundle found on host."
         echo >&2 "  Expected one of:"
         echo >&2 "    /etc/ssl/certs/ca-certificates.crt (Debian/Ubuntu/Alpine)"
-        echo >&2 "    /etc/pki/tls/certs/ca-bundle.crt   (RHEL/CentOS)"
+        echo >&2 "    /etc/pki/tls/certs/ca-bundle.crt   (RHEL)"
         echo >&2 "    /etc/ssl/cert.pem                   (macOS)"
         exit 1
     fi
