@@ -11,7 +11,7 @@ Docs about running unit tests for each component.
 :::
 
 :::{grid-item-card}
-:link: integration-tests
+:link: integration-tests/index
 Integration tests
 ^^^
 Docs about running CLP's integration tests.
