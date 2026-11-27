@@ -233,8 +233,6 @@ fn resolve_terminal_status(
 mod tests {
     use clp_rust_utils::job_config::QueryJobStatus;
 
-    use super::resolve_terminal_status;
-    use crate::Error;
     use crate::spider_job_submitter::JobOutcome;
 
     #[test]
@@ -321,6 +319,9 @@ mod tests {
         current_status: QueryJobStatus,
         expected: Result<(QueryJobStatus, Option<&str>), QueryJobStatus>,
     ) {
+        use super::resolve_terminal_status;
+        use crate::Error;
+
         match (resolve_terminal_status(outcome, current_status), expected) {
             (Ok((status, message)), Ok(expected)) => {
                 assert_eq!(
