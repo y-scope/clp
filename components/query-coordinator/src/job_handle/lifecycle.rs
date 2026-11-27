@@ -32,11 +32,8 @@ impl<'pool_lifetime> JobLifecycle<'pool_lifetime> {
         Self { db_pool, job_id }
     }
 
-    /// Persists the Spider job ID and marks the job as running.
-    ///
-    /// This method associates the given Spider job ID with the job in the CLP database and
-    /// updates the job status from [`QueryJobStatus::Pending`] to [`QueryJobStatus::Running`]
-    /// in a transaction that locks the job's row.
+    /// Records the Spider job ID, task count, and start time, and moves the job from
+    /// [`QueryJobStatus::Pending`] to [`QueryJobStatus::Running`] under a row lock.
     ///
     /// This method also ensures that the job has a valid `dispatch_time`, which the coordinator
     /// uses to mark jobs as dispatched. A coordinator restart may occur before the marker is
