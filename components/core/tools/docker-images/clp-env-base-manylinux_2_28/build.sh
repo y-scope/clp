@@ -47,6 +47,7 @@ trap 'cleanup_ca_cert "$component_root"' EXIT
 build_cmd=(
     docker buildx build
     --platform "${platform}"
+    --build-arg "QUAY_MIRROR=${QUAY_MIRROR:-quay.io}"
     --tag "clp-core-dependencies-${arch_prefix}-${os_name}:dev"
     "$component_root"
     --file "${script_dir}/Dockerfile"
@@ -55,6 +56,7 @@ build_cmd=(
 
 # Optional env vars:
 #   HTTP_PROXY / HTTPS_PROXY / NO_PROXY / ALL_PROXY — Forwarded into the build container
+#   QUAY_MIRROR        — Override the quay.io registry (hostname, optionally with a port)
 #   DNF_MIRROR_BASE_URL — Override AlmaLinux mirrors (organization-internal or regional)
 #   DOCKER_NETWORK      — Override Docker network mode (auto: host for localhost proxies)
 #   DOCKER_PULL=true    — Force pull the latest base image from the registry
