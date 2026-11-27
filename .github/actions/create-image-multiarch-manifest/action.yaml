@@ -27,6 +27,11 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - uses: "docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069"  # v4.4.1
+      with:
+        # Manifest assembly doesn't need a separate BuildKit container.
+        driver: "docker"
+
     - uses: "docker/login-action@dbcb813823bdd20940b903addbd779551569679f"  # v4.6.0
       with:
         registry: "${{inputs.image_registry}}"
@@ -57,6 +62,6 @@ runs:
             continue
           fi
 
-          docker manifest create "$tag" "${tag}-amd64" "${tag}-arm64"
-          docker manifest push "$tag"
+          # Publish directly from the registry without reusing the runner's local manifest store.
+          docker buildx imagetools create --tag "$tag" "${tag}-amd64" "${tag}-arm64"
         done <<< "${{steps.extract-image-tags.outputs.tags}}"
