@@ -188,7 +188,7 @@ impl From<&JobOutcome> for QueryJobStatus {
 ///
 /// # Returns
 ///
-/// On success, a tuple containing:
+/// A tuple on success, containing:
 ///
 /// * The terminal [`QueryJobStatus`].
 /// * The status message, if any.
