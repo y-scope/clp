@@ -182,9 +182,9 @@ impl From<&JobOutcome> for QueryJobStatus {
 
 /// Resolves the terminal state for a job with the given outcome and current status.
 ///
-/// A failure takes precedence over a cancellation, and a cancellation request takes precedence
-/// over a success. A reported cancellation for a job still marked [`QueryJobStatus::Running`]
-/// resolves to [`QueryJobStatus::Failed`].
+/// For non-terminal jobs, failure takes precedence over cancellation, and a cancellation request
+/// takes precedence over success. A reported cancellation for a job still marked
+/// [`QueryJobStatus::Running`] resolves to [`QueryJobStatus::Failed`].
 ///
 /// # Returns
 ///
