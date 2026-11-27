@@ -764,7 +764,7 @@ struct CompressionTimeoutFactors {
     /// The pessimistic compression throughput, used for the hard timeout.
     hard_compression_throughput_bytes_per_sec: NonZeroU64,
 
-    /// The estimated ratio of uncompressed input size to archive size, used to estimate the
+    /// The estimated ratio of uncompressed input size to archive size, used for estimating the
     /// archive size to upload.
     output_compression_ratio_estimate: NonZeroU64,
 

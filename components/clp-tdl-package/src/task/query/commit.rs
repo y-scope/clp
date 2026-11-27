@@ -85,9 +85,9 @@ pub(super) async fn commit_timeline_results(
 
 /// Writes validated buckets in bounded batches, then publishes the completion marker.
 ///
-/// Archive buckets are retained. Numeric bucket IDs cannot collide with their object IDs,
-/// and replacement upserts make publication safe to repeat after acknowledgement loss. The
-/// query and its archive inputs must remain immutable throughout retries.
+/// Archive buckets are retained. Numeric bucket IDs cannot collide with their object IDs, and
+/// replacement upserts make publication safe to repeat after acknowledgement loss. The query and
+/// its archive inputs must remain immutable throughout retries.
 ///
 /// # Errors
 ///

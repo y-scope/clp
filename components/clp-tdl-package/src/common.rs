@@ -1,5 +1,5 @@
-//! Process-global state shared by this package's tasks: the Tokio runtime, the Spider task
-//! executor config, and this cdylib's `tracing` subscriber.
+//! Process-global state shared by this package's tasks: the Tokio runtime, the Spider task executor
+//! config, and this cdylib's `tracing` subscriber.
 
 use std::path::Path;
 use std::path::PathBuf;

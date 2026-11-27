@@ -3,8 +3,8 @@ use aws_sdk_s3::Client;
 use clp_rust_utils::s3::ObjectMetadata;
 use non_empty_string::NonEmptyString;
 
-/// Scans all objects under the given S3 prefix using continuation tokens and invokes a callback
-/// for each non-empty scanned page.
+/// Scans all objects under the given S3 prefix using continuation tokens and invokes a callback for
+/// each non-empty scanned page.
 ///
 /// This function applies the following filters to the S3 objects:
 /// * Entries with a missing key or size are skipped.
