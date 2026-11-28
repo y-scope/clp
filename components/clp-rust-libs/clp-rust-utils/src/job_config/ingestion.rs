@@ -110,12 +110,12 @@ pub mod s3 {
 
         /// The long polling wait time, in seconds, for receiving messages from the SQS queue.
         ///
-        /// This value controls how long an SQS `ReceiveMessage` call will wait for a message to
-        /// arrive before returning a response. Enabling long polling can reduce empty responses
-        /// and lower overall request costs.
+        /// This value controls how long an SQS `ReceiveMessage` call waits for a message to arrive
+        /// before returning a response. Enabling long polling can reduce empty responses and lower
+        /// overall request costs.
         ///
-        /// AWS SQS enforces a maximum wait time of 20 seconds. Any configured value greater than
-        /// 20 seconds will be considered invalid.
+        /// AWS SQS enforces a maximum wait time of 20 seconds. Any configured value above 20
+        /// seconds will be considered invalid.
         ///
         /// Defaults to `20`.
         #[serde(default = "default_sqs_wait_time_sec")]
@@ -199,9 +199,8 @@ pub mod s3 {
         /// Time-based flush threshold in seconds.
         ///
         /// This is a hard timeout. The buffer is flushed to create a compression job when the
-        /// oldest buffered object has remained in the buffer for at least this duration,
-        /// regardless of the total buffered size. The timer is not reset by newly ingested
-        /// objects.
+        /// oldest buffered object has been in the buffer for at least this duration, regardless of
+        /// the total buffered size. The timer is not reset by newly ingested objects.
         ///
         /// Defaults to 300 seconds (5 minutes).
         pub timeout_sec: u64,
@@ -209,8 +208,7 @@ pub mod s3 {
         /// Capacity of the internal buffer channel.
         ///
         /// Defines the maximum number of objects that can be queued before being processed by the
-        /// buffer. Increasing this value may improve throughput at the cost of higher memory
-        /// usage.
+        /// buffer. Increasing this value may improve throughput at the cost of higher memory use.
         ///
         /// Defaults to 16. Must be a positive integer. The behavior for values less than 1 is
         /// undefined.

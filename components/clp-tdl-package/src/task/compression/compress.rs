@@ -107,8 +107,8 @@ impl Source for FsInputSource {
     }
 }
 
-/// Compresses the given inputs into archives, publishes them, and returns their metadata
-/// for the commit task.
+/// Compresses the given inputs into archives, publishes them, and returns their metadata for the
+/// commit task.
 ///
 /// # Type Parameters
 ///
@@ -688,8 +688,8 @@ fn build_clp_s_args(
 
 /// Runs clp-s, invoking `on_archive` for each archive it reports on stdout.
 ///
-/// Attempts to stop and reap the process after a stdout or callback failure. Cleanup failures
-/// are logged without replacing the original error.
+/// Attempts to stop and reap the process after a stdout or callback failure. Cleanup failures are
+/// logged without replacing the original error.
 ///
 /// # Errors
 ///

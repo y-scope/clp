@@ -94,8 +94,8 @@ pub enum Frame {
 }
 
 impl Frame {
-    /// Decodes a frame from the front of `buffer`, consuming its bytes. The number of fields of
-    /// the frame's array tells a result from a trailer.
+    /// Decodes a frame from the front of `buffer`, consuming its bytes. The number of fields of the
+    /// frame's array tells a result from a trailer.
     ///
     /// # Returns
     ///

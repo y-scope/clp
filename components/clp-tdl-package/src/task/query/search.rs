@@ -214,8 +214,8 @@ impl<'config> ResultsFile<'config> {
         })
     }
 
-    /// Publishes the staged results file to its destination once clp-s has written it, unless
-    /// clp-s didn't create it or left it empty.
+    /// Publishes the staged results file to its destination once clp-s has written it, unless clp-s
+    /// didn't create it or left it empty.
     ///
     /// The file is moved to a filesystem destination, or uploaded to an S3 destination.
     ///

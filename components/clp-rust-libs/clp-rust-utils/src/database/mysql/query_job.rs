@@ -40,8 +40,8 @@ pub async fn submit(
 ///
 /// # Returns
 ///
-/// The query job's cancellability before the request on success, or `None` if the query job
-/// doesn't exist. The query job is marked only if it was [`Cancellability::Cancellable`].
+/// The query job's cancellability before the request on success, or `None` if the query job doesn't
+/// exist. The query job is marked only if it was [`Cancellability::Cancellable`].
 ///
 /// # Errors
 ///

@@ -46,7 +46,7 @@ pub struct LogIngestorRecoveryContext {
     pub unfinished_compression_jobs: Vec<ClpCompressionJobContext>,
 
     /// A vector of contexts for all recoverable ingestion jobs in CLP DB. These ingestion jobs are
-    /// in either [`ClpIngestionJobStatus::Requested`] or [`ClpIngestionJobStatus::Running`]
+    /// in either the [`ClpIngestionJobStatus::Requested`] or [`ClpIngestionJobStatus::Running`]
     /// status, and can be resumed by creating an ingestion job instance with the context.
     pub recoverable_ingestion_jobs: Vec<ClpIngestionJobContext>,
 
@@ -867,8 +867,8 @@ impl ClpIngestionState {
     ///
     /// # NOTE
     ///
-    /// All database operations are executed within the given transaction and are committed
-    /// before the metadata is sent to the channel.
+    /// All database operations are executed within the given transaction and are committed before
+    /// the metadata is sent to the channel.
     ///
     /// # Returns
     ///
@@ -1510,8 +1510,8 @@ async fn update_job_status(
     Ok(())
 }
 
-/// Runs `tx` on a freshly acquired pooled connection whose next transaction uses the `READ
-/// COMMITTED` isolation level.
+/// Runs `tx` on a freshly acquired pooled connection whose next transaction uses the
+/// `READ COMMITTED` isolation level.
 ///
 /// A `SET TRANSACTION ISOLATION LEVEL READ COMMITTED` statement is issued on the connection before
 /// `tx` runs. Because it omits `SESSION`/`GLOBAL`, it applies only to the next transaction started

@@ -1040,8 +1040,8 @@ export interface operations {
         parameters: {
             query: {
                 /**
-                 * @description The logs-input path of the directory to list: relative to the logs-input mount point, with
-                 *     a leading `/` that denotes the mount point itself.
+                 * @description The logs-input path of the directory to list: relative to the logs-input mount point, where
+                 *     a leading `/` denotes the mount point itself.
                  */
                 path: string;
             };
@@ -1332,8 +1332,8 @@ export interface operations {
                 raw_docs?: boolean;
                 /**
                  * @description When `true`, results buffered in `MongoDB` are streamed sorted by timestamp descending;
-                 *     otherwise, they're streamed in insertion order. Only applies to query jobs whose results
-                 *     are buffered in `MongoDB`.
+                 *     otherwise, they're streamed in insertion order. Only applies to query jobs with results
+                 *     buffered in `MongoDB`.
                  */
                 sorted?: boolean;
             };
