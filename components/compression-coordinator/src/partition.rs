@@ -58,8 +58,7 @@ pub struct InputMetadata<PathType: AsRef<str>> {
     pub size: u64,
 }
 
-/// Groups files or S3 objects into task manifests by estimated uncompressed size and entry
-/// count.
+/// Groups files or S3 objects into task manifests by estimated uncompressed size and entry count.
 ///
 /// # Type Parameters
 ///
@@ -130,8 +129,8 @@ impl<SourceType: Source> CompressionInputBuilder<SourceType> {
 
     /// Partitions buffered objects into target-sized partitions for compression tasks.
     ///
-    /// When `flush_buffer` is false, objects that cannot fill another target-sized partition
-    /// remain buffered. Otherwise, the final partial partition is also emitted.
+    /// When `flush_buffer` is false, objects that cannot fill another target-sized partition remain
+    /// buffered. Otherwise, the final partial partition is also emitted.
     fn partition(&mut self, flush_buffer: bool) {
         if self.buffer.is_empty() {
             return;

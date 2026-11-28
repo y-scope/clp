@@ -111,8 +111,8 @@ impl Listener {
     /// Creates and spawns a new [`Listener`] backed by a [`ListenerTask`].
     ///
     /// This function spawns a [`ListenerTask`]. The spawned task will buffer incoming
-    /// [`CompressionBufferEntry`] values and call the supplied `Submitter` when either the
-    /// buffer's threshold is reached or the configured `timeout` fires.
+    /// [`CompressionBufferEntry`] values and call the supplied `Submitter` when either the buffer's
+    /// threshold is reached or the configured `timeout` fires.
     ///
     /// # Type parameters
     ///

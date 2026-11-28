@@ -1,5 +1,5 @@
-//! The compression-job-submission API trait for driving CLP compression jobs on a Spider
-//! (Huntsman) cluster.
+//! The compression-job-submission API trait for driving CLP compression jobs on a Spider (Huntsman)
+//! cluster.
 
 mod spider;
 
