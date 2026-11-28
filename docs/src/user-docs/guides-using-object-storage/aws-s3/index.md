@@ -67,9 +67,9 @@ clp-json currently supports the AWS authentication methods described below.
 
 :::{caution}
 Short-term [STS credentials][aws-sts-credentials] (which include a Session Token) are not supported
-directly. Instead, use [named profiles](#named-profiles) (with IAM Identity Center authentication or
-IAM role assumption) which provide the required permissions and don't require specifying credentials
-directly.
+directly. Instead, use the [default credential provider chain](#default-credential-provider-chain)
+with a source that provides the required permissions (e.g., IRSA or an EC2 instance IAM role) and
+doesn't require specifying credentials directly.
 :::
 
 #### Long-term IAM user credentials
@@ -81,27 +81,6 @@ clp-json can authenticate using long-term credentials for an IAM user.
     attach policies in later steps, depending on which object storage use cases you require.
 * To generate the credentials, follow [this guide][aws-create-access-keys].
   * Choose the "Other" use case to generate long-term credentials.
-
-#### Named profiles
-
-clp-json can authenticate using AWS CLI named profiles. Named profiles can themselves make use of a
-variety of AWS authentication mechanisms, including:
-
-* [IAM Identity Center authentication][aws-iam-identity-center]
-* [Assuming an IAM role][aws-iam-roles]
-* Long-term IAM user credentials
-
-Follow [this guide][aws-configure-profiles] for more information on configuring profiles with the
-AWS CLI.
-
-:::{note}
-Profile configurations are stored in your AWS config directory (typically `~/.aws`).
-:::
-
-#### Environment variables for long-term credentials
-
-clp-json can authenticate using [long-term IAM user credentials](#long-term-iam-user-credentials)
-specified through the environment variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
 
 #### Default credential provider chain
 
@@ -158,12 +137,9 @@ eks-irsa-setup
 using-clp-with-aws-s3
 :::
 
-[aws-configure-profiles]: https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html
 [aws-create-access-keys]: https://docs.aws.amazon.com/keyspaces/latest/devguide/create.keypair.html
 [aws-create-iam-user]: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html
 [aws-ec2-attach-iam-role]: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/attach-iam-role.html
-[aws-iam-identity-center]: https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sso.html
-[aws-iam-roles]: https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-role.html
 [aws-key-prefixes]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-prefixes.html
 [aws-sts-credentials]: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp.html
 [release-choices]: ../../quick-start/index.md#choosing-a-flavor

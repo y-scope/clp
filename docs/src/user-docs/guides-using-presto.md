@@ -27,8 +27,7 @@ CLP supports Presto through two deployment methods:
 
 When deploying CLP on Kubernetes using Helm, Presto can be enabled by setting `clpConfig.presto` to
 a non-null configuration and `clpConfig.webui.query_engine` to `"presto"`. The `query_engine` setting controls
-which search interface the Web UI displays. Presto runs alongside the existing compression pipeline;
-the clp-s native query components can optionally be disabled to save resources.
+which search interface the Web UI displays. Presto runs alongside the existing compression pipeline.
 
 ### Requirements
 
@@ -44,11 +43,6 @@ the clp-s native query components can optionally be disabled to save resources.
    clpConfig:
      webui:
        query_engine: "presto"
-
-     # Optional: Disable the clp-s native query pipeline to save resources.
-     query_scheduler: null
-     query_worker: null
-     reducer: null
 
      # Disable results cache retention since the Presto integration doesn't yet support
      # garbage collection of search results.
@@ -142,14 +136,6 @@ Using Presto with CLP via Docker Compose requires:
       #
       #  # Retention period for search results, in minutes. Set to null to disable automatic deletion.
         retention_period: null
-      ```
-
-    * Optional: Disable the native query pipeline to save resources.
-
-      ```yaml
-      query_scheduler: null
-      query_worker: null
-      reducer: null
       ```
 
     * Update the `presto` key with the host and port of the Presto cluster. If you follow the

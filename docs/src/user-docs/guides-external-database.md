@@ -16,7 +16,7 @@ CLP requires two types of databases:
 
 * **MariaDB/MySQL** - for storing:
   * metadata about CLP's archives, files, compression jobs, and query jobs.
-  * metadata about Spider's jobs (only when Spider is used for scheduling).
+  * metadata about Spider's jobs.
 * **MongoDB** - for caching query results.
 
 ## MariaDB/MySQL setup
@@ -209,8 +209,6 @@ mysql -h <mariadb-hostname-or-ip> -u clp-user -p clp-db
    # Remove "database" and "results_cache" from this list to use external instances.
    bundled: [
      # "database",
-     "queue",
-     "redis",
      # "results_cache",
      "otel_collector",
    ]
@@ -236,13 +234,6 @@ mysql -h <mariadb-hostname-or-ip> -u clp-user -p clp-db
      password: "<your-mariadb-password>"
    ```
 
-```{note}
-When using external databases in a multi-host deployment, you do **not** need to start the
-`database` and `results-cache` Docker Compose services. Skip those services when following the
-[multi-host deployment guide][multi-host-guide]. However, you still need to run the database
-initialization jobs (`db-table-creator` and `results-cache-indices-creator`).
-```
-
 :::
 
 :::{tab-item} Kubernetes
@@ -255,8 +246,6 @@ initialization jobs (`db-table-creator` and `results-cache-indices-creator`).
      # Remove "database" and "results_cache" from this list to use external instances.
      bundled: [
        # "database",
-       "queue",
-       "redis",
        # "results_cache",
        "otel_collector",
        "presto",
@@ -290,6 +279,11 @@ initialization jobs (`db-table-creator` and `results-cache-indices-creator`).
 ::::
 
 ## Using an external database with Spider
+
+:::{note}
+Only Kubernetes deployments can use an external database with Spider. Docker Compose deployments
+always use the database bundled with Spider.
+:::
 
 To use an external database with Spider, you'll need to:
 
@@ -355,4 +349,3 @@ To use an external database with Spider, you'll need to:
 [k8s-guide]: guides-k8s-deployment.md
 [mongodb-install]: https://www.mongodb.com/docs/manual/installation/
 [mongodb-security]: https://docs.mongodb.com/manual/security/
-[multi-host-guide]: guides-docker-compose-deployment.md#starting-clp

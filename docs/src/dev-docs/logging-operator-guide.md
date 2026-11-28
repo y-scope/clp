@@ -6,7 +6,7 @@ high-level overview of the logging behaviors across all component families:
 
 | Component family              | Components                                                                                                                     | Logger                                                          | Format                 | Level control              |
 |-------------------------------|--------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------|------------------------|----------------------------|
-| Python orchestration services | `compression_scheduler`, `query_scheduler`, `compression_worker`, `query_worker`, `reducer`, `garbage_collector`, `mcp_server` | [`structlog` with stdlib logging compatibility][clp-py-logging] | JSON                   | `CLP_LOGGING_LEVEL`        |
+| Python orchestration services | `garbage_collector`, `mcp_server`                                                                                              | [`structlog` with stdlib logging compatibility][clp-py-logging] | JSON                   | `CLP_LOGGING_LEVEL`        |
 | Rust HTTP services            | `api_server`, `log_ingestor`                                                                                                   | [`clp_rust_utils::logging`][clp-rust-logging] / `tracing`       | JSON                   | `RUST_LOG`                 |
 | WebUI server                  | Fastify server                                                                                                                 | [Fastify/Pino][pino]                                            | JSON or pretty text    | `LOG_LEVEL`                |
 | WebUI client                  | Browser app                                                                                                                    | Browser console                                                 | Browser console output | Browser/devtools dependent |
@@ -57,10 +57,9 @@ logs are additionally written to `<CLP_LOGS_DIR>/<component_name>.log`. This dir
 * **Core binaries**: Running standalone binaries (`clp`, `clp-s`, etc.) emits
   unstructured `spdlog` text to `stdout`.
   :::{note}
-  *When deployed*, Python orchestration services invoke these binaries as subprocesses.
-  Consequently, the core binaries' unstructured log text is captured and written to the Python
-  logger's output stream as a single multi-line JSON record. These appear alongside normal container
-  logs in Docker or Kubernetes.
+  *When deployed*, Spider tasks invoke these binaries as subprocesses. If a binary fails, the task
+  captures the binary's `stderr` output and logs it in a single error record. These records appear
+  in the Spider workers' logs in Docker or Kubernetes.
   :::
 * **WebUI client**: WebUI client (`console.*`) logs remain local to the user's browser devtools
   and are *not* captured by any backend telemetry service. They should be treated purely as local
@@ -98,12 +97,12 @@ Example:
 ```json
 {
   "timestamp": "2026-06-22T17:03:21.123456Z",
-  "event": "Compression job 1 submitted.",
-  "logger": "compression_scheduler",
+  "event": "Creating archive-garbage-collector with retention period = 60 minutes",
+  "logger": "garbage_collector",
   "level": "info",
-  "filename": "compression_scheduler.py",
+  "filename": "garbage_collector.py",
   "func_name": "main",
-  "lineno": 616
+  "lineno": 68
 }
 ```
 
