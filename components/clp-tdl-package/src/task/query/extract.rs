@@ -1,5 +1,7 @@
-//! Ordered chunk extraction through the `clp-s` subprocess.
+//! Extraction and publication of ordered JSON chunks from a single archive.
 
+use std::fs;
+use std::io;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::io::Read;
@@ -14,13 +16,404 @@ use std::thread;
 use std::thread::ScopedJoinHandle;
 
 use anyhow::Context;
+use clp_rust_utils::clp_config::package::config::ResultsCache;
 use clp_rust_utils::clp_config::package::config::SpiderTaskExecutorConfig;
 use clp_rust_utils::clp_config::package::config::StorageEngine;
+use clp_rust_utils::clp_config::package::config::StreamOutputStorage;
 use clp_rust_utils::task_io::extraction::ExtractTaskInput;
+use clp_rust_utils::types::ArchiveId;
+use mongodb::Client;
+use mongodb::Collection;
+use mongodb::Namespace;
+use mongodb::bson::Document;
+use mongodb::bson::doc;
+use mongodb::options::ReplaceOneModel;
 use serde::Deserialize;
+use spider_core::types::id::TaskInstanceId;
 
 use crate::task::query::archive_input::ArchiveDescriptor;
+use crate::task::query::results_cache::parse_results_cache_uri;
+use crate::task::utils::TmpFileDeleter;
+use crate::task::utils::build_s3_client;
 use crate::task::utils::clp_binary_path;
+use crate::task::utils::upload_file_to_s3;
+
+/// Extracts and publishes an archive's ordered JSON chunks and their metadata.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * Forwards [`fs::create_dir_all`]'s return values on failure.
+/// * Forwards [`fs::create_dir`]'s return values on failure.
+/// * Forwards [`run_clp_s_extract`]'s return values on failure.
+/// * Forwards [`reject_unordered_output`]'s return values on failure.
+/// * Forwards [`ChunkBatch::parse`]'s return values on failure.
+/// * Forwards [`prepare_metadata_collection`]'s return values on failure.
+/// * Forwards [`publish_files`]'s return values on failure.
+/// * Forwards [`upsert_metadata`]'s return values on failure.
+pub(super) fn extract(
+    runtime: &tokio::runtime::Handle,
+    clp_home: &Path,
+    config: &SpiderTaskExecutorConfig,
+    task_instance_id: TaskInstanceId,
+    input: &ExtractTaskInput,
+) -> anyhow::Result<()> {
+    let staging_root = config.abs_stream_output_staging(clp_home).join(".staging");
+    fs::create_dir_all(&staging_root).with_context(|| {
+        format!(
+            "failed to create the extraction staging root {}",
+            staging_root.display()
+        )
+    })?;
+    let staging_path = staging_root.join(format!("{}.{task_instance_id}", input.job_id));
+    fs::create_dir(&staging_path).with_context(|| {
+        format!(
+            "failed to create an extraction staging directory {}",
+            staging_path.display()
+        )
+    })?;
+    let mut tmp_file_deleter = TmpFileDeleter::new();
+    tmp_file_deleter.add(staging_path.clone());
+
+    let batch = {
+        let paths = run_clp_s_extract(runtime, clp_home, config, input, &staging_path)?;
+        reject_unordered_output(&staging_path)?;
+        ChunkBatch::parse(&staging_path, input.archive_id, &paths)?
+    };
+    if batch.chunks.is_empty() {
+        return Ok(());
+    }
+    let collection = runtime.block_on(prepare_metadata_collection(&config.results_cache))?;
+    publish_files(runtime, clp_home, config, &batch)?;
+    runtime.block_on(upsert_metadata(&collection, &batch))
+}
+
+const MAX_STATS_LINE_SIZE: usize = 64 * 1024;
+const MAX_STATS_OUTPUT_SIZE: usize = 128 * 1024 * 1024;
+const MAX_STATS_READ_SIZE: usize = MAX_STATS_LINE_SIZE + 1;
+const MAX_CHUNKS: usize = 1_000_000;
+const MAX_STDERR_TAIL_SIZE: usize = 64 * 1024;
+
+const _: () = assert!(
+    MAX_STATS_OUTPUT_SIZE
+        .checked_add(MAX_STATS_READ_SIZE)
+        .is_some(),
+    "the maximum output size plus one stats line and its newline must fit in a usize"
+);
+
+/// An extracted file and its validated bounds in the archive's event stream.
+#[derive(Debug, PartialEq)]
+struct Chunk {
+    filename: String,
+    begin_msg_ix: i64,
+    end_msg_ix: i64,
+    is_last: bool,
+}
+
+/// An archive's validated chunks and the staging directory they belong to.
+///
+/// # Type Parameters
+///
+/// * `'staging_path` - The lifetime of the borrowed staging directory path.
+#[derive(Debug)]
+struct ChunkBatch<'staging_path> {
+    archive_id: ArchiveId,
+    chunks: Vec<Chunk>,
+    staging_path: &'staging_path Path,
+}
+
+impl<'staging_path> ChunkBatch<'staging_path> {
+    /// Validates the filenames and contiguous ranges of a sequence of ordered chunks.
+    ///
+    /// # Returns
+    ///
+    /// The archive's staging path and validated chunks in emission order on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`anyhow::Error`] if:
+    ///   * A path is not the exact path of a file directly under `staging_path`.
+    ///   * A filename does not match the archive ID and chunk naming format.
+    ///   * The ranges do not form a contiguous sequence of positive-length ranges from index zero.
+    /// * Forwards [`parse_chunk_index`]'s return values on failure.
+    fn parse(
+        staging_path: &'staging_path Path,
+        archive_id: ArchiveId,
+        paths: &[PathBuf],
+    ) -> anyhow::Result<Self> {
+        let prefix = format!("{archive_id}_");
+        let mut chunks = Vec::with_capacity(paths.len());
+        let mut expected_begin = 0;
+        for (index, path) in paths.iter().enumerate() {
+            let filename = path
+                .file_name()
+                .and_then(|name| name.to_str())
+                .filter(|name| path.as_os_str() == staging_path.join(name).as_os_str())
+                .with_context(|| {
+                    format!(
+                        "reported chunk path {} is not a UTF-8 filename directly under {}",
+                        path.display(),
+                        staging_path.display()
+                    )
+                })?;
+            let (begin, end) = filename
+                .strip_prefix(&prefix)
+                .and_then(|suffix| suffix.strip_suffix(".jsonl"))
+                .and_then(|range| range.split_once('_'))
+                .with_context(|| format!("invalid ordered chunk filename {filename}"))?;
+            let begin_msg_ix = parse_chunk_index(begin, filename)?;
+            let end_msg_ix = parse_chunk_index(end, filename)?;
+            anyhow::ensure!(
+                begin_msg_ix == expected_begin && end_msg_ix > begin_msg_ix,
+                "invalid range in {filename}: expected start {expected_begin} and a larger end"
+            );
+            chunks.push(Chunk {
+                filename: filename.to_owned(),
+                begin_msg_ix,
+                end_msg_ix,
+                is_last: index + 1 == paths.len(),
+            });
+            expected_begin = end_msg_ix;
+        }
+        Ok(Self {
+            archive_id,
+            chunks,
+            staging_path,
+        })
+    }
+
+    /// # Returns
+    ///
+    /// The results-cache upserts for the archive's chunks in emission order.
+    fn replacement_models(
+        &self,
+        namespace: Namespace,
+    ) -> impl Iterator<Item = ReplaceOneModel> + '_ {
+        let archive_id = self.archive_id.to_string();
+        self.chunks.iter().map(move |chunk| {
+            ReplaceOneModel::builder()
+                .namespace(namespace.clone())
+                .filter(doc! { "_id": &chunk.filename })
+                .replacement(doc! {
+                    "_id": &chunk.filename,
+                    "path": &chunk.filename,
+                    "stream_id": &archive_id,
+                    "begin_msg_ix": chunk.begin_msg_ix,
+                    "end_msg_ix": chunk.end_msg_ix,
+                    "is_last_chunk": chunk.is_last,
+                })
+                .upsert(true)
+                .build()
+        })
+    }
+}
+
+/// A subprocess that is killed and reaped on drop unless already reaped.
+#[must_use = "dropping the guard before waiting kills and reaps the subprocess"]
+struct ChildGuard {
+    child: Option<Child>,
+}
+
+impl ChildGuard {
+    /// Waits for the subprocess and reaps it.
+    ///
+    /// # Returns
+    ///
+    /// The child's exit status on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`Child::wait`]'s return values on failure.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the guard no longer holds a child. Only this consuming method releases the child.
+    fn wait(mut self) -> std::io::Result<ExitStatus> {
+        let status = self
+            .child
+            .as_mut()
+            .expect("the guard holds the child until it is reaped")
+            .wait()?;
+        self.child = None;
+        Ok(status)
+    }
+}
+
+impl Drop for ChildGuard {
+    fn drop(&mut self) {
+        let Some(mut child) = self.child.take() else {
+            return;
+        };
+        if let Err(error) = child.kill() {
+            tracing::warn!(error = % error, pid = child.id(), "Failed to kill clp-s.");
+        }
+        if let Err(error) = child.wait() {
+            tracing::warn!(error = % error, pid = child.id(), "Failed to reap clp-s.");
+        }
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ChunkStatsLine {
+    path: PathBuf,
+}
+
+/// Rejects the `original` file clp-s writes when it falls back to unordered extraction.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * [`anyhow::Error`] if the unordered output exists.
+/// * Forwards [`fs::symlink_metadata`]'s return values on failure, except when the file is absent.
+fn reject_unordered_output(staging_path: &Path) -> anyhow::Result<()> {
+    let path = staging_path.join("original");
+    match fs::symlink_metadata(&path) {
+        Ok(_) => anyhow::bail!("clp-s produced unordered output; the archive lacks log ordering"),
+        Err(error) if io::ErrorKind::NotFound == error.kind() => Ok(()),
+        Err(error) => Err(error).with_context(|| format!("failed to check for {}", path.display())),
+    }
+}
+
+/// # Returns
+///
+/// The parsed nonnegative event index on success.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * [`anyhow::Error`] if the index is not written in canonical decimal form.
+/// * Forwards [`str::parse`]'s return values on failure.
+fn parse_chunk_index(index: &str, filename: &str) -> anyhow::Result<i64> {
+    anyhow::ensure!(
+        !index.is_empty()
+            && index.bytes().all(|byte| byte.is_ascii_digit())
+            && (index.len() == 1 || !index.starts_with('0')),
+        "invalid event index {index:?} in ordered chunk filename {filename}"
+    );
+    index.parse().with_context(|| {
+        format!("invalid event index {index:?} in ordered chunk filename {filename}")
+    })
+}
+
+/// Publishes a batch's validated chunks from its staging directory to the filesystem or S3.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * [`anyhow::Error`] if a staged chunk is not a regular file.
+/// * Forwards [`fs::symlink_metadata`]'s return values on failure.
+/// * Forwards [`fs::rename`]'s return values on failure.
+/// * Forwards [`upload_file_to_s3`]'s return values on failure.
+fn publish_files(
+    runtime: &tokio::runtime::Handle,
+    clp_home: &Path,
+    config: &SpiderTaskExecutorConfig,
+    batch: &ChunkBatch<'_>,
+) -> anyhow::Result<()> {
+    let staging_path = batch.staging_path;
+    for chunk in &batch.chunks {
+        let path = staging_path.join(&chunk.filename);
+        let metadata = fs::symlink_metadata(&path).with_context(|| {
+            format!(
+                "failed to read metadata for staged chunk {}",
+                path.display()
+            )
+        })?;
+        anyhow::ensure!(
+            metadata.is_file(),
+            "staged chunk {} is not a regular file",
+            path.display()
+        );
+    }
+    match &config.stream_output.storage {
+        StreamOutputStorage::Fs { .. } => {
+            let local_directory = config.abs_stream_output_staging(clp_home);
+            for chunk in &batch.chunks {
+                let source = staging_path.join(&chunk.filename);
+                let destination = local_directory.join(&chunk.filename);
+                fs::rename(&source, &destination).with_context(|| {
+                    format!(
+                        "failed to move staged chunk {} to {}",
+                        source.display(),
+                        destination.display()
+                    )
+                })?;
+            }
+        }
+        StreamOutputStorage::S3 { s3_config, .. } => {
+            let client = build_s3_client(runtime, s3_config);
+            runtime.block_on(async {
+                for chunk in &batch.chunks {
+                    let key = format!("{}{}", s3_config.key_prefix, chunk.filename);
+                    upload_file_to_s3(
+                        &client,
+                        s3_config.bucket.as_str(),
+                        &key,
+                        &staging_path.join(&chunk.filename),
+                    )
+                    .await?;
+                }
+                Ok::<(), anyhow::Error>(())
+            })?;
+        }
+    }
+    Ok(())
+}
+
+/// Prepares the stream metadata collection using the configured results cache.
+///
+/// # Returns
+///
+/// The collection for stream metadata on success.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * Forwards [`parse_results_cache_uri`]'s return values on failure.
+/// * Forwards [`Client::with_options`]'s return values on failure.
+async fn prepare_metadata_collection(
+    config: &ResultsCache,
+) -> anyhow::Result<Collection<Document>> {
+    let options = parse_results_cache_uri(config.uri().as_str()).await?;
+    let client = Client::with_options(options)?;
+    Ok(client
+        .database(&config.db_name)
+        .collection(&config.stream_collection_name))
+}
+
+/// Upserts stream metadata in bounded batches.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * Forwards [`Client::bulk_write`]'s return values on failure.
+async fn upsert_metadata(
+    collection: &Collection<Document>,
+    batch: &ChunkBatch<'_>,
+) -> anyhow::Result<()> {
+    const BATCH_SIZE: usize = 1_000;
+
+    let mut operations = batch.replacement_models(collection.namespace()).peekable();
+    while operations.peek().is_some() {
+        collection
+            .client()
+            .bulk_write(operations.by_ref().take(BATCH_SIZE))
+            .await
+            .context("failed to upsert ordered chunk metadata")?;
+    }
+    Ok(())
+}
 
 /// Extracts one archive into ordered chunks in `output_directory`.
 ///
@@ -44,14 +437,7 @@ use crate::task::utils::clp_binary_path;
 /// # Panics
 ///
 /// Panics if either pipe is absent on the child spawned with piped stdout and stderr.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "the extraction task will call the runner once registered"
-    )
-)]
-pub(super) fn run_clp_s_extract(
+fn run_clp_s_extract(
     runtime: &tokio::runtime::Handle,
     clp_home: &Path,
     config: &SpiderTaskExecutorConfig,
@@ -108,72 +494,6 @@ pub(super) fn run_clp_s_extract(
         let stderr_tail = describe_stderr_tail(stderr_reader);
         result.with_context(|| format!("failed to extract with clp-s; stderr tail: {stderr_tail}"))
     })
-}
-
-const MAX_STATS_LINE_SIZE: usize = 64 * 1024;
-const MAX_STATS_OUTPUT_SIZE: usize = 128 * 1024 * 1024;
-const MAX_STATS_READ_SIZE: usize = MAX_STATS_LINE_SIZE + 1;
-const MAX_CHUNKS: usize = 1_000_000;
-const MAX_STDERR_TAIL_SIZE: usize = 64 * 1024;
-
-const _: () = assert!(
-    MAX_STATS_OUTPUT_SIZE
-        .checked_add(MAX_STATS_READ_SIZE)
-        .is_some(),
-    "the maximum output size plus one stats line and its newline must fit in a usize"
-);
-
-/// A subprocess that is killed and reaped on drop unless already reaped.
-#[must_use = "dropping the guard before waiting kills and reaps the subprocess"]
-struct ChildGuard {
-    child: Option<Child>,
-}
-
-impl ChildGuard {
-    /// Waits for the subprocess and reaps it.
-    ///
-    /// # Returns
-    ///
-    /// The child's exit status on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * Forwards [`Child::wait`]'s return values on failure.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the guard no longer holds a child. Only this consuming method releases the child.
-    fn wait(mut self) -> std::io::Result<ExitStatus> {
-        let status = self
-            .child
-            .as_mut()
-            .expect("the guard holds the child until it is reaped")
-            .wait()?;
-        self.child = None;
-        Ok(status)
-    }
-}
-
-impl Drop for ChildGuard {
-    fn drop(&mut self) {
-        let Some(mut child) = self.child.take() else {
-            return;
-        };
-        if let Err(error) = child.kill() {
-            tracing::warn!(error = % error, pid = child.id(), "Failed to kill clp-s.");
-        }
-        if let Err(error) = child.wait() {
-            tracing::warn!(error = % error, pid = child.id(), "Failed to reap clp-s.");
-        }
-    }
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct ChunkStatsLine {
-    path: PathBuf,
 }
 
 /// Builds a command for extracting one archive with `clp-s x`.
@@ -301,10 +621,13 @@ fn describe_stderr_tail(reader: ScopedJoinHandle<'_, std::io::Result<Vec<u8>>>) 
 #[cfg(test)]
 mod tests {
     use std::ffi::OsStr;
+    use std::fs;
+    use std::io;
     use std::io::BufReader;
     use std::io::Read;
     use std::num::NonZeroU64;
     use std::os::unix::fs::PermissionsExt;
+    use std::os::unix::fs::symlink;
     use std::path::Path;
     use std::path::PathBuf;
     use std::process::Command;
@@ -314,17 +637,25 @@ mod tests {
     use clp_rust_utils::clp_config::package::config::ArchiveOutput;
     use clp_rust_utils::clp_config::package::config::ArchiveOutputStorage;
     use clp_rust_utils::clp_config::package::config::Package;
+    use clp_rust_utils::clp_config::package::config::ResultsCache;
     use clp_rust_utils::clp_config::package::config::SpiderTaskExecutorConfig;
     use clp_rust_utils::clp_config::package::config::StorageEngine;
+    use clp_rust_utils::clp_config::package::config::StreamOutput;
+    use clp_rust_utils::clp_config::package::config::StreamOutputStorage;
     use clp_rust_utils::dataset::DatasetName;
     use clp_rust_utils::task_io::extraction::ExtractTaskInput;
     use clp_rust_utils::types::ArchiveId;
+    use mongodb::Namespace;
+    use mongodb::bson::doc;
 
+    use super::ChunkBatch;
     use super::MAX_CHUNKS;
     use super::MAX_STATS_LINE_SIZE;
     use super::MAX_STATS_OUTPUT_SIZE;
     use super::MAX_STDERR_TAIL_SIZE;
     use super::build_clp_s_extract_command;
+    use super::extract;
+    use super::publish_files;
     use super::read_chunk_paths;
     use super::run_clp_s_extract;
     use crate::task::query::archive_input::ArchiveDescriptor;
@@ -360,6 +691,343 @@ mod tests {
             }
             self.unread.read(buffer)
         }
+    }
+
+    #[test]
+    fn chunk_batch_parse_builds_metadata_for_contiguous_chunks() -> anyhow::Result<()> {
+        use ChunkPosition::Intermediate;
+        use ChunkPosition::Last;
+
+        enum ChunkPosition {
+            Intermediate,
+            Last,
+        }
+
+        let staging_path = Path::new("/staging");
+        let archive_id = ARCHIVE_ID.parse()?;
+        let namespace = Namespace::new("db", "streams");
+        let cases: &[&[(i64, i64, ChunkPosition)]] = &[
+            &[(0, 7, Last)],
+            &[(0, 2, Intermediate), (2, 42, Last)],
+            &[(0, 3, Intermediate), (3, 8, Intermediate), (8, 17, Last)],
+        ];
+        for &expected in cases {
+            let filenames: Vec<_> = expected
+                .iter()
+                .map(|(begin, end, _)| format!("{ARCHIVE_ID}_{begin}_{end}.jsonl"))
+                .collect();
+            let paths: Vec<_> = filenames
+                .iter()
+                .map(|filename| staging_path.join(filename))
+                .collect();
+            let batch = ChunkBatch::parse(staging_path, archive_id, &paths)?;
+            let operations: Vec<_> = batch.replacement_models(namespace.clone()).collect();
+            assert_eq!(operations.len(), expected.len());
+            for ((filename, (begin, end, position)), operation) in
+                filenames.iter().zip(expected).zip(operations)
+            {
+                assert_eq!(operation.namespace, namespace);
+                assert_eq!(operation.filter, doc! { "_id": filename });
+                assert_eq!(operation.upsert, Some(true));
+                assert_eq!(
+                    operation.replacement,
+                    doc! {
+                        "_id": filename,
+                        "path": filename,
+                        "stream_id": ARCHIVE_ID,
+                        "begin_msg_ix": *begin,
+                        "end_msg_ix": *end,
+                        "is_last_chunk": matches!(position, Last),
+                    }
+                );
+            }
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn chunk_batch_parse_rejects_malformed_chunk_paths() {
+        let staging_path = Path::new("/staging");
+        let archive_id = ARCHIVE_ID
+            .parse()
+            .expect("the fixture has a valid archive ID");
+        let assert_rejected = |path, expected_error| {
+            let error = ChunkBatch::parse(staging_path, archive_id, &[path])
+                .expect_err("a malformed chunk path should be rejected");
+            assert_eq!(error.to_string(), expected_error);
+        };
+
+        let filename = format!("{ARCHIVE_ID}_0_1.jsonl");
+        for path in [
+            PathBuf::from(&filename),
+            Path::new("/other").join(&filename),
+            staging_path.join("nested").join(&filename),
+            staging_path.join("nested/..").join(&filename),
+            staging_path.join(format!("{filename}/")),
+        ] {
+            let expected_error = format!(
+                "reported chunk path {} is not a UTF-8 filename directly under {}",
+                path.display(),
+                staging_path.display()
+            );
+            assert_rejected(path, expected_error);
+        }
+
+        for filename in [
+            "68243977-37d6-46e1-a02d-7d0f08b04f70_0_1.jsonl".to_owned(),
+            format!("{ARCHIVE_ID}_0_1.json"),
+        ] {
+            assert_rejected(
+                staging_path.join(&filename),
+                format!("invalid ordered chunk filename {filename}"),
+            );
+        }
+
+        for (range, invalid_index) in [
+            ("0_1_2", "1_2"),
+            ("_1", ""),
+            ("-0_1", "-0"),
+            ("0_+1", "+1"),
+            ("0_01", "01"),
+            ("0_9223372036854775808", "9223372036854775808"),
+        ] {
+            let filename = format!("{ARCHIVE_ID}_{range}.jsonl");
+            assert_rejected(
+                staging_path.join(&filename),
+                format!(
+                    "invalid event index {invalid_index:?} in ordered chunk filename {filename}"
+                ),
+            );
+        }
+    }
+
+    #[test]
+    fn chunk_batch_parse_rejects_noncontiguous_or_nonpositive_ranges() {
+        struct Case {
+            ranges: [&'static str; 2],
+            invalid_chunk: usize,
+            expected_start: i64,
+        }
+
+        let staging_path = Path::new("/staging");
+        let archive_id = ARCHIVE_ID
+            .parse()
+            .expect("the fixture has a valid archive ID");
+        for case in [
+            Case {
+                ranges: ["1_2", "2_3"],
+                invalid_chunk: 0,
+                expected_start: 0,
+            },
+            Case {
+                ranges: ["0_2", "3_5"],
+                invalid_chunk: 1,
+                expected_start: 2,
+            },
+            Case {
+                ranges: ["0_2", "1_3"],
+                invalid_chunk: 1,
+                expected_start: 2,
+            },
+            Case {
+                ranges: ["0_2", "0_2"],
+                invalid_chunk: 1,
+                expected_start: 2,
+            },
+            Case {
+                ranges: ["0_2", "2_2"],
+                invalid_chunk: 1,
+                expected_start: 2,
+            },
+            Case {
+                ranges: ["0_2", "2_1"],
+                invalid_chunk: 1,
+                expected_start: 2,
+            },
+        ] {
+            let filenames = case
+                .ranges
+                .map(|range| format!("{ARCHIVE_ID}_{range}.jsonl"));
+            let paths = filenames
+                .each_ref()
+                .map(|filename| staging_path.join(filename));
+            let error = ChunkBatch::parse(staging_path, archive_id, &paths)
+                .expect_err("invalid chunk ranges should be rejected");
+            assert_eq!(
+                error.to_string(),
+                format!(
+                    "invalid range in {}: expected start {} and a larger end",
+                    filenames[case.invalid_chunk], case.expected_start
+                )
+            );
+        }
+    }
+
+    #[test]
+    fn chunk_batch_parse_accepts_an_empty_ordered_stream() -> anyhow::Result<()> {
+        assert_eq!(
+            ChunkBatch::parse(Path::new("/staging"), ARCHIVE_ID.parse()?, &[])?.chunks,
+            []
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn extract_validates_the_results_cache_only_when_ordered_chunks_exist() -> anyhow::Result<()> {
+        let filename = format!("{ARCHIVE_ID}_0_1.jsonl");
+        for (body, expected_error) in [
+            (":".to_owned(), None),
+            (
+                r#"touch "$5/original""#.to_owned(),
+                Some("clp-s produced unordered output; the archive lacks log ordering"),
+            ),
+            (
+                format!(
+                    r#"touch "$5/{filename}"
+printf '{{"path":"%s"}}\n' "$5/{filename}""#
+                ),
+                Some("results-cache URI must name a database"),
+            ),
+        ] {
+            let clp_home = tempfile::tempdir()?;
+            let config = SpiderTaskExecutorConfig {
+                package: Package {
+                    storage_engine: StorageEngine::ClpS,
+                },
+                stream_output: StreamOutput {
+                    storage: StreamOutputStorage::Fs {
+                        directory: "streams".to_owned(),
+                    },
+                    ..StreamOutput::default()
+                },
+                results_cache: ResultsCache {
+                    db_name: String::new(),
+                    ..ResultsCache::default()
+                },
+                ..SpiderTaskExecutorConfig::default()
+            };
+            let check_path = r#"test -d "$5"
+case "$5" in
+    */streams/.staging/42.19) ;;
+    *) exit 1 ;;
+esac"#;
+            install_stand_in(clp_home.path(), &format!("{check_path}\n{body}"))?;
+
+            let runtime = tokio::runtime::Builder::new_current_thread().build()?;
+            let input = ExtractTaskInput {
+                job_id: 42,
+                dataset: DatasetName::default(),
+                archive_id: ARCHIVE_ID.parse()?,
+                target_chunk_size: None,
+            };
+            let result = extract(runtime.handle(), clp_home.path(), &config, 19, &input);
+            if let Some(expected_error) = expected_error {
+                assert_eq!(
+                    result.expect_err("extraction should fail").to_string(),
+                    expected_error
+                );
+            } else {
+                result?;
+            }
+            let streams_directory = clp_home.path().join("streams");
+            assert_eq!(
+                fs::symlink_metadata(streams_directory.join(&filename))
+                    .expect_err("no chunk should be published")
+                    .kind(),
+                io::ErrorKind::NotFound
+            );
+            assert_eq!(
+                fs::read_dir(streams_directory.join(".staging"))?
+                    .map(|entry| entry.map(|entry| entry.path()))
+                    .collect::<io::Result<Vec<_>>>()?,
+                Vec::<PathBuf>::new()
+            );
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn publish_files_renames_regular_chunks_over_previous_outputs() -> anyhow::Result<()> {
+        let clp_home = tempfile::tempdir()?;
+        let config = SpiderTaskExecutorConfig {
+            stream_output: StreamOutput {
+                storage: StreamOutputStorage::Fs {
+                    directory: "streams".to_owned(),
+                },
+                ..StreamOutput::default()
+            },
+            ..SpiderTaskExecutorConfig::default()
+        };
+        let destination = clp_home.path().join("streams");
+        fs::create_dir(&destination)?;
+        let staging = tempfile::tempdir_in(&destination)?;
+        let filenames = [
+            format!("{ARCHIVE_ID}_0_2.jsonl"),
+            format!("{ARCHIVE_ID}_2_5.jsonl"),
+        ];
+        let paths = filenames.each_ref().map(|name| staging.path().join(name));
+        fs::write(destination.join(&filenames[0]), "previous attempt")?;
+        for (path, filename) in paths.iter().zip(&filenames) {
+            fs::write(path, filename)?;
+        }
+        let batch = ChunkBatch::parse(staging.path(), ARCHIVE_ID.parse()?, &paths)?;
+        let runtime = tokio::runtime::Builder::new_current_thread().build()?;
+        publish_files(runtime.handle(), clp_home.path(), &config, &batch)?;
+
+        for (path, filename) in paths.iter().zip(&filenames) {
+            assert_eq!(fs::read_to_string(destination.join(filename))?, *filename);
+            assert_eq!(
+                fs::symlink_metadata(path)
+                    .expect_err("the chunk should be moved")
+                    .kind(),
+                io::ErrorKind::NotFound
+            );
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn publish_files_rejects_a_late_symlink_before_moving_any_chunk() -> anyhow::Result<()> {
+        let clp_home = tempfile::tempdir()?;
+        let config = SpiderTaskExecutorConfig {
+            stream_output: StreamOutput {
+                storage: StreamOutputStorage::Fs {
+                    directory: "streams".to_owned(),
+                },
+                ..StreamOutput::default()
+            },
+            ..SpiderTaskExecutorConfig::default()
+        };
+        let destination = clp_home.path().join("streams");
+        fs::create_dir(&destination)?;
+        let staging = tempfile::tempdir_in(&destination)?;
+        let filenames = [
+            format!("{ARCHIVE_ID}_0_2.jsonl"),
+            format!("{ARCHIVE_ID}_2_5.jsonl"),
+        ];
+        let paths = filenames.each_ref().map(|name| staging.path().join(name));
+        fs::write(&paths[0], "first chunk")?;
+        symlink(&paths[0], &paths[1])?;
+
+        let batch = ChunkBatch::parse(staging.path(), ARCHIVE_ID.parse()?, &paths)?;
+        let runtime = tokio::runtime::Builder::new_current_thread().build()?;
+        let error = publish_files(runtime.handle(), clp_home.path(), &config, &batch)
+            .expect_err("a symlink is not a regular staged chunk");
+
+        assert_eq!(
+            error.to_string(),
+            format!("staged chunk {} is not a regular file", paths[1].display())
+        );
+        assert_eq!(fs::read_to_string(&paths[0])?, "first chunk");
+        for name in &filenames {
+            assert_eq!(
+                fs::symlink_metadata(destination.join(name))
+                    .expect_err("no chunk should be published")
+                    .kind(),
+                io::ErrorKind::NotFound
+            );
+        }
+        Ok(())
     }
 
     #[test]
@@ -630,13 +1298,7 @@ exec sleep 30"#
         const RETURN_TIMEOUT: Duration = Duration::from_secs(10);
         const RESULT_CHANNEL_CAPACITY: usize = 1;
 
-        let bin_directory = clp_home.join("bin");
-        let clp_s_path = bin_directory.join("clp-s");
-        std::fs::create_dir(bin_directory).expect("the fixture's bin directory should be created");
-        std::fs::write(&clp_s_path, format!("#!/bin/sh\nset -eu\n{script}\n"))
-            .expect("the stand-in clp-s script should be written");
-        std::fs::set_permissions(clp_s_path, std::fs::Permissions::from_mode(0o755))
-            .expect("the stand-in clp-s script should be executable");
+        install_stand_in(clp_home, script).expect("the stand-in clp-s should be installed");
         let clp_home = clp_home.to_path_buf();
         let (sender, receiver) = std::sync::mpsc::sync_channel(RESULT_CHANNEL_CAPACITY);
         let worker = std::thread::spawn(move || {
@@ -674,6 +1336,23 @@ exec sleep 30"#
             .expect("the clp-s runner should return promptly");
         worker.join().expect("the runner thread should finish");
         result
+    }
+
+    /// Installs an executable stand-in for clp-s.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`fs::create_dir`]'s return values on failure.
+    /// * Forwards [`fs::write`]'s return values on failure.
+    /// * Forwards [`fs::set_permissions`]'s return values on failure.
+    fn install_stand_in(clp_home: &Path, script: &str) -> io::Result<()> {
+        let bin_directory = clp_home.join("bin");
+        let clp_s_path = bin_directory.join("clp-s");
+        fs::create_dir(bin_directory)?;
+        fs::write(&clp_s_path, format!("#!/bin/sh\nset -eu\n{script}\n"))?;
+        fs::set_permissions(clp_s_path, fs::Permissions::from_mode(0o755))
     }
 
     /// Asserts that the stand-in process recorded by the fixture no longer exists.
