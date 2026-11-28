@@ -98,7 +98,7 @@ impl<'pool_lifetime> JobLifecycle<'pool_lifetime> {
     ///
     /// * Forwards [`sqlx::Pool::begin`]'s return values on failure.
     /// * Forwards [`Self::lock_and_get_status`]'s return values on failure.
-    /// * Forwards [`resolve_terminal_status`]'s return values on failure.
+    /// * Forwards [`resolve_terminal_transition`]'s return values on failure.
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     /// * Forwards [`sqlx::Transaction::commit`]'s return values on failure.
     pub(super) async fn terminate(&self, outcome: JobOutcome) -> Result<(), Error> {
@@ -108,28 +108,29 @@ impl<'pool_lifetime> JobLifecycle<'pool_lifetime> {
 
         let mut tx = self.db_pool.begin().await?;
         let current_status = self.lock_and_get_status(&mut tx).await?;
-        let outcome_status = QueryJobStatus::from(&outcome);
-        let (terminal_status, status_message) = resolve_terminal_status(outcome, current_status)?;
+        let transition = resolve_terminal_transition(outcome, current_status)?;
 
-        match (outcome_status, terminal_status) {
-            (QueryJobStatus::Succeeded, QueryJobStatus::Cancelled) => {
+        match &transition {
+            TerminalTransition::CancelledAfterCompletion => {
                 tracing::info!(
                     query_job_id = % self.job_id,
                     "{CANCELLED_AFTER_COMPLETION_MESSAGE}",
                 );
             }
-            (QueryJobStatus::Cancelled, QueryJobStatus::Failed) => {
+            TerminalTransition::UnexpectedCancellation => {
                 tracing::error!(
                     query_job_id = % self.job_id,
                     "{CANCELLED_UNEXPECTED_MESSAGE}",
                 );
             }
-            _ => {}
+            TerminalTransition::Succeeded
+            | TerminalTransition::Cancelled
+            | TerminalTransition::Failed { .. } => {}
         }
 
         sqlx::query(UPDATE_QUERY)
-            .bind(terminal_status)
-            .bind(status_message)
+            .bind(transition.status())
+            .bind(transition.into_message())
             .bind(self.job_id)
             .execute(&mut *tx)
             .await?;
@@ -170,6 +171,44 @@ const CANCELLED_AFTER_COMPLETION_MESSAGE: &str =
 const CANCELLED_UNEXPECTED_MESSAGE: &str =
     "The query job was cancelled unexpectedly without a cancellation request.";
 
+/// A valid transition to a terminal job status.
+#[derive(Debug, Eq, PartialEq)]
+enum TerminalTransition {
+    Succeeded,
+    Cancelled,
+    CancelledAfterCompletion,
+    UnexpectedCancellation,
+    Failed { error_message: String },
+}
+
+impl TerminalTransition {
+    /// # Returns
+    ///
+    /// The terminal status to persist.
+    const fn status(&self) -> QueryJobStatus {
+        match self {
+            Self::Succeeded => QueryJobStatus::Succeeded,
+            Self::Cancelled | Self::CancelledAfterCompletion => QueryJobStatus::Cancelled,
+            Self::UnexpectedCancellation | Self::Failed { .. } => QueryJobStatus::Failed,
+        }
+    }
+
+    /// # Returns
+    ///
+    /// The status message to persist, if any.
+    fn into_message(self) -> Option<String> {
+        const CANCELLED_MESSAGE: &str = "The query job was cancelled.";
+
+        match self {
+            Self::Succeeded => None,
+            Self::Cancelled => Some(CANCELLED_MESSAGE.to_owned()),
+            Self::CancelledAfterCompletion => Some(CANCELLED_AFTER_COMPLETION_MESSAGE.to_owned()),
+            Self::UnexpectedCancellation => Some(CANCELLED_UNEXPECTED_MESSAGE.to_owned()),
+            Self::Failed { error_message } => Some(error_message),
+        }
+    }
+}
+
 impl From<&JobOutcome> for QueryJobStatus {
     fn from(outcome: &JobOutcome) -> Self {
         match outcome {
@@ -180,7 +219,7 @@ impl From<&JobOutcome> for QueryJobStatus {
     }
 }
 
-/// Resolves the terminal state for a job with the given outcome and current status.
+/// Resolves the terminal transition for a job with the given outcome and current status.
 ///
 /// For non-terminal jobs, failure takes precedence over cancellation, and a cancellation request
 /// takes precedence over success. A reported cancellation for a job still marked
@@ -188,44 +227,37 @@ impl From<&JobOutcome> for QueryJobStatus {
 ///
 /// # Returns
 ///
-/// A tuple on success, containing:
-///
-/// * The terminal [`QueryJobStatus`].
-/// * The status message, if any.
+/// The selected [`TerminalTransition`] on success.
 ///
 /// # Errors
 ///
 /// Returns an error if:
 ///
 /// * [`Error::InvalidQueryJobStatusTransition`] if the current status doesn't permit the outcome.
-fn resolve_terminal_status(
+fn resolve_terminal_transition(
     outcome: JobOutcome,
     current_status: QueryJobStatus,
-) -> Result<(QueryJobStatus, Option<String>), Error> {
-    const CANCELLED_MESSAGE: &str = "The query job was cancelled.";
-
-    let to = QueryJobStatus::from(&outcome);
+) -> Result<TerminalTransition, Error> {
     match (outcome, current_status) {
         (JobOutcome::Succeeded, QueryJobStatus::Pending | QueryJobStatus::Running) => {
-            Ok((to, None))
+            Ok(TerminalTransition::Succeeded)
         }
         (JobOutcome::Cancelled, QueryJobStatus::CancelRequested | QueryJobStatus::Cancelling) => {
-            Ok((to, Some(CANCELLED_MESSAGE.to_owned())))
+            Ok(TerminalTransition::Cancelled)
         }
         (JobOutcome::Succeeded, QueryJobStatus::CancelRequested | QueryJobStatus::Cancelling) => {
-            Ok((
-                QueryJobStatus::Cancelled,
-                Some(CANCELLED_AFTER_COMPLETION_MESSAGE.to_owned()),
-            ))
+            Ok(TerminalTransition::CancelledAfterCompletion)
         }
-        (JobOutcome::Cancelled, QueryJobStatus::Running) => Ok((
-            QueryJobStatus::Failed,
-            Some(CANCELLED_UNEXPECTED_MESSAGE.to_owned()),
-        )),
+        (JobOutcome::Cancelled, QueryJobStatus::Running) => {
+            Ok(TerminalTransition::UnexpectedCancellation)
+        }
         (JobOutcome::Failed { error_message }, from) if !from.is_terminal() => {
-            Ok((to, Some(error_message)))
+            Ok(TerminalTransition::Failed { error_message })
         }
-        (_, from) => Err(Error::InvalidQueryJobStatusTransition { from, to }),
+        (outcome, from) => Err(Error::InvalidQueryJobStatusTransition {
+            from,
+            to: QueryJobStatus::from(&outcome),
+        }),
     }
 }
 
@@ -233,14 +265,13 @@ fn resolve_terminal_status(
 mod tests {
     use clp_rust_utils::job_config::QueryJobStatus;
 
+    use super::TerminalTransition;
     use crate::spider_job_submitter::JobOutcome;
 
     #[test]
     fn resolve_success_from_every_status() {
-        const COMPLETION_MESSAGE: &str =
-            "The query job completed, but it had already been requested to be cancelled.";
-        let cancelled = Ok((QueryJobStatus::Cancelled, Some(COMPLETION_MESSAGE)));
-        let succeeded = Ok((QueryJobStatus::Succeeded, None));
+        let cancelled_after_completion = Ok(&TerminalTransition::CancelledAfterCompletion);
+        let succeeded = Ok(&TerminalTransition::Succeeded);
         let rejected = Err(QueryJobStatus::Succeeded);
 
         for (status, expected) in [
@@ -248,19 +279,21 @@ mod tests {
             (QueryJobStatus::Running, succeeded),
             (QueryJobStatus::Succeeded, rejected),
             (QueryJobStatus::Failed, rejected),
-            (QueryJobStatus::CancelRequested, cancelled),
-            (QueryJobStatus::Cancelling, cancelled),
+            (QueryJobStatus::CancelRequested, cancelled_after_completion),
+            (QueryJobStatus::Cancelling, cancelled_after_completion),
             (QueryJobStatus::Cancelled, rejected),
             (QueryJobStatus::Killed, rejected),
         ] {
-            assert_terminal_status(JobOutcome::Succeeded, status, expected);
+            assert_terminal_transition(JobOutcome::Succeeded, status, expected);
         }
     }
 
     #[test]
     fn resolve_failure_from_every_status() {
         const ERROR_MESSAGE: &str = "the test job failed";
-        let failed = Ok((QueryJobStatus::Failed, Some(ERROR_MESSAGE)));
+        let failed = Ok(&TerminalTransition::Failed {
+            error_message: ERROR_MESSAGE.to_owned(),
+        });
         let rejected = Err(QueryJobStatus::Failed);
 
         for (status, expected) in [
@@ -273,7 +306,7 @@ mod tests {
             (QueryJobStatus::Cancelled, rejected),
             (QueryJobStatus::Killed, rejected),
         ] {
-            assert_terminal_status(
+            assert_terminal_transition(
                 JobOutcome::Failed {
                     error_message: ERROR_MESSAGE.to_owned(),
                 },
@@ -285,19 +318,13 @@ mod tests {
 
     #[test]
     fn resolve_cancellation_from_every_status() {
-        const CANCELLATION_MESSAGE: &str = "The query job was cancelled.";
-        const UNEXPECTED_CANCELLATION_MESSAGE: &str =
-            "The query job was cancelled unexpectedly without a cancellation request.";
-        let cancelled = Ok((QueryJobStatus::Cancelled, Some(CANCELLATION_MESSAGE)));
-        let failed = Ok((
-            QueryJobStatus::Failed,
-            Some(UNEXPECTED_CANCELLATION_MESSAGE),
-        ));
+        let cancelled = Ok(&TerminalTransition::Cancelled);
+        let unexpected_cancellation = Ok(&TerminalTransition::UnexpectedCancellation);
         let rejected = Err(QueryJobStatus::Cancelled);
 
         for (status, expected) in [
             (QueryJobStatus::Pending, rejected),
-            (QueryJobStatus::Running, failed),
+            (QueryJobStatus::Running, unexpected_cancellation),
             (QueryJobStatus::Succeeded, rejected),
             (QueryJobStatus::Failed, rejected),
             (QueryJobStatus::CancelRequested, cancelled),
@@ -305,30 +332,67 @@ mod tests {
             (QueryJobStatus::Cancelled, rejected),
             (QueryJobStatus::Killed, rejected),
         ] {
-            assert_terminal_status(JobOutcome::Cancelled, status, expected);
+            assert_terminal_transition(JobOutcome::Cancelled, status, expected);
         }
     }
 
-    /// Asserts the terminal status and message or the rejected transition's source and target.
+    #[test]
+    fn terminal_transitions_map_to_status_and_message() {
+        const ERROR_MESSAGE: &str = "the test job failed";
+
+        for (transition, status, message) in [
+            (
+                TerminalTransition::Succeeded,
+                QueryJobStatus::Succeeded,
+                None,
+            ),
+            (
+                TerminalTransition::Cancelled,
+                QueryJobStatus::Cancelled,
+                Some("The query job was cancelled."),
+            ),
+            (
+                TerminalTransition::CancelledAfterCompletion,
+                QueryJobStatus::Cancelled,
+                Some("The query job completed, but it had already been requested to be cancelled."),
+            ),
+            (
+                TerminalTransition::UnexpectedCancellation,
+                QueryJobStatus::Failed,
+                Some("The query job was cancelled unexpectedly without a cancellation request."),
+            ),
+            (
+                TerminalTransition::Failed {
+                    error_message: ERROR_MESSAGE.to_owned(),
+                },
+                QueryJobStatus::Failed,
+                Some(ERROR_MESSAGE),
+            ),
+        ] {
+            assert_eq!(transition.status(), status, "{transition:?}");
+            assert_eq!(transition.into_message().as_deref(), message);
+        }
+    }
+
+    /// Asserts the terminal transition or the rejected transition's source and target.
     ///
     /// # Panics
     ///
     /// Panics if the resolved result doesn't match the expected transition or rejection.
-    fn assert_terminal_status(
+    fn assert_terminal_transition(
         outcome: JobOutcome,
         current_status: QueryJobStatus,
-        expected: Result<(QueryJobStatus, Option<&str>), QueryJobStatus>,
+        expected: Result<&TerminalTransition, QueryJobStatus>,
     ) {
-        use super::resolve_terminal_status;
+        use super::resolve_terminal_transition;
         use crate::Error;
 
-        match (resolve_terminal_status(outcome, current_status), expected) {
-            (Ok((status, message)), Ok(expected)) => {
-                assert_eq!(
-                    (status, message.as_deref()),
-                    expected,
-                    "from {current_status:?}"
-                );
+        match (
+            resolve_terminal_transition(outcome, current_status),
+            expected,
+        ) {
+            (Ok(transition), Ok(expected)) => {
+                assert_eq!(&transition, expected, "from {current_status:?}");
             }
             (Err(Error::InvalidQueryJobStatusTransition { from, to }), Err(expected_to)) => {
                 assert_eq!((from, to), (current_status, expected_to));
