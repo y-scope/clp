@@ -10,9 +10,11 @@ use non_empty_string::NonEmptyString;
 ///
 /// # Errors
 ///
+/// Returns an error if:
+///
+/// * [`anyhow::Error`] if the object size cannot be converted to [`usize`].
 /// * Forwards [`aws_sdk_s3::operation::put_object::builders::PutObjectFluentBuilder::send`]'s
 ///   return values on failure.
-/// * Returns an [`anyhow::Error`] if the object size cannot be converted to [`usize`].
 pub async fn create_s3_objects(
     s3_client: aws_sdk_s3::Client,
     objects: Vec<ObjectMetadata>,
@@ -57,6 +59,8 @@ pub fn get_testing_prefix_as_non_empty_string(job_id: IngestionJobId) -> NonEmpt
 /// A vector of created S3 object metadata.
 ///
 /// # Errors
+///
+/// Returns an error if:
 ///
 /// * Forwards [`create_s3_objects`]'s return values on failure.
 pub async fn upload_test_objects(

@@ -249,7 +249,8 @@ impl From<NumValueReadError<BytesReadError>> for DecodeError {
 ///
 /// Returns an error if:
 ///
-/// * Forwards the [`ProtocolError`] of an invalid frame from `decode`.
+/// * Forwards `decode`'s return values as [`ProtocolError`] on failure, except
+///   [`DecodeError::Incomplete`].
 fn decode_frame<FrameType>(
     buffer: &mut BytesMut,
     decode: impl FnOnce(&mut Bytes<'_>) -> Result<FrameType, DecodeError>,
@@ -294,9 +295,9 @@ fn check_num_fields(num_fields: u32, expected: u32) -> Result<(), DecodeError> {
 ///
 /// * [`DecodeError::Incomplete`] if the reader ends before the string does.
 /// * [`DecodeError::Invalid`] if:
-///   * The next value isn't a string.
 ///   * The string's length doesn't fit in `usize`.
 ///   * The string is longer than `max_len` bytes.
+/// * Forwards [`rmp::decode::read_str_len`]'s return values on failure.
 fn read_str<'buffer>(
     reader: &mut Bytes<'buffer>,
     max_len: usize,

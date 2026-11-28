@@ -97,10 +97,9 @@ impl<SqsClientManager: AwsClientManagerType<Client>, State: IngestionJobState + 
     /// Returns an error if:
     ///
     /// * Forwards [`AwsClientManagerType::get`]'s return values on failure.
-    /// * Forwards the following `aws_sdk_sqs` methods' return values on failure:
-    ///   * [`DeleteMessageBatchFluentBuilder::send`]
-    ///   * [`DeleteMessageBatchRequestEntryBuilder::build`]
-    /// * Forwards [`Self::extract_object_metadata`]'s return values on failure.
+    /// * Forwards [`aws_sdk_sqs::types::builders::DeleteMessageBatchRequestEntryBuilder::build`]'s
+    ///   return values on failure.
+    /// * Forwards [`DeleteMessageBatchFluentBuilder::send`]'s return values on failure.
     /// * Forwards [`SqsListenerState::ingest`]'s return values on failure.
     async fn process_sqs_response(&self, response: ReceiveMessageOutput) -> Result<bool> {
         let Some(messages) = response.messages else {

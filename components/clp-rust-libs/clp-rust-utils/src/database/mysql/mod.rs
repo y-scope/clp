@@ -57,7 +57,7 @@ where
 ///
 /// Returns an error if:
 ///
-/// * Forwards [`sqlx::mysql::MySqlPoolOptions::connect_with`]'s errors on failure.
+/// * Forwards [`sqlx::mysql::MySqlPoolOptions::connect_with`]'s return values on failure.
 pub async fn create_clp_db_mysql_pool(
     config: &DatabaseConfig,
     credentials: &DatabaseCredentials,

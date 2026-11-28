@@ -134,11 +134,10 @@ impl Client {
     ///
     /// Returns an error if:
     ///
-    /// * Forwards the pagination stream's error returned from S3 list-object-v2 operation's
-    ///   paginator (i.e., from
-    ///   [`aws_smithy_async::future::pagination_stream::PaginationStream::next`]).
-    /// * Forwards S3 get-object operation's return values on failure (i.e., from
-    ///   [`aws_sdk_s3::operation::get_object::builders::GetObjectFluentBuilder::send`]).
+    /// * Forwards [`aws_smithy_async::future::pagination_stream::PaginationStream::next`]'s return
+    ///   values on failure.
+    /// * Forwards [`aws_sdk_s3::operation::get_object::builders::GetObjectFluentBuilder::send`]'s
+    ///   return values on failure.
     /// * Forwards [`aws_smithy_types::byte_stream::ByteStream::collect`]'s return values on
     ///   failure.
     ///
@@ -243,7 +242,7 @@ impl Client {
     ///
     /// * [`ClientError::MalformedData`] if a retrieved document does not contain a "message" field,
     ///   or if the "message" field is not a BSON string.
-    /// * Forwards [`mongodb::error::Error`] produced by the `MongoDB` cursor item access.
+    /// * [`ClientError::Mongo`] if the `MongoDB` cursor fails to retrieve a document.
     /// * Forwards [`serde_json::to_string`]'s return values on failure.
     ///
     /// # Errors

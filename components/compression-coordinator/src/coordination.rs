@@ -76,7 +76,7 @@ impl Coordinator {
     ///
     /// * [`Error::InvalidConfiguration`] if the compression coordinator configuration is invalid.
     /// * [`Error::InvalidEndpoint`] if the Spider host and port do not form a valid endpoint.
-    /// * Forwards [`SpiderClient::builder`]'s connection return values on failure.
+    /// * Forwards [`spider_client::SpiderClientBuilder::connect`]'s return values on failure.
     /// * Forwards [`ExternalResourceGroupCredentials::from_env`]'s return values on failure.
     /// * Forwards [`SpiderClient::add_or_verify_resource_group`]'s return values on failure.
     /// * Forwards [`Self::fetch_submitted_running_jobs`]'s return values on failure.

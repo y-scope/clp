@@ -496,10 +496,10 @@ impl ArchiveFinisher {
 ///
 /// Returns an error if:
 ///
-/// * Forwards [`tokio::task::JoinSet::join_next`]'s task-join errors on failure.
+/// * [`anyhow::Error`] if [`drain_finishers`] collects an archive finisher's error.
+/// * Forwards [`tokio::task::JoinSet::join_next`]'s return values on failure.
 /// * Forwards [`ArchiveFinisher::finish`]'s return values on failure.
 /// * Forwards [`run_clp_s`]'s return values on failure.
-/// * Forwards [`drain_finishers`]'s collected error, if any.
 ///
 /// # Panics
 ///
@@ -696,7 +696,7 @@ fn build_clp_s_args(
 /// Returns an error if:
 ///
 /// * [`anyhow::Error`] if clp-s exits with a non-zero status.
-/// * Forwards [`std::io::Lines::next`]'s line-reading errors on failure.
+/// * Forwards [`std::io::Lines::next`]'s return values on failure.
 /// * Forwards `on_archive`'s return values on failure.
 /// * Forwards [`Command::spawn`]'s return values on failure.
 /// * Forwards [`parse_archive_stats`]'s return values on failure.

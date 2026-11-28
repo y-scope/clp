@@ -45,8 +45,10 @@ impl AwsConfig {
     ///
     /// Returns an error if:
     ///
-    /// * `CLP_LOG_INGESTOR_S3_BUCKET` environment variable is not set, or set to an empty string.
-    /// * `CLP_LOG_INGESTOR_SQS_QUEUE` environment variable is not set, or set to an empty string.
+    /// * [`anyhow::Error`] if:
+    ///   * The `CLP_LOG_INGESTOR_S3_BUCKET` or `CLP_LOG_INGESTOR_SQS_QUEUE` environment variable is
+    ///     not set.
+    ///   * The resolved endpoint, region, bucket name, or queue name is an empty string.
     pub fn from_env() -> Result<Self> {
         let endpoint = std::env::var("AWS_ENDPOINT_URL")
             .unwrap_or_else(|_| DEFAULT_AWS_ENDPOINT_URL.to_string());
