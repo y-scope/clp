@@ -151,7 +151,6 @@ impl Client {
     ///
     /// Returns an error if:
     ///
-    /// * [`ClientError::QueryJobNotFound`] if the job doesn't exist.
     /// * Forwards [`job_polling::wait_for_status`]'s return values on failure.
     pub(super) async fn wait_for_query_job_termination(
         &self,
@@ -173,8 +172,6 @@ impl Client {
     ///
     /// Returns an error if:
     ///
-    /// * [`ClientError::QueryNotSucceeded`] if the query fails or cancellation has begun.
-    /// * [`ClientError::QueryJobNotFound`] if the job doesn't exist.
     /// * Forwards [`job_polling::wait_for_status`]'s return values on failure.
     pub(super) async fn wait_for_query_success(
         &self,

@@ -25,9 +25,13 @@ use crate::error::ClientError;
 ///
 /// Returns an error if:
 ///
-/// * `job_not_found` supplies an error because the job doesn't exist.
+/// * [`ClientError`] as supplied by `job_not_found` if the job doesn't exist.
 /// * `evaluate_status` breaks with an error.
 /// * Forwards [`query_job::get_status`]'s return values on failure.
+///
+/// # Cancel safety
+///
+/// Dropping the future stops polling without cancelling or modifying the job.
 pub async fn wait_for_status<OutputType>(
     sql_pool: &MySqlPool,
     job_id: u64,

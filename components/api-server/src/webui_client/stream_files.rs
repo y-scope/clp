@@ -151,9 +151,6 @@ impl WebuiClient {
     ///
     /// Returns an error if:
     ///
-    /// * [`ClientError::ExtractionJobNotFound`] if the job disappears from the query jobs table
-    ///   before it finishes.
-    /// * [`ClientError::ExtractionJobFailed`] if the job fails, is killed, or is cancelled.
     /// * Forwards [`rmp_serde::to_vec_named`]'s return values on failure.
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     /// * Forwards [`job_polling::wait_for_status`]'s return values on failure.
