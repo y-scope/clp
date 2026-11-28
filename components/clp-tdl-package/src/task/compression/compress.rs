@@ -32,6 +32,7 @@ use non_empty_string::NonEmptyString;
 
 use crate::common::clp_home;
 use crate::common::runtime;
+use crate::task::utils::TmpFileDeleter;
 use crate::task::utils::build_s3_client;
 use crate::task::utils::clp_binary_path;
 use crate::task::utils::s3_credential_env;
@@ -345,46 +346,6 @@ impl ClpSInput {
         let log_converter_bin = clp_binary_path(clp_home, "log-converter");
         run_log_converter(&log_converter_bin, &converted_dir, &input_list)?;
         Ok(Self::Directory(converted_dir))
-    }
-}
-
-/// Attempts to remove registered temporary paths on drop, logging cleanup failures.
-struct TmpFileDeleter {
-    paths: Vec<PathBuf>,
-}
-
-impl TmpFileDeleter {
-    /// Factory function.
-    ///
-    /// # Returns
-    ///
-    /// An empty [`TmpFileDeleter`].
-    const fn new() -> Self {
-        Self { paths: Vec::new() }
-    }
-
-    /// Registers `path` for deletion when this deleter is dropped.
-    fn add(&mut self, path: PathBuf) {
-        self.paths.push(path);
-    }
-}
-
-impl Drop for TmpFileDeleter {
-    fn drop(&mut self) {
-        for path in &self.paths {
-            let result = if path.is_dir() {
-                std::fs::remove_dir_all(path)
-            } else {
-                std::fs::remove_file(path)
-            };
-            if let Err(e) = result {
-                tracing::warn!(
-                    error = % e,
-                    path = % path.display(),
-                    "Failed to delete tmp path."
-                );
-            }
-        }
     }
 }
 
