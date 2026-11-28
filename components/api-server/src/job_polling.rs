@@ -1,6 +1,7 @@
 //! Polling for job status in the query jobs table.
 
 use std::future::Future;
+use std::num::NonZeroU64;
 use std::ops::ControlFlow;
 use std::time::Duration;
 
@@ -51,8 +52,8 @@ pub async fn wait_for_status<OutputType>(
 /// delay doubles the previous one up to the configured maximum or the initial delay, whichever is
 /// greater.
 struct Backoff {
-    delay_ms: u64,
-    max_delay_ms: u64,
+    delay_ms: NonZeroU64,
+    max_delay_ms: NonZeroU64,
 }
 
 impl Backoff {
@@ -60,10 +61,13 @@ impl Backoff {
     ///
     /// A newly created backoff, starting at its first delay.
     fn new(config: &QueryJobPollingConfig) -> Self {
-        let delay_ms = config.initial_backoff_ms.max(1);
+        let delay_ms = NonZeroU64::new(config.initial_backoff_ms).unwrap_or(NonZeroU64::MIN);
+        let max_delay_ms = NonZeroU64::new(config.max_backoff_ms)
+            .unwrap_or(delay_ms)
+            .max(delay_ms);
         Self {
             delay_ms,
-            max_delay_ms: config.max_backoff_ms.max(delay_ms),
+            max_delay_ms,
         }
     }
 
@@ -71,8 +75,13 @@ impl Backoff {
     ///
     /// The delay before the next status read. Advances the backoff for subsequent reads.
     fn next_delay(&mut self) -> Duration {
-        let delay = Duration::from_millis(self.delay_ms);
-        self.delay_ms = self.delay_ms.saturating_mul(2).min(self.max_delay_ms);
+        const BACKOFF_FACTOR: NonZeroU64 = NonZeroU64::new(2).expect("the factor is nonzero");
+
+        let delay = Duration::from_millis(self.delay_ms.get());
+        self.delay_ms = self
+            .delay_ms
+            .saturating_mul(BACKOFF_FACTOR)
+            .min(self.max_delay_ms);
         delay
     }
 }
