@@ -1,6 +1,7 @@
 //! Handles for driving query jobs to completion.
 
 mod archive;
+mod lifecycle;
 mod query;
 
 use std::num::NonZeroU64;
