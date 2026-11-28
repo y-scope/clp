@@ -13,23 +13,26 @@ use crate::Error;
 use crate::spider_job_submitter::JobOutcome;
 
 /// SQL lifecycle transitions for one job.
-///
-/// # Type Parameters
-///
-/// * `'pool_lifetime` - The lifetime of the shared database pool.
-pub(super) struct JobLifecycle<'pool_lifetime> {
-    db_pool: &'pool_lifetime MySqlPool,
+pub(super) struct JobLifecycle {
+    db_pool: MySqlPool,
     job_id: QueryJobId,
 }
 
-impl<'pool_lifetime> JobLifecycle<'pool_lifetime> {
+impl JobLifecycle {
     /// Creates the lifecycle for the given job in the CLP database.
     ///
     /// # Returns
     ///
     /// A newly created [`JobLifecycle`].
-    pub(super) const fn new(db_pool: &'pool_lifetime MySqlPool, job_id: QueryJobId) -> Self {
+    pub(super) const fn new(db_pool: MySqlPool, job_id: QueryJobId) -> Self {
         Self { db_pool, job_id }
+    }
+
+    /// # Returns
+    ///
+    /// The ID of the query job.
+    pub(super) const fn job_id(&self) -> QueryJobId {
+        self.job_id
     }
 
     /// Records the Spider job ID, task count, and start time, and moves the job from

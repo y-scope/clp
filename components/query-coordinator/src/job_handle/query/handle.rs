@@ -24,7 +24,7 @@ use crate::spider_job_submitter::SpiderJobSubmitter;
 /// * `SubmitterType` - The type of the job submitter for Spider job submission.
 pub struct QueryJobHandle<SubmitterType: SpiderJobSubmitter> {
     context: Arc<QueryJobHandleContext>,
-    query_job_id: QueryJobId,
+    lifecycle: JobLifecycle,
     job_submitter: SubmitterType,
     resource_group_id: ResourceGroupId,
     query_job_config: QueryJobConfig,
@@ -38,7 +38,7 @@ impl<SubmitterType: SpiderJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// A newly created [`QueryJobHandle`] for the given query job.
     #[must_use]
-    pub const fn new(
+    pub fn new(
         context: Arc<QueryJobHandleContext>,
         query_job_id: QueryJobId,
         job_submitter: SubmitterType,
@@ -46,9 +46,10 @@ impl<SubmitterType: SpiderJobSubmitter> QueryJobHandle<SubmitterType> {
         query_job_config: QueryJobConfig,
         job_creation_timestamp_millisecs: i64,
     ) -> Self {
+        let lifecycle = JobLifecycle::new(context.db_pool.clone(), query_job_id);
         Self {
             context,
-            query_job_id,
+            lifecycle,
             job_submitter,
             resource_group_id,
             query_job_config,
@@ -74,12 +75,12 @@ impl<SubmitterType: SpiderJobSubmitter> QueryJobHandle<SubmitterType> {
     /// * Forwards [`Self::submit`]'s return values on failure.
     /// * Forwards [`Self::to_completion`]'s return values on failure.
     pub async fn run(self) -> Result<(), Error> {
-        tracing::info!(query_job_id = % self.query_job_id, "Starting query job.");
+        tracing::info!(query_job_id = % self.lifecycle.job_id(), "Starting query job.");
 
         let result = async {
             let archives_to_search = self.plan().await?;
             if archives_to_search.is_empty() && !self.query_job_config.output.has_timeline() {
-                return self.lifecycle().terminate(JobOutcome::Succeeded).await;
+                return self.lifecycle.terminate(JobOutcome::Succeeded).await;
             }
 
             let spider_job_id = self.submit(archives_to_search).await?;
@@ -108,7 +109,7 @@ impl<SubmitterType: SpiderJobSubmitter> QueryJobHandle<SubmitterType> {
     /// * Forwards [`Self::to_completion`]'s return values on failure.
     pub async fn recover(self, spider_job_id: SpiderJobId) -> Result<(), Error> {
         tracing::info!(
-            query_job_id = % self.query_job_id,
+            query_job_id = % self.lifecycle.job_id(),
             spider_job_id = % spider_job_id,
             "Recovering query job.",
         );
@@ -138,12 +139,13 @@ impl<SubmitterType: SpiderJobSubmitter> QueryJobHandle<SubmitterType> {
         &self,
         archives_to_search: Vec<(ArchiveMetadata, ExecutionPolicy)>,
     ) -> Result<SpiderJobId, Error> {
+        let query_job_id = self.lifecycle.job_id();
         let num_tasks = archives_to_search.len();
         let persisted_num_tasks =
             i32::try_from(num_tasks).map_err(|_| Error::TooManyQueryTasks(num_tasks))?;
         let spider_job_id = {
             let (graph, input) = build_query_task_graph(
-                self.query_job_id,
+                query_job_id,
                 &self.query_job_config.query,
                 &self.query_job_config.output,
                 archives_to_search,
@@ -154,7 +156,7 @@ impl<SubmitterType: SpiderJobSubmitter> QueryJobHandle<SubmitterType> {
                 .await?;
 
             tracing::info!(
-                query_job_id = % self.query_job_id,
+                query_job_id = % query_job_id,
                 spider_job_id = % spider_job_id,
                 num_tasks = graph.get_num_tasks(),
                 "Submitted query job to Spider.",
@@ -163,14 +165,14 @@ impl<SubmitterType: SpiderJobSubmitter> QueryJobHandle<SubmitterType> {
         };
 
         tracing::info!(
-            query_job_id = % self.query_job_id,
+            query_job_id = % query_job_id,
             spider_job_id = % spider_job_id,
             num_tasks,
             "Query job submitted.",
         );
 
         if let Err(start_error) = self
-            .lifecycle()
+            .lifecycle
             .start(spider_job_id, persisted_num_tasks)
             .await
         {
@@ -180,7 +182,7 @@ impl<SubmitterType: SpiderJobSubmitter> QueryJobHandle<SubmitterType> {
                 .await
                 .inspect_err(|e| {
                     tracing::warn!(
-                        query_job_id = % self.query_job_id,
+                        query_job_id = % query_job_id,
                         spider_job_id = % spider_job_id,
                         error = % e,
                         "Failed to cancel the Spider job after failing to start the query job.",
@@ -237,13 +239,13 @@ impl<SubmitterType: SpiderJobSubmitter> QueryJobHandle<SubmitterType> {
             .await?;
 
         tracing::info!(
-            query_job_id = % self.query_job_id,
+            query_job_id = % self.lifecycle.job_id(),
             spider_job_id = % spider_job_id,
             outcome = ? outcome,
             "Query job reached a terminal Spider state.",
         );
 
-        self.lifecycle().terminate(outcome).await
+        self.lifecycle.terminate(outcome).await
     }
 
     /// Finalizes the query job after the handle failed to drive it to completion.
@@ -255,8 +257,9 @@ impl<SubmitterType: SpiderJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// A failed attempt is logged and otherwise ignored, so that it can't re-enter this path.
     async fn finalize_on_error(&self, error: &Error) {
+        let query_job_id = self.lifecycle.job_id();
         tracing::error!(
-            query_job_id = % self.query_job_id,
+            query_job_id = % query_job_id,
             error = % error,
             "Query job failed.",
         );
@@ -270,32 +273,25 @@ impl<SubmitterType: SpiderJobSubmitter> QueryJobHandle<SubmitterType> {
             },
         };
 
-        let Err(terminate_error) = self.lifecycle().terminate(outcome).await else {
+        let Err(terminate_error) = self.lifecycle.terminate(outcome).await else {
             return;
         };
         match terminate_error {
             Error::InvalidQueryJobStatusTransition { from, .. } if from.is_terminal() => {
                 tracing::warn!(
-                    query_job_id = % self.query_job_id,
+                    query_job_id = % query_job_id,
                     from = ? from,
                     "Query job already reached a terminal status; skipping the status update.",
                 );
             }
             terminate_error => {
                 tracing::error!(
-                    query_job_id = % self.query_job_id,
+                    query_job_id = % query_job_id,
                     error = % terminate_error,
                     "Failed to update job status on a job failure.",
                 );
             }
         }
-    }
-
-    /// # Returns
-    ///
-    /// The [`JobLifecycle`] for the current job.
-    fn lifecycle(&self) -> JobLifecycle<'_> {
-        JobLifecycle::new(&self.context.db_pool, self.query_job_id)
     }
 }
 
