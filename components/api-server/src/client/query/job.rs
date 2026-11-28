@@ -1,9 +1,8 @@
 //! Submission, cancellation and status of query jobs.
 
 use std::num::NonZeroU32;
-use std::time::Duration;
+use std::ops::ControlFlow;
 
-use clp_rust_utils::clp_config::package::config::QueryJobPollingConfig;
 use clp_rust_utils::database::mysql::query_job;
 use clp_rust_utils::job_config::Aggregation;
 use clp_rust_utils::job_config::Cancellability;
@@ -20,6 +19,7 @@ use utoipa::ToSchema;
 
 use crate::client::Client;
 use crate::error::ClientError;
+use crate::job_polling;
 
 /// Defines the request configuration for submitting a query job.
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
@@ -151,20 +151,20 @@ impl Client {
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`Client::get_status`]'s return values on failure.
+    /// * [`ClientError::QueryJobNotFound`] if the job doesn't exist.
+    /// * Forwards [`job_polling::wait_for_status`]'s return values on failure.
     pub(super) async fn wait_for_query_job_termination(
         &self,
         query_job_id: u64,
     ) -> Result<QueryJobStatus, ClientError> {
-        let mut backoff =
-            QueryJobPollingBackoff::new(&self.get_api_server_config().query_job_polling);
-        loop {
-            let status = self.get_status(query_job_id).await?;
-            if status.is_terminal() {
-                return Ok(status);
-            }
-            tokio::time::sleep(backoff.next_delay()).await;
-        }
+        job_polling::wait_for_status(
+            &self.sql_pool,
+            query_job_id,
+            &self.get_api_server_config().query_job_polling,
+            ClientError::QueryJobNotFound,
+            query_termination_poll_result,
+        )
+        .await
     }
 
     /// Waits until a query succeeds, fails, or begins cancellation.
@@ -174,32 +174,20 @@ impl Client {
     /// Returns an error if:
     ///
     /// * [`ClientError::QueryNotSucceeded`] if the query fails or cancellation has begun.
-    /// * Forwards [`Self::get_status`]'s return values on failure.
+    /// * [`ClientError::QueryJobNotFound`] if the job doesn't exist.
+    /// * Forwards [`job_polling::wait_for_status`]'s return values on failure.
     pub(super) async fn wait_for_query_success(
         &self,
         query_job_id: u64,
     ) -> Result<(), ClientError> {
-        let mut backoff =
-            QueryJobPollingBackoff::new(&self.get_api_server_config().query_job_polling);
-        loop {
-            match self.get_status(query_job_id).await? {
-                QueryJobStatus::Succeeded => {
-                    break;
-                }
-                QueryJobStatus::Failed
-                | QueryJobStatus::CancelRequested
-                | QueryJobStatus::Cancelling
-                | QueryJobStatus::Cancelled
-                | QueryJobStatus::Killed => {
-                    return Err(ClientError::QueryNotSucceeded);
-                }
-                QueryJobStatus::Running | QueryJobStatus::Pending => {
-                    tokio::time::sleep(backoff.next_delay()).await;
-                }
-            }
-        }
-
-        Ok(())
+        job_polling::wait_for_status(
+            &self.sql_pool,
+            query_job_id,
+            &self.get_api_server_config().query_job_polling,
+            ClientError::QueryJobNotFound,
+            query_success_poll_result,
+        )
+        .await
     }
 
     pub(super) async fn get_job_config(
@@ -234,40 +222,49 @@ impl Client {
     }
 }
 
-/// The backoff between the reads of a query job's status: the first delay is the configured initial
-/// backoff, and each next delay doubles the previous one, up to the configured maximum backoff.
-struct QueryJobPollingBackoff {
-    delay: Duration,
-    max_delay: Duration,
+/// # Returns
+///
+/// A terminal status to stop polling, or an instruction to keep polling.
+const fn query_termination_poll_result(
+    status: QueryJobStatus,
+) -> ControlFlow<Result<QueryJobStatus, ClientError>> {
+    if status.is_terminal() {
+        ControlFlow::Break(Ok(status))
+    } else {
+        ControlFlow::Continue(())
+    }
 }
 
-impl QueryJobPollingBackoff {
-    /// Factory function.
-    ///
-    /// # Returns
-    ///
-    /// A newly created backoff that `config` configures, starting at its first delay.
-    const fn new(config: &QueryJobPollingConfig) -> Self {
-        Self {
-            delay: Duration::from_millis(config.initial_backoff_ms),
-            max_delay: Duration::from_millis(config.max_backoff_ms),
-        }
-    }
-
-    /// # Returns
-    ///
-    /// The delay before the next read of the status. The delay after it is doubled, up to the
-    /// maximum.
-    fn next_delay(&mut self) -> Duration {
-        let delay = self.delay;
-        self.delay = std::cmp::min(self.delay.saturating_mul(2), self.max_delay);
-        delay
+/// # Returns
+///
+/// A result to stop polling when the query finishes or begins cancellation, or an instruction to
+/// keep polling.
+const fn query_success_poll_result(status: QueryJobStatus) -> ControlFlow<Result<(), ClientError>> {
+    match status {
+        QueryJobStatus::Succeeded => ControlFlow::Break(Ok(())),
+        QueryJobStatus::Failed
+        | QueryJobStatus::CancelRequested
+        | QueryJobStatus::Cancelling
+        | QueryJobStatus::Cancelled
+        | QueryJobStatus::Killed => ControlFlow::Break(Err(ClientError::QueryNotSucceeded)),
+        QueryJobStatus::Running | QueryJobStatus::Pending => ControlFlow::Continue(()),
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::num::NonZeroU32;
+    use std::ops::ControlFlow;
+
+    use clp_rust_utils::job_config::Aggregation;
+    use clp_rust_utils::job_config::QueryJobStatus as Status;
+    use clp_rust_utils::job_config::QueryOutput;
+    use clp_rust_utils::job_config::ResultsCacheOutput;
+
+    use super::QueryOutputConfig;
+    use super::query_success_poll_result;
+    use super::query_termination_poll_result;
+    use crate::error::ClientError;
 
     #[test]
     fn query_output_config_converts_to_the_matching_query_output() {
@@ -299,17 +296,48 @@ mod tests {
     }
 
     #[test]
-    fn query_job_polling_backoff_doubles_its_delay_up_to_the_maximum() {
-        let mut backoff = QueryJobPollingBackoff::new(&QueryJobPollingConfig {
-            initial_backoff_ms: 100,
-            max_backoff_ms: 500,
-        });
-
-        for expected_delay_ms in [100, 200, 400, 500, 500] {
+    fn query_termination_poll_result_maps_every_status() {
+        for (status, expected) in [
+            (Status::Pending, ControlFlow::Continue(())),
+            (Status::Running, ControlFlow::Continue(())),
+            (Status::Succeeded, ControlFlow::Break(Status::Succeeded)),
+            (Status::Failed, ControlFlow::Break(Status::Failed)),
+            (Status::CancelRequested, ControlFlow::Continue(())),
+            (Status::Cancelling, ControlFlow::Continue(())),
+            (Status::Cancelled, ControlFlow::Break(Status::Cancelled)),
+            (Status::Killed, ControlFlow::Break(Status::Killed)),
+        ] {
             assert_eq!(
-                backoff.next_delay(),
-                Duration::from_millis(expected_delay_ms)
+                query_termination_poll_result(status)
+                    .map_break(|result| result.expect("the terminal status should be returned")),
+                expected,
+                "status: {status:?}"
             );
+        }
+    }
+
+    #[test]
+    fn query_success_poll_result_maps_every_status() {
+        let not_succeeded = ControlFlow::Break(Err(()));
+        for (status, expected) in [
+            (Status::Pending, ControlFlow::Continue(())),
+            (Status::Running, ControlFlow::Continue(())),
+            (Status::Succeeded, ControlFlow::Break(Ok(()))),
+            (Status::Failed, not_succeeded),
+            (Status::CancelRequested, not_succeeded),
+            (Status::Cancelling, not_succeeded),
+            (Status::Cancelled, not_succeeded),
+            (Status::Killed, not_succeeded),
+        ] {
+            let result = query_success_poll_result(status).map_break(|result| {
+                result.map_err(|error| {
+                    assert!(
+                        matches!(error, ClientError::QueryNotSucceeded),
+                        "status {status:?} returned {error:?}"
+                    );
+                })
+            });
+            assert_eq!(result, expected, "status: {status:?}");
         }
     }
 }
