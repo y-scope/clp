@@ -12,8 +12,7 @@ use sqlx::MySqlPool;
 
 use crate::error::ClientError;
 
-/// Reads a job's status immediately, then polls with backoff until `evaluate_status` decides to
-/// stop.
+/// Polls a job's status according to the supplied policy.
 ///
 /// # Type Parameters
 ///
@@ -59,7 +58,7 @@ struct Backoff {
 impl Backoff {
     /// # Returns
     ///
-    /// A newly created backoff, starting at its first delay.
+    /// A backoff initialized from `config`.
     fn new(config: &QueryJobPollingConfig) -> Self {
         let delay_ms = NonZeroU64::new(config.initial_backoff_ms).unwrap_or(NonZeroU64::MIN);
         let max_delay_ms = NonZeroU64::new(config.max_backoff_ms)
@@ -71,9 +70,11 @@ impl Backoff {
         }
     }
 
+    /// Advances the backoff for subsequent reads.
+    ///
     /// # Returns
     ///
-    /// The delay before the next status read. Advances the backoff for subsequent reads.
+    /// The delay before the next status read.
     fn next_delay(&mut self) -> Duration {
         const BACKOFF_FACTOR: NonZeroU64 = NonZeroU64::new(2).expect("the factor is nonzero");
 
@@ -86,24 +87,30 @@ impl Backoff {
     }
 }
 
-/// Polls for a job's status, backing off between reads until `evaluate_status` decides to stop.
+/// Reads a job's status immediately, then polls with backoff until `evaluate_status` returns
+/// [`ControlFlow::Break`].
 ///
 /// # Type Parameters
 ///
-/// * `OutputType` - The value returned when polling ends successfully.
-/// * `ReadFutureType` - The future that reads the job's status.
+/// * `OutputType` - The type of the value returned on success.
+/// * `ReadFutureType` - The future type returned by `read_status`.
 ///
 /// # Returns
 ///
-/// The value supplied by `evaluate_status` on success.
+/// The value in the result carried by [`ControlFlow::Break`] on success.
 ///
 /// # Errors
 ///
 /// Returns an error if:
 ///
-/// * [`ClientError`] as supplied by `job_not_found` if the job doesn't exist.
-/// * `evaluate_status` breaks with an error.
+/// * [`ClientError`] if the job doesn't exist. The error is supplied by `job_not_found`.
 /// * Forwards `read_status`'s return values on failure.
+/// * Forwards `evaluate_status`'s return values on failure.
+///
+/// # Cancel safety
+///
+/// Dropping the future stops polling and drops any in-progress read future. It does not undo work
+/// already performed by the callbacks.
 async fn poll_status<
     OutputType,
     ReadFutureType: Future<Output = Result<Option<QueryJobStatus>, clp_rust_utils::Error>> + Send,

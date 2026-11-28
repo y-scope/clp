@@ -140,8 +140,7 @@ impl Client {
             .ok_or(ClientError::QueryJobNotFound(query_job_id))
     }
 
-    /// Waits until a query job terminates, reading its status with the backoff of the API server's
-    /// query job polling configuration.
+    /// Waits for a query job to reach a terminal status.
     ///
     /// # Returns
     ///
@@ -166,7 +165,7 @@ impl Client {
         .await
     }
 
-    /// Waits until a query succeeds, fails, or begins cancellation.
+    /// Waits until a query job finishes or cancellation is requested.
     ///
     /// # Errors
     ///
@@ -187,6 +186,20 @@ impl Client {
         .await
     }
 
+    /// Loads the configuration of a previously submitted query job.
+    ///
+    /// # Returns
+    ///
+    /// The stored configuration decoded as [`QueryJobConfig`] on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`ClientError::QueryJobNotFound`] if the job doesn't exist.
+    /// * Forwards [`sqlx::query::Query::fetch_optional`]'s return values on failure.
+    /// * Forwards [`sqlx::Row::try_get`]'s return values on failure.
+    /// * Forwards [`rmp_serde::from_slice`]'s return values on failure.
     pub(super) async fn get_job_config(
         &self,
         query_job_id: u64,
@@ -221,7 +234,8 @@ impl Client {
 
 /// # Returns
 ///
-/// A terminal status to stop polling, or an instruction to keep polling.
+/// [`ControlFlow::Break`] with `Ok(status)` if the status is terminal, or [`ControlFlow::Continue`]
+/// otherwise.
 const fn query_termination_poll_result(
     status: QueryJobStatus,
 ) -> ControlFlow<Result<QueryJobStatus, ClientError>> {
@@ -234,8 +248,15 @@ const fn query_termination_poll_result(
 
 /// # Returns
 ///
-/// A result to stop polling when the query finishes or begins cancellation, or an instruction to
-/// keep polling.
+/// [`ControlFlow::Break`] with `Ok(())` on success, or [`ControlFlow::Continue`] if the query is
+/// pending or running.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * [`ClientError::QueryNotSucceeded`] if the query terminates unsuccessfully or cancellation has
+///   been requested. The error is returned as [`Err`] inside [`ControlFlow::Break`].
 const fn query_success_poll_result(status: QueryJobStatus) -> ControlFlow<Result<(), ClientError>> {
     match status {
         QueryJobStatus::Succeeded => ControlFlow::Break(Ok(())),

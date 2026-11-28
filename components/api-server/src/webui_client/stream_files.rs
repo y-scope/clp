@@ -67,27 +67,22 @@ impl WebuiClient {
     ///
     /// # Returns
     ///
-    /// The stream file's metadata on success, with its `path` resolved to where the `WebUI` fetches
-    /// the stream file from (see [`StreamFileMetadata::path`]).
+    /// The metadata with [`StreamFileMetadata::path`] resolved for the `WebUI` on success.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
     /// * [`ClientError::InvalidInput`] if:
-    ///   * the package's storage engine isn't clp-s.
-    ///   * `log_event_idx` exceeds `i64::MAX`.
-    /// * [`ClientError::StreamExtractionTimeout`] if the extraction job doesn't finish within the
-    ///   configured timeout.
-    /// * [`ClientError::LogEventNotFound`] if the extraction job succeeds without extracting a
-    ///   stream file that contains the log event.
+    ///   * The package's storage engine isn't clp-s.
+    ///   * The log event index exceeds [`i64::MAX`].
+    /// * [`ClientError::StreamExtractionTimeout`] if the configured timeout expires while
+    ///   submitting the extraction job or waiting for it to finish.
+    /// * [`ClientError::LogEventNotFound`] if the extraction job succeeds but the results cache has
+    ///   no stream file containing the log event.
     /// * Forwards [`mongodb::Collection::find_one`]'s return values on failure.
     /// * Forwards [`Self::submit_and_wait_for_extraction_job`]'s return values on failure.
     /// * Forwards [`StreamFileStorage::resolve_path`]'s return values on failure.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the results cache has no such stream file and `self.config.api_server` is `None`.
     pub async fn extract_stream_file(
         &self,
         extraction: StreamFileExtraction,
@@ -276,7 +271,15 @@ impl StreamFileStorage {
 
 /// # Returns
 ///
-/// A result to stop polling when the extraction job finishes, or an instruction to keep polling.
+/// [`ControlFlow::Break`] with `Ok(())` on success, or [`ControlFlow::Continue`] if the extraction
+/// job has not reached a terminal status.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * [`ClientError::ExtractionJobFailed`] if the extraction job fails, is killed, or is cancelled.
+///   The error is returned as [`Err`] inside [`ControlFlow::Break`].
 const fn extraction_poll_result(
     job_id: u64,
     status: QueryJobStatus,
