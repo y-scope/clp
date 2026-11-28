@@ -320,8 +320,8 @@ struct QueryResultsParams {
     raw_docs: bool,
 
     /// When `true`, results buffered in `MongoDB` are streamed sorted by timestamp descending;
-    /// otherwise, they're streamed in insertion order. Only applies to query jobs whose results
-    /// are buffered in `MongoDB`.
+    /// otherwise, they're streamed in insertion order. Only applies to query jobs with results
+    /// buffered in `MongoDB`.
     #[serde(default)]
     sorted: bool,
 }
@@ -654,8 +654,8 @@ mod tests {
     }
 
     /// Builds a minimal Axum app that validates compression usage params via
-    /// [`TryFrom<CompressionUsageParams>`] and returns the resolved
-    /// status integer codes on success. No real database is needed.
+    /// [`TryFrom<CompressionUsageParams>`] and returns the resolved status integer codes on
+    /// success. No real database is needed.
     fn compression_usage_test_app() -> axum::Router {
         axum::Router::new().route(
             "/usage/compression",

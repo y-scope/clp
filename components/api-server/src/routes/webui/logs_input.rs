@@ -29,8 +29,8 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
 #[into_params(parameter_in = Query)]
 #[serde(deny_unknown_fields)]
 struct ListParams {
-    /// The logs-input path of the directory to list: relative to the logs-input mount point, with
-    /// a leading `/` that denotes the mount point itself.
+    /// The logs-input path of the directory to list: relative to the logs-input mount point, where
+    /// a leading `/` denotes the mount point itself.
     #[param(value_type = String)]
     path: LogsInputPath,
 }

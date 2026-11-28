@@ -214,8 +214,8 @@ impl Ending {
         ending
     }
 
-    /// Receives the items of `events` until its end or failure, without polling it further, so
-    /// that the stream hasn't finished yet.
+    /// Receives the items of `events` until its end or failure, without polling it further, so that
+    /// the stream hasn't finished yet.
     ///
     /// # Returns
     ///

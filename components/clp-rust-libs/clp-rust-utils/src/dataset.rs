@@ -207,9 +207,9 @@ const CLP_DEFAULT_DATASET_NAME: &str = "default";
 
 /// The maximum number of characters in a dataset name.
 ///
-/// The bound ensures that the longest metadata table name, `<table prefix><dataset>_<longest
-/// suffix>` with the table prefix [`CLP_METADATA_TABLE_PREFIX`], fits MySQL's 64-character
-/// table-name limit.
+/// The bound ensures that the longest metadata table name,
+/// `<table prefix><dataset>_<longest suffix>` with the table prefix [`CLP_METADATA_TABLE_PREFIX`],
+/// fits MySQL's 64-character table-name limit.
 const DATASET_NAME_MAX_LEN: usize =
     MYSQL_TABLE_NAME_MAX_LEN - CLP_METADATA_TABLE_PREFIX.len() - 1 - TABLE_SUFFIX_MAX_LEN;
 

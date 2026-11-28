@@ -1,8 +1,8 @@
 //! The coordinator poll loop that discovers pending CLP compression jobs and dispatches them to
 //! Spider.
 //!
-//! The coordinator is responsible for the compression jobs in the `compression_jobs` table that
-//! are in one of the following states:
+//! The coordinator is responsible for the compression jobs in the `compression_jobs` table that are
+//! in one of the following states:
 //!
 //! | `status` | `spider_id` | `dispatch_time` | Description                                      |
 //! |----------|-------------|-----------------|--------------------------------------------------|
