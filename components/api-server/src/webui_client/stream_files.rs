@@ -1,5 +1,6 @@
 //! Extraction of stream files for the `WebUI`'s log viewer.
 
+use std::ops::ControlFlow;
 use std::time::Duration;
 
 use aws_sdk_s3::presigning::PresigningConfig;
@@ -20,6 +21,7 @@ use serde::Serialize;
 use utoipa::ToSchema;
 
 use crate::error::ClientError;
+use crate::job_polling;
 use crate::webui_client::WebuiClient;
 
 /// Request body for the stream-file extraction endpoint.
@@ -65,27 +67,22 @@ impl WebuiClient {
     ///
     /// # Returns
     ///
-    /// The stream file's metadata on success, with its `path` resolved to where the `WebUI` fetches
-    /// the stream file from (see [`StreamFileMetadata::path`]).
+    /// The metadata with [`StreamFileMetadata::path`] resolved for the `WebUI` on success.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
     /// * [`ClientError::InvalidInput`] if:
-    ///   * the package's storage engine isn't clp-s.
-    ///   * `log_event_idx` exceeds `i64::MAX`.
-    /// * [`ClientError::StreamExtractionTimeout`] if the extraction job doesn't finish within the
-    ///   configured timeout.
-    /// * [`ClientError::LogEventNotFound`] if the extraction job succeeds without extracting a
-    ///   stream file that contains the log event.
+    ///   * The package's storage engine isn't clp-s.
+    ///   * The log event index exceeds [`i64::MAX`].
+    /// * [`ClientError::StreamExtractionTimeout`] if the configured timeout expires while
+    ///   submitting the extraction job or waiting for it to finish.
+    /// * [`ClientError::LogEventNotFound`] if the extraction job succeeds but the results cache has
+    ///   no stream file containing the log event.
     /// * Forwards [`mongodb::Collection::find_one`]'s return values on failure.
     /// * Forwards [`Self::submit_and_wait_for_extraction_job`]'s return values on failure.
     /// * Forwards [`StreamFileStorage::resolve_path`]'s return values on failure.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the results cache has no such stream file and `self.config.api_server` is `None`.
     pub async fn extract_stream_file(
         &self,
         extraction: StreamFileExtraction,
@@ -149,16 +146,9 @@ impl WebuiClient {
     ///
     /// Returns an error if:
     ///
-    /// * [`ClientError::ExtractionJobNotFound`] if the job disappears from the query jobs table
-    ///   before it finishes.
-    /// * [`ClientError::ExtractionJobFailed`] if the job fails, is killed, or is cancelled.
     /// * Forwards [`rmp_serde::to_vec_named`]'s return values on failure.
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
-    /// * Forwards [`sqlx::query::QueryScalar::fetch_optional`]'s return values on failure.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `self.config.api_server` is `None`.
+    /// * Forwards [`job_polling::wait_for_status`]'s return values on failure.
     async fn submit_and_wait_for_extraction_job(
         &self,
         job_config: &ExtractJsonJobConfig,
@@ -172,31 +162,14 @@ impl WebuiClient {
         .await?
         .last_insert_id();
 
-        let polling = &self.get_api_server_config().query_job_polling;
-        let mut delay_ms = polling.initial_backoff_ms.max(1);
-        let max_delay_ms = polling.max_backoff_ms.max(delay_ms);
-        loop {
-            let status = sqlx::query_scalar::<_, QueryJobStatus>(&format!(
-                "SELECT `status` FROM `{QUERY_JOBS_TABLE_NAME}` WHERE `id` = ?"
-            ))
-            .bind(job_id)
-            .fetch_optional(&self.sql_pool)
-            .await?
-            .ok_or(ClientError::ExtractionJobNotFound(job_id))?;
-            match status {
-                QueryJobStatus::Succeeded => return Ok(()),
-                QueryJobStatus::Pending
-                | QueryJobStatus::Running
-                | QueryJobStatus::CancelRequested
-                | QueryJobStatus::Cancelling => {
-                    tokio::time::sleep(Duration::from_millis(delay_ms)).await;
-                    delay_ms = std::cmp::min(delay_ms.saturating_mul(2), max_delay_ms);
-                }
-                QueryJobStatus::Failed | QueryJobStatus::Killed | QueryJobStatus::Cancelled => {
-                    return Err(ClientError::ExtractionJobFailed { job_id, status });
-                }
-            }
-        }
+        job_polling::wait_for_status(
+            &self.sql_pool,
+            job_id,
+            &self.get_api_server_config().query_job_polling,
+            ClientError::ExtractionJobNotFound,
+            |status| extraction_poll_result(job_id, status),
+        )
+        .await
     }
 
     /// # Returns
@@ -296,8 +269,37 @@ impl StreamFileStorage {
     }
 }
 
+/// # Returns
+///
+/// [`ControlFlow::Break`] with `Ok(())` on success, or [`ControlFlow::Continue`] if the extraction
+/// job has not reached a terminal status.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * [`ClientError::ExtractionJobFailed`] if the extraction job fails, is killed, or is cancelled.
+///   The error is returned as [`Err`] inside [`ControlFlow::Break`].
+const fn extraction_poll_result(
+    job_id: u64,
+    status: QueryJobStatus,
+) -> ControlFlow<Result<(), ClientError>> {
+    match status {
+        QueryJobStatus::Succeeded => ControlFlow::Break(Ok(())),
+        QueryJobStatus::Pending
+        | QueryJobStatus::Running
+        | QueryJobStatus::CancelRequested
+        | QueryJobStatus::Cancelling => ControlFlow::Continue(()),
+        QueryJobStatus::Failed | QueryJobStatus::Killed | QueryJobStatus::Cancelled => {
+            ControlFlow::Break(Err(ClientError::ExtractionJobFailed { job_id, status }))
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use std::ops::ControlFlow;
+
     use clp_rust_utils::aws::AWS_DEFAULT_REGION;
     use clp_rust_utils::clp_config::AwsAuthentication;
     use clp_rust_utils::clp_config::AwsCredentials;
@@ -308,12 +310,49 @@ mod tests {
     use clp_rust_utils::clp_config::package::config::StreamOutput;
     use clp_rust_utils::clp_config::package::config::StreamOutputStorage;
     use clp_rust_utils::dataset::DatasetName;
+    use clp_rust_utils::job_config::QueryJobStatus as Status;
     use clp_rust_utils::types::non_empty_string::ExpectedNonEmpty;
     use non_empty_string::NonEmptyString;
 
     use super::StreamFileExtraction;
     use super::StreamFileStorage;
+    use super::extraction_poll_result;
+    use crate::error::ClientError;
     use crate::webui_client::WebuiClient;
+
+    #[test]
+    fn extraction_poll_result_maps_every_status() {
+        const JOB_ID: u64 = 42;
+
+        for (status, expected) in [
+            (Status::Pending, ControlFlow::Continue(())),
+            (Status::Running, ControlFlow::Continue(())),
+            (Status::Succeeded, ControlFlow::Break(Ok(()))),
+            (Status::Failed, ControlFlow::Break(Err(Status::Failed))),
+            (Status::CancelRequested, ControlFlow::Continue(())),
+            (Status::Cancelling, ControlFlow::Continue(())),
+            (
+                Status::Cancelled,
+                ControlFlow::Break(Err(Status::Cancelled)),
+            ),
+            (Status::Killed, ControlFlow::Break(Err(Status::Killed))),
+        ] {
+            let result = extraction_poll_result(JOB_ID, status).map_break(|result| {
+                result.map_err(|error| {
+                    let ClientError::ExtractionJobFailed {
+                        job_id,
+                        status: failed_status,
+                    } = error
+                    else {
+                        panic!("status {status:?} returned {error:?}");
+                    };
+                    assert_eq!(job_id, JOB_ID, "status: {status:?}");
+                    failed_status
+                })
+            });
+            assert_eq!(result, expected, "status: {status:?}");
+        }
+    }
 
     #[tokio::test]
     async fn extraction_is_rejected_under_the_clp_storage_engine() -> anyhow::Result<()> {
